@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ドパガキ捕まえ隊</title>
+<meta name="description" content="子ども、スマホ、ぐるぐる目。3つそろったらドパガキだ。そっくりさんに惑わされず、本物だけを網で捕まえろ。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="エクステン堂">
+<meta property="og:title" content="ドパガキ捕まえ隊｜エクステン堂">
+<meta property="og:description" content="子ども、スマホ、ぐるぐる目。3つそろったらドパガキだ。そっくりさんに惑わされず、本物だけを網で捕まえろ。">
+<meta property="og:url" content="https://extendo.getup117.workers.dev/dopagaki/">
+<meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp_dopagaki.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preload" as="image" href="images/title.webp" fetchpriority="high">
+<link rel="preload" as="font" type="font/woff2" href="fonts/dot.woff2" crossorigin>
+<style>
+@font-face{font-family:"DotGothic16";src:url(fonts/dot.woff2) format("woff2");font-display:swap}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#2b2d42;overflow:hidden}
+body{font-family:"DotGothic16","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;color:#222;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+#game{position:relative;width:min(100vw,480px);height:100vh;height:100dvh;margin:0 auto;overflow:hidden;background:#9acdfd;image-rendering:pixelated}
+#field{position:absolute;inset:0}
+.ch{position:absolute;left:0;top:0;pointer-events:none;will-change:transform}
+.ch img{width:100%;height:100%;display:block;image-rendering:pixelated;will-change:transform}
+.ch .hit{position:absolute;left:16%;right:16%;top:10%;bottom:4%;pointer-events:auto;cursor:pointer}
+.tag{position:absolute;left:50%;top:-4%;transform:translateX(-50%);white-space:nowrap;background:#fff;border:3px solid #222;padding:2px 8px;font-size:15px;line-height:1.2;box-shadow:3px 3px 0 #222}
+.ch.caught img{animation:caught .5s steps(4) forwards}
+.ch.caught .tag{opacity:0}
+.ch.dash::after{content:"";position:absolute;bottom:4%;width:30%;height:10%;left:var(--dust,auto);background:repeating-linear-gradient(90deg,rgba(150,120,90,.5) 0 6px,transparent 6px 12px);}
+.net{position:absolute;inset:6%;border:5px solid #6b4a2b;border-radius:50%;background:repeating-linear-gradient(45deg,transparent 0 9px,rgba(60,40,20,.55) 9px 11px),repeating-linear-gradient(-45deg,transparent 0 9px,rgba(60,40,20,.55) 9px 11px);animation:netdrop .18s steps(3)}
+@keyframes netdrop{from{transform:translateY(-60%) scale(1.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes caught{0%{transform:scale(1)}50%{transform:scale(.9) rotate(-6deg)}100%{transform:scale(.7) rotate(6deg);opacity:.0}}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 12px 8px;font-size:20px;color:#fff;text-shadow:2px 2px 0 #222,-2px 2px 0 #222,2px -2px 0 #222,-2px -2px 0 #222;pointer-events:none;z-index:50}
+#lives{color:#ff5a6e;letter-spacing:2px}
+#combo{position:absolute;top:calc(44px + env(safe-area-inset-top));left:12px;font-size:16px;color:#ffe14d;text-shadow:2px 2px 0 #222,-2px 2px 0 #222,2px -2px 0 #222,-2px -2px 0 #222;z-index:50;pointer-events:none}
+#banner{position:absolute;left:50%;top:calc(78px + env(safe-area-inset-top));transform:translateX(-50%);width:88%;background:#fff;border:4px solid #222;box-shadow:4px 4px 0 #222;padding:8px 12px;text-align:center;z-index:60;pointer-events:none;opacity:0;transition:opacity .15s}
+#banner.show{opacity:1}
+#banner b{display:block;font-size:22px;color:#e23b3b;font-weight:normal}
+#banner span{font-size:16px}
+.pop{position:absolute;font-size:22px;color:#fff;text-shadow:2px 2px 0 #222,-2px 2px 0 #222,2px -2px 0 #222,-2px -2px 0 #222;pointer-events:none;z-index:55;animation:pop .8s steps(6) forwards;white-space:nowrap;transform:translateX(-50%)}
+.pop.good{color:#ffe14d}.pop.bad{color:#ff6b6b}
+@keyframes pop{to{margin-top:-50px;opacity:0}}
+#flash{position:absolute;inset:0;background:#ff3030;opacity:0;pointer-events:none;z-index:45}
+#flash.on{animation:flash .35s steps(3)}
+@keyframes flash{0%{opacity:.35}100%{opacity:0}}
+#game.shake{animation:shake .3s steps(6)}
+@keyframes shake{0%,100%{transform:none}25%{transform:translate(-6px,2px)}50%{transform:translate(5px,-3px)}75%{transform:translate(-3px,3px)}}
+.screen{position:absolute;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:calc(24px + env(safe-area-inset-top)) 16px 24px;background:rgba(20,22,40,.55)}
+.tscr{padding:0;justify-content:center;background:linear-gradient(#68bafc 0 42%,#fce7ce 42% 100%)}
+.tstack{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center}
+.tart{width:100%;height:auto;display:block;image-rendering:auto}
+.tbtns{width:100%;background:#fce7ce;display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0 calc(16px + env(safe-area-inset-bottom))}
+.btn.pink{background:#f0578f;color:#fff;width:78%;max-width:340px;font-size:24px;padding:10px 0;text-shadow:2px 2px 0 #b8306a}
+.btn.white{background:#fffaf0;width:52%;max-width:230px;font-size:20px;padding:8px 0}
+.tbest{font-size:15px;color:#6b4a2b;min-height:1em}
+.hidden{display:none!important}
+#game.bgready{background:url(images/bg.webp) center bottom/cover no-repeat,url(images/bg.png) center bottom/cover no-repeat,#9acdfd}
+#zone{position:absolute;left:-60%;top:-30%;width:220%;height:160%;pointer-events:none;z-index:40;opacity:0;background:conic-gradient(#ff0080,#ff8c00,#ffe600,#00e676,#00b0ff,#d500f9,#ff0080);mix-blend-mode:color;transition:opacity .4s}
+#game.zone #zone{opacity:.6;animation:zspin 2.4s linear infinite}
+@keyframes zspin{to{transform:rotate(360deg)}}
+#game.zone #field{animation:psy 1.1s linear infinite}
+@keyframes psy{0%{filter:hue-rotate(0deg) saturate(2.2)}50%{filter:hue-rotate(180deg) saturate(2.2) contrast(1.15)}100%{filter:hue-rotate(360deg) saturate(2.2)}}
+#game.zone{animation:zpulse .55s ease-in-out infinite alternate}
+@keyframes zpulse{from{background-size:auto 100%}to{background-size:auto 104%}}
+#zoneTxt{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:44px;white-space:nowrap;color:#fff;text-shadow:3px 3px 0 #ff0080,-3px -3px 0 #00b0ff,0 0 0 #222;z-index:70;pointer-events:none;opacity:0}
+#zoneTxt.on{animation:zin 1.6s steps(8) forwards}
+@keyframes zin{0%{opacity:1;transform:translate(-50%,-50%) scale(2.2) rotate(-8deg)}30%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(4deg)}80%{opacity:1;transform:translate(-50%,-50%) scale(1.05) rotate(-3deg)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}}
+#combo.z{color:#fff;text-shadow:2px 2px 0 #ff0080,-2px -2px 0 #00b0ff}
+.title{font-size:40px;line-height:1.15;color:#ffe14d;text-align:center;text-shadow:3px 3px 0 #222,-3px 3px 0 #222,3px -3px 0 #222,-3px -3px 0 #222,6px 6px 0 #e23b3b;margin:8px 0 4px;letter-spacing:1px}
+.sub{color:#fff;font-size:16px;text-shadow:2px 2px 0 #222;margin-bottom:14px;text-align:center}
+.card{background:#fff;border:4px solid #222;box-shadow:5px 5px 0 #222;padding:12px 14px;width:100%;max-width:400px;margin-bottom:14px}
+.card h2{font-size:18px;font-weight:normal;border-bottom:3px dotted #222;padding-bottom:4px;margin-bottom:8px}
+.how{display:flex;gap:10px;align-items:center}
+.how img{width:96px;height:96px;image-rendering:pixelated;flex:none}
+.how ul{list-style:none;font-size:16px;line-height:1.7}
+.how li::before{content:"✔ ";color:#1aa84a}
+.note{font-size:14px;line-height:1.6;margin-top:6px}
+.btn{font-family:inherit;font-size:24px;background:#ffe14d;color:#222;border:4px solid #222;box-shadow:5px 5px 0 #222;padding:10px 34px;cursor:pointer;margin:6px 0}
+.btn:active{transform:translate(4px,4px);box-shadow:1px 1px 0 #222}
+.btn.sm{font-size:18px;padding:8px 22px;background:#fff}
+#count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:72px;color:#fff;text-shadow:4px 4px 0 #222,-4px 4px 0 #222,4px -4px 0 #222,-4px -4px 0 #222;z-index:90;pointer-events:none}
+.stats{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:17px}
+.big{font-size:44px;text-align:center;color:#e23b3b}
+.rank{text-align:center;font-size:24px;margin:2px 0 6px}
+.dex{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dex>div{border:3px solid #222;padding:4px;text-align:center;font-size:13px;line-height:1.4;position:relative}
+.dex img{width:64px;height:64px;image-rendering:pixelated;display:block;margin:0 auto}
+.dex .nm{font-size:15px}
+.dex .bd{position:absolute;top:2px;right:2px;background:#e23b3b;color:#fff;font-size:11px;padding:0 4px}
+.dex .ok{background:#1aa84a}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="field"></div>
+  <div id="flash"></div>
+  <div id="zone"></div>
+  <div id="zoneTxt">ドーパZONE!!</div>
+  <div id="hud" class="hidden"><span id="score">0</span><span id="time">60</span><span id="lives">♥♥♥</span></div>
+  <div id="combo"></div>
+  <div id="banner"><b></b><span></span></div>
+  <div id="count" class="hidden"></div>
+
+  <div id="titleScreen" class="screen tscr">
+    <div class="tstack">
+      <img class="tart" id="titleArt" src="images/title.webp" width="600" height="624" decoding="async" fetchpriority="high" alt="ドパガキ捕まえ隊">
+      <div class="tbtns">
+        <button class="btn pink" id="startBtn">▶ ゲームスタート</button>
+        <button class="btn white" id="howBtn">あそびかた</button>
+        <p class="tbest" id="best"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="howScreen" class="screen hidden">
+    <div class="title" style="font-size:30px">あそびかた</div>
+    <div class="card">
+      <h2>ドパガキの見分け方</h2>
+      <div class="how">
+        <img data-src="images/dopagaki_1.webp" id="howImg" alt="ドパガキ">
+        <ul><li>子ども</li><li>スマホかタブレット</li><li>目がぐるぐる</li></ul>
+      </div>
+      <p class="note">3つそろったらドパガキ。1つでも欠けたら偽物だ。見た目だけで見抜け。</p>
+    </div>
+    <div class="card">
+      <h2>ルール</h2>
+      <p class="note">タップで網を投げて捕まえる。偽物を捕まえる（誤認逮捕）か、ドパガキを逃がすとライフが減る。制限時間は60秒。途中から、すぐ引き返すやつやダッシュで駆け抜けるやつも出てくる。</p>
+    </div>
+    <button class="btn pink" id="howStartBtn">▶ ゲームスタート</button>
+    <button class="btn white" id="howBackBtn">もどる</button>
+  </div>
+
+  <div id="resultScreen" class="screen hidden">
+    <div class="title" style="font-size:32px">任務終了</div>
+    <div class="card">
+      <div class="big" id="rScore">0</div>
+      <div class="rank" id="rRank"></div>
+      <div class="stats">
+        <span>捕まえたドパガキ</span><span id="rGood">0</span>
+        <span>誤認逮捕</span><span id="rBad">0</span>
+        <span>逃がしたドパガキ</span><span id="rMiss">0</span>
+        <span>最大コンボ</span><span id="rCombo">0</span>
+        <span>ドーパZONE突入</span><span id="rZone">0</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>出会ったキャラ図鑑</h2>
+      <div class="dex" id="dex"></div>
+    </div>
+    <button class="btn" id="retryBtn">もう一度出動</button>
+    <button class="btn sm" id="topBtn">タイトルへ</button>
+  </div>
+</div>
+
+<script>
+const CHARS = [
+  {id:'dopagaki_1', name:'ドパガキ', target:true},
+  {id:'dopagaki_2', name:'ドパガキ', target:true},
+  {id:'dopagaki_3', name:'ドパガキ', target:true},
+  {id:'dopa_kaki', name:'ドパ牡蠣', tier:0, line:'それは牡蠣だ。冬が旬。'},
+  {id:'dopa_kagi', name:'ドパ鍵', tier:0, line:'それは鍵だ。家に帰れなくなる。'},
+  {id:'toppogi', name:'トッポギ', tier:0, line:'それはトッポギだ。もちもち。'},
+  {id:'dopa_persimmon', name:'ドパ柿', tier:0, line:'それは柿だ。干すと甘い。'},
+  {id:'dopa_kaki_vase', name:'ドパ花器', tier:0, line:'それは花器だ。割ったら弁償。'},
+  {id:'sake_toba', name:'鮭とば', tier:0, line:'それは鮭とばだ。噛むほどうまい。'},
+  {id:'horagai', name:'ホラガイ', tier:0, line:'それは法螺貝だ。ブオオオ。'},
+  {id:'dopa_hamu', name:'ドパハム', tier:1, line:'それはハムスターだ。回し車に返してあげて。'},
+  {id:'dubai_yagi', name:'ドバイのヤギ', tier:1, line:'それはヤギだ。メェ〜。'},
+  {id:'futsuu_gaki', name:'ふつうのガキ', tier:2, line:'それはふつうのガキだ。本を読んでえらい。'},
+  {id:'doba_gaki', name:'汗ドバガキ', tier:2, line:'それは汗だくの野球少年だ。青春。'},
+  {id:'tora_gaki', name:'トラガキ', tier:2, line:'それはトラ好きの子だ。がおー。'},
+  {id:'dohachi_gaki', name:'土八ガキ', tier:2, line:'それは土曜8時のガキだ。テレビの前に集合中。'}
+];
+const GAME_TIME = 60, LIVES = 3, SHOW_TAGS = false;
+const $ = s => document.querySelector(s);
+const game = $('#game'), field = $('#field');
+
+let preloaded = false;
+function preloadAll(){
+  if(preloaded) return; preloaded = true;
+  game.classList.add('bgready');
+CHARS.forEach(c => {
+  c.ok = false;
+  const im = new Image();
+  im.onload = () => { c.ok = true; c.src = im.src; if(im.decode) im.decode().catch(()=>{}); };
+  im.onerror = () => { if(!im.dataset.png){ im.dataset.png = 1; im.src = 'images/' + c.id + '.png'; } };
+  im.src = 'images/' + c.id + '.webp';
+  c.img = im;
+});
+}
+(function(){
+  const t = $('#titleArt');
+  const go = () => setTimeout(preloadAll, 50);
+  if(t.complete) go(); else { t.addEventListener('load', go); t.addEventListener('error', go); }
+  setTimeout(preloadAll, 2500);
+})();
+
+let actx = null;
+function beep(freqs, dur, type){
+  if(!actx) return;
+  const t0 = actx.currentTime;
+  freqs.forEach((f,i)=>{
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.08, t0 + i*dur); g.gain.exponentialRampToValueAtTime(0.001, t0 + (i+1)*dur);
+    o.connect(g); g.connect(actx.destination); o.start(t0 + i*dur); o.stop(t0 + (i+1)*dur);
+  });
+}
+const sfx = {
+  good: () => beep([880,1320], .07),
+  bad: () => beep([220,150], .14, 'sawtooth'),
+  miss: () => beep([400,300,200], .09, 'triangle'),
+  swing: () => beep([600], .03, 'triangle'),
+  count: () => beep([660], .1),
+  go: () => beep([990], .2)
+};
+
+let S = null, last = 0, raf = 0;
+const ZONE_COMBO = 10;
+function enterZone(){
+  S.zone = true; S.zones++;
+  game.classList.add('zone'); $('#combo').classList.add('z');
+  const z = $('#zoneTxt'); z.classList.remove('on'); void z.offsetWidth; z.classList.add('on');
+  beep([523,659,784,1047,1319,1568], .06);
+}
+function exitZone(silent){
+  if(!S || !S.zone) return;
+  S.zone = false;
+  game.classList.remove('zone'); $('#combo').classList.remove('z');
+  if(!silent){ beep([800,500,300], .08, 'triangle'); banner('ZONE終了', 'コンボが途切れて、正気に戻った。'); }
+}
+let W = 0, H = 0, laneY = [], baseSize = 120;
+function layout(){
+  W = game.clientWidth; H = game.clientHeight;
+  const imgH = Math.max(H, W * 1.5);
+  const groundTop = H - imgH * 0.35;
+  const gh = H - groundTop;
+  laneY = [groundTop + gh*0.33, groundTop + gh*0.62, groundTop + gh*0.92];
+  baseSize = Math.min(W * 0.4, gh * 0.62, 180);
+}
+window.addEventListener('resize', layout);
+
+function pick(list){ return list[Math.floor(Math.random()*list.length)]; }
+function pickWeighted(items){
+  const tot = items.reduce((a,b)=>a+b.w,0); let r = Math.random()*tot;
+  for(const it of items){ r -= it.w; if(r<=0) return it.c; }
+  return items[items.length-1].c;
+}
+
+function chooseChar(t){
+  const targets = CHARS.filter(c=>c.target && c.ok);
+  const decoys = CHARS.filter(c=>!c.target && c.ok && (c.tier===0 || (c.tier===1 && t>=10) || (c.tier===2 && t>=20)));
+  if(targets.length && (Math.random() < 0.42 || !decoys.length)) return pick(targets);
+  return pickWeighted(decoys.map(c=>({c, w: c.tier===2 ? 2.2 : c.tier===1 ? 1.5 : 1})));
+}
+
+function spawn(){
+  const t = S.elapsed;
+  const c = chooseChar(t); if(!c) return;
+  const free = [0,1,2].filter(l => !S.actors.some(a => a.lane===l && (a.dir>0 ? a.x < baseSize : a.x > W - baseSize)));
+  if(!free.length) return;
+  const lane = pick(free);
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const scale = [0.82, 0.94, 1.06][lane];
+  const size = baseSize * scale;
+  let tag = c.name;
+  if(!c.target && t >= 15 && Math.random() < 0.3 + 0.15*Math.min(1,(t-15)/30)) tag = 'ドパガキ';
+  const el = document.createElement('div');
+  el.className = 'ch';
+  el.style.width = el.style.height = size + 'px';
+  el.style.zIndex = 10 + lane;
+  el.innerHTML = (SHOW_TAGS ? '<div class="tag"></div>' : '') + '<img alt=""><div class="hit"></div>';
+  if(SHOW_TAGS){ el.querySelector('.tag').textContent = tag; el.querySelector('.tag').style.fontSize = Math.round(13 + scale*3) + 'px'; }
+  el.querySelector('img').src = c.src;
+  const a = {c, el, img: el.querySelector('img'), lane, dir, size, x: dir>0 ? -size/2 : W + size/2, phase: Math.random()*6, speedMul: 0.85 + Math.random()*0.3, mode:'walk'};
+  const r = Math.random();
+  let pPeek = t >= 8 ? Math.min(0.3, 0.12 + t*0.004) : 0;
+  let pDash = t >= 12 ? Math.min(0.3, 0.1 + t*0.004) : 0;
+  if(S.zone){ pPeek = 0.3; pDash = 0.4; }
+  if(r < pPeek){
+    a.mode = 'peek'; a.state = 'in'; a.pause = 0.25 + Math.random()*0.25;
+    const d = W * (0.18 + Math.random()*0.2);
+    a.turnX = dir>0 ? d : W - d;
+  } else if(r < pPeek + pDash){
+    a.mode = 'dash'; a.speedMul *= 2.1; el.classList.add('dash'); el.style.setProperty('--dust', dir>0 ? '-12%' : '82%');
+  }
+  el.querySelector('.hit').addEventListener('pointerdown', e => { e.stopPropagation(); catchActor(a); });
+  field.appendChild(el);
+  S.actors.push(a);
+  S.seen.add(c.id);
+}
+
+function popText(x, y, txt, cls){
+  const p = document.createElement('div');
+  p.className = 'pop ' + (cls||''); p.textContent = txt;
+  p.style.left = Math.max(70, Math.min(W - 70, x)) + 'px'; p.style.top = y + 'px';
+  game.appendChild(p); setTimeout(()=>p.remove(), 850);
+}
+let bannerTimer = 0;
+function banner(h, s){
+  const b = $('#banner'); b.querySelector('b').textContent = h; b.querySelector('span').textContent = s;
+  b.classList.add('show'); clearTimeout(bannerTimer); bannerTimer = setTimeout(()=>b.classList.remove('show'), 1600);
+}
+function hurt(){
+  S.lives--; updateHud();
+  const f = $('#flash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+  game.classList.remove('shake'); void game.offsetWidth; game.classList.add('shake');
+  if(navigator.vibrate) try{ navigator.vibrate(80); }catch(e){}
+  if(S.lives <= 0) endGame();
+}
+
+function catchActor(a){
+  if(!S || !S.running || a.done) return;
+  a.done = true;
+  S.actors = S.actors.filter(x => x !== a);
+  const net = document.createElement('div'); net.className = 'net'; a.el.appendChild(net);
+  a.el.classList.add('caught');
+  setTimeout(()=>a.el.remove(), 550);
+  const top = laneY[a.lane] - a.size*0.9;
+  if(a.c.target){
+    S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo); S.good++;
+    if(S.combo >= ZONE_COMBO && !S.zone) enterZone();
+    const pts = Math.round(100 * (1 + Math.min(S.combo-1, 5) * 0.2) * (S.zone ? 2 : 1));
+    S.score += pts; sfx.good();
+    popText(a.x, top, '+' + pts, 'good');
+  } else {
+    S.combo = 0; exitZone(); S.bad++; S.wrong.add(a.c.id); sfx.bad();
+    popText(a.x, top, '誤認逮捕！', 'bad');
+    banner('誤認逮捕！', a.c.line);
+    hurt();
+  }
+  updateHud();
+}
+
+const hudEls = {score: $('#score'), time: $('#time'), lives: $('#lives'), combo: $('#combo')};
+const hudCache = {};
+function setHud(k, v){ if(hudCache[k] !== v){ hudCache[k] = v; hudEls[k].textContent = v; } }
+function updateHud(){
+  setHud('score', String(S.score));
+  setHud('time', String(Math.max(0, Math.ceil(GAME_TIME - S.elapsed))));
+  setHud('lives', '♥'.repeat(Math.max(0,S.lives)) + '♡'.repeat(Math.max(0, LIVES - Math.max(0,S.lives))));
+  setHud('combo', S.combo >= 2 ? S.combo + ' コンボ！' + (S.zone ? '　ドーパZONE 得点2倍' : '') : '');
+}
+
+function loop(ts){
+  if(!S || !S.running) return;
+  let dt = (ts - last) / 1000; last = ts;
+  if(dt > 0.1) dt = 0.1;
+  S.elapsed += dt;
+  const p = Math.min(1, S.elapsed / GAME_TIME);
+  S.spawnT -= dt;
+  const maxActors = Math.min(5, 2 + Math.floor(S.elapsed / 12)) + (S.zone ? 2 : 0);
+  if(S.spawnT <= 0){
+    if(S.actors.length < maxActors) spawn();
+    const q = Math.min(1, S.elapsed / 40);
+    S.spawnT = (1.15 - 0.65*q) * (0.75 + Math.random()*0.5) * (S.zone ? 0.55 : 1);
+  }
+  const speed = W * (0.22 + 0.3*Math.min(1, S.elapsed / 40)) * (S.zone ? 1.5 : 1);
+  for(const a of S.actors.slice()){
+    let move = true;
+    if(a.mode === 'peek'){
+      if(a.state === 'in' && (a.dir>0 ? a.x >= a.turnX : a.x <= a.turnX)){ a.state = 'pause'; }
+      if(a.state === 'pause'){
+        move = false; a.pause -= dt;
+        if(a.pause <= 0){ a.state = 'out'; a.dir = -a.dir; a.speedMul *= 1.7; }
+      }
+    }
+    if(move) a.x += a.dir * speed * a.speedMul * dt;
+    a.phase += dt * (a.mode === 'dash' ? 20 : move ? 10 : 0);
+    const bob = Math.abs(Math.sin(a.phase)) * a.size * -0.035;
+    a.el.style.transform = 'translate3d(' + (a.x - a.size/2).toFixed(1) + 'px,' + (laneY[a.lane] - a.size*0.95).toFixed(1) + 'px,0)';
+    a.img.style.transform = 'translateY(' + bob + 'px) scaleX(' + (a.dir>0 ? -1 : 1) + ')' + (a.mode === 'dash' ? ' rotate(-8deg)' : '');
+    if((a.dir>0 && a.x > W + a.size/2) || (a.dir<0 && a.x < -a.size/2)){
+      a.done = true; S.actors = S.actors.filter(x=>x!==a); a.el.remove();
+      if(a.c.target){
+        S.miss++; S.combo = 0; exitZone(); sfx.miss();
+        popText(a.dir>0 ? W-50 : 50, laneY[a.lane] - a.size*0.7, '逃げられた！', 'bad');
+        hurt();
+        if(!S.running) return;
+      }
+    }
+  }
+  updateHud();
+  if(S.elapsed >= GAME_TIME){ endGame(); return; }
+  raf = requestAnimationFrame(loop);
+}
+
+function startGame(){
+  preloadAll();
+  if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(actx && actx.state === 'suspended') actx.resume();
+  layout();
+  field.innerHTML = '';
+  S = {score:0, lives:LIVES, elapsed:0, spawnT:0.3, actors:[], combo:0, maxCombo:0, zone:false, zones:0, good:0, bad:0, miss:0, seen:new Set(), wrong:new Set(), running:false};
+  $('#titleScreen').classList.add('hidden'); $('#resultScreen').classList.add('hidden'); $('#howScreen').classList.add('hidden');
+  $('#hud').classList.remove('hidden'); updateHud();
+  const cnt = $('#count'); cnt.classList.remove('hidden');
+  let n = 3;
+  const tick = () => {
+    if(n > 0){ cnt.textContent = n; sfx.count(); n--; setTimeout(tick, 650); }
+    else { cnt.textContent = '出動！'; sfx.go(); setTimeout(()=>{ cnt.classList.add('hidden'); S.running = true; last = performance.now(); raf = requestAnimationFrame(loop); }, 500); }
+  };
+  tick();
+}
+
+function rankOf(s){
+  if(s >= 3000) return '隊長';
+  if(s >= 1800) return '警部';
+  if(s >= 800) return '巡査';
+  return '見習い隊員';
+}
+
+function endGame(){
+  if(!S.running) return;
+  S.running = false; cancelAnimationFrame(raf); exitZone(true);
+  setTimeout(showResult, 700);
+}
+
+function showResult(){
+  $('#hud').classList.add('hidden'); $('#combo').textContent = '';
+  $('#rScore').textContent = S.score + ' 点';
+  $('#rRank').textContent = '隊員ランク：' + rankOf(S.score);
+  $('#rGood').textContent = S.good; $('#rBad').textContent = S.bad; $('#rMiss').textContent = S.miss; $('#rCombo').textContent = S.maxCombo; $('#rZone').textContent = S.zones + ' 回';
+  const dex = $('#dex'); dex.innerHTML = '';
+  const shown = new Set();
+  CHARS.filter(c => S.seen.has(c.id)).forEach(c => {
+    if(c.target){ if(shown.has('target')) return; shown.add('target'); }
+    const d = document.createElement('div');
+    const line = c.target ? '子ども・スマホ・ぐるぐる目。捕まえてよし。' : c.line;
+    d.innerHTML = '<img alt=""><div class="nm"></div><div class="ln"></div>' + (S.wrong.has(c.id) ? '<span class="bd">誤認</span>' : '') + (c.target ? '<span class="bd ok">正解</span>' : '');
+    d.querySelector('img').src = c.src || ('images/' + c.id + '.webp');
+    d.querySelector('.nm').textContent = c.name;
+    d.querySelector('.ln').textContent = line;
+    dex.appendChild(d);
+  });
+  try{
+    const best = +(localStorage.getItem('dopagaki_best')||0);
+    if(S.score > best) localStorage.setItem('dopagaki_best', S.score);
+  }catch(e){}
+  field.innerHTML = '';
+  $('#resultScreen').classList.remove('hidden');
+  $('#resultScreen').scrollTop = 0;
+  showBest();
+}
+
+function showBest(){
+  try{
+    const best = +(localStorage.getItem('dopagaki_best')||0);
+    $('#best').textContent = best ? 'ベスト：' + best + ' 点' : '';
+  }catch(e){}
+}
+
+field.addEventListener('pointerdown', () => { if(S && S.running) sfx.swing(); });
+$('#startBtn').addEventListener('click', startGame);
+$('#howStartBtn').addEventListener('click', startGame);
+$('#howBtn').addEventListener('click', () => { const hi = $('#howImg'); if(!hi.src) hi.src = hi.dataset.src; $('#titleScreen').classList.add('hidden'); $('#howScreen').classList.remove('hidden'); $('#howScreen').scrollTop = 0; });
+$('#howBackBtn').addEventListener('click', () => { $('#howScreen').classList.add('hidden'); $('#titleScreen').classList.remove('hidden'); });
+$('#retryBtn').addEventListener('click', startGame);
+$('#topBtn').addEventListener('click', () => { $('#resultScreen').classList.add('hidden'); $('#titleScreen').classList.remove('hidden'); });
+document.addEventListener('visibilitychange', () => {
+  if(!S || !S.running) return;
+  if(document.hidden){ cancelAnimationFrame(raf); }
+  else { last = performance.now(); raf = requestAnimationFrame(loop); }
+});
+layout(); showBest();
+</script>
+</body>
+</html>

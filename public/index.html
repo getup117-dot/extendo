@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エクステン堂</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="description" content="ブラウザですぐ遊べる、ちいさなゲームの棚。スマホ推奨。インストールも登録もいりません。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="エクステン堂">
+<meta property="og:title" content="エクステン堂">
+<meta property="og:description" content="ブラウザですぐ遊べる、ちいさなゲームの棚。スマホ推奨。インストールも登録もいりません。">
+<meta property="og:url" content="https://extendo.getup117.workers.dev/">
+<meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=M+PLUS+Rounded+1c:wght@500;800&family=Zen+Old+Mincho:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4efe4; --ink:#1d1a17; --soft:#7a7166; --line:#d9d0bf; --red:#e2231a;
+  --round:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--round);font-weight:500;
+  background-image:radial-gradient(#0000000a 1px,transparent 1px);background-size:14px 14px}
+.wrap{max-width:780px;margin:0 auto;padding:44px 20px 64px}
+header{margin-bottom:34px}
+.kicker{font-size:12px;letter-spacing:.24em;color:var(--soft);margin:0 0 8px;font-weight:800}
+h1{font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:clamp(34px,8vw,58px);line-height:1.05;margin:0;letter-spacing:.01em}
+h1 em{font-style:normal;color:var(--red)}
+.lead{margin:14px 0 0;font-size:15px;line-height:1.8;color:#4b443c;max-width:34em}
+.count{display:inline-block;margin-top:16px;font-size:12px;font-weight:800;letter-spacing:.12em;border:2px solid var(--ink);border-radius:999px;padding:5px 12px}
+
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:22px}
+.card{background:#fff;border:3px solid var(--ink);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:6px 6px 0 var(--ink);transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink)}
+.cover{position:relative;aspect-ratio:3/4;border-bottom:3px solid var(--ink);overflow:hidden}
+.cover svg,.cover img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cover img{object-fit:cover;object-position:top center}
+.badge{position:absolute;top:10px;left:10px;font-size:11px;font-weight:800;letter-spacing:.08em;padding:4px 9px;border-radius:999px;background:#fff;border:2px solid var(--ink);z-index:2}
+.badge.new{background:var(--red);color:#fff;border-color:var(--red)}
+.badge.horror{left:auto;right:10px;background:#111;color:#fff;border-color:#fff}
+.body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
+.ttl{margin:0;font-size:23px;line-height:1.25}
+.yomi{margin:-4px 0 0;font-size:11px;color:var(--soft);letter-spacing:.14em}
+.copy{margin:2px 0 0;font-size:14px;line-height:1.75;color:#3d3731}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.tag{font-size:11px;font-weight:800;color:#5a5249;background:#f1ebdf;border-radius:6px;padding:3px 8px}
+.play{margin-top:auto;padding-top:10px;display:flex;align-items:center;justify-content:space-between}
+.date{font-size:11px;color:var(--soft);letter-spacing:.06em}
+.btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#fff;background:var(--ink);font-weight:800;font-size:15px;
+  letter-spacing:.08em;padding:10px 20px;border-radius:999px}
+.btn:hover{background:var(--red)}
+.btn:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+
+.t-koukai{font-family:"Dela Gothic One",sans-serif;font-weight:400}
+.t-koukai span{color:var(--red)}
+.t-medetashi{font-family:"DotGothic16",sans-serif;font-weight:400}
+.t-tenten{font-family:var(--round);font-weight:800;color:#5E4B72}
+.t-matcha{font-family:var(--round);font-weight:800;color:#3f7d1f}
+.t-ehon{font-family:"Zen Old Mincho",serif;font-weight:700}
+.t-saikyo{font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:20px}
+.t-saikyo small{display:block;font-size:13px;color:var(--soft)}
+.t-saikyo span{color:#e8a10f}
+
+footer{margin-top:48px;font-size:12px;color:var(--soft);text-align:center;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker">EXTENDO ／ しょうたのゲーム</p>
+    <h1>エクステン<em>堂</em></h1>
+    <p class="lead">ブラウザですぐ遊べる、ちいさなゲームを並べています。スマホ推奨。インストールも登録もいりません。</p>
+    <span class="count">いま 7 本</span>
+  </header>
+
+  <main class="shelf">
+
+    <!-- ぼくのかんがえたサイキョウ・ロワイヤル -->
+    <article class="card">
+      <div class="cover" style="background:#2a2e36">
+        <span class="badge new">NEW</span>
+        <img src="img/cover_saikyo.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-saikyo"><small>ぼくのかんがえた</small>サイキョウ・<span>ロワイヤル</span></h2>
+        <p class="yomi">ぼくのかんがえたさいきょう・ろわいやる</p>
+        <p class="copy">紙に描いた最強キャラを撮影して、AIが能力を鑑定。6回のじゃんけんを読み合って、必殺技で決めろ。2人対戦もCPU戦もOK。</p>
+        <div class="meta"><span class="tag">お絵かき</span><span class="tag">じゃんけん</span><span class="tag">2人対戦</span><span class="tag">AI鑑定</span></div>
+        <div class="play"><span class="date">2026.11.04</span><a class="btn" href="https://saikyo-royale.getup117.workers.dev" target="_blank" rel="noopener">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+    <!-- 抹茶カメレオン -->
+    <article class="card">
+      <div class="cover" style="background:#dde9ee">
+        <img src="img/cover_matcha.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-matcha">抹茶カメレオン</h2>
+        <p class="yomi">まっちゃかめれおん</p>
+        <p class="copy">指1本で、茶畑をずんずん進め。舌をのばして虫をぱくり。お茶を飲めば、色も技も変わる。抹茶をキメたら、食べ放題だ。</p>
+        <div class="meta"><span class="tag">縦スクロール</span><span class="tag">指1本</span><span class="tag">変身</span></div>
+        <div class="play"><span class="date">2026.11.02</span><a class="btn" href="matcha/">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+    <!-- ドパガキ捕まえ隊 -->
+    <article class="card">
+      <div class="cover" style="background:#4a5f86">
+                <img src="img/cover_dopagaki.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-medetashi">ドパガキ捕まえ隊</h2>
+        <p class="yomi">どぱがきつかまえたい</p>
+        <p class="copy">子ども、スマホ、ぐるぐる目。3つそろったらドパガキだ。ドパ牡蠣、ドパ鍵、トッポギ……そっくりさんに惑わされず、本物だけを網で捕まえろ。</p>
+        <div class="meta"><span class="tag">見分け</span><span class="tag">タップ</span><span class="tag">60秒</span></div>
+        <div class="play"><span class="date">2026.11.01</span><a class="btn" href="dopagaki/">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+    <!-- 後悔、先に立たす！ -->
+    <article class="card">
+      <div class="cover" style="background:#fffaf0">
+                <img src="img/cover_koukai.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-koukai">後悔、先に立た<span>す</span>！</h2>
+        <p class="yomi">こうかい、さきにたたす</p>
+        <p class="copy">立ち上がろうとする「先走りくん」を、その瞬間に押さえろ。飛びついたら連打。後悔くんが先に立つまで、絶対に逃がすな。</p>
+        <div class="meta"><span class="tag">タイミング</span><span class="tag">連打</span><span class="tag">ことわざ</span></div>
+        <div class="play"><span class="date">2026.10.30</span><a class="btn" href="koukai/">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+    <!-- めでたしなんて言わせない！ -->
+    <article class="card">
+      <div class="cover" style="background:#0c0a1e">
+        <img src="img/cover_medetashi.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-medetashi">めでたしなんて<br>言わせない！</h2>
+        <p class="yomi">めでたしなんていわせない</p>
+        <p class="copy">主人公はシンデレラの継母。時をさかのぼり、0時の鐘が鳴る前に城の大時計を弓矢で撃ち抜け。覚醒すれば「マッハママハハ」。</p>
+        <div class="meta"><span class="tag">シューティング</span><span class="tag">童話</span><span class="tag">ドット</span></div>
+        <div class="play"><span class="date">2026.10.28</span><a class="btn" href="https://claude.ai/artifact/5U9FFaWwQiGRsPz9KqkiBk" target="_blank" rel="noopener">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+    <!-- てんてんつなぎ -->
+    <article class="card">
+      <div class="cover" style="background:#FFE8F0">
+        <span class="badge horror">ホラー注意</span>
+        <img src="img/cover_tenten.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-tenten">てんてんつなぎ</h2>
+        <p class="yomi">てんてんつなぎ</p>
+        <p class="copy">同じ色の点と点を、指でつなぐだけ。かんたんで、かわいいパズル。……のはずだった。</p>
+        <div class="meta"><span class="tag">パズル</span><span class="tag">スワイプ</span><span class="tag">ホラー</span></div>
+        <div class="play"><span class="date">2026.10.28</span><a class="btn" href="tenten/">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+    <!-- えほんあわせ -->
+    <article class="card">
+      <div class="cover" style="background:#e9dcc3">
+        <span class="badge horror">ホラー注意</span>
+        <img src="img/cover_ehon.jpg" alt="">
+      </div>
+      <div class="body">
+        <h2 class="ttl t-ehon">えほんあわせ</h2>
+        <p class="yomi">えほんあわせ</p>
+        <p class="copy">横スワイプで背景、縦スワイプで人形。ばらばらになった絵本を直していくうちに、知らない部屋のページが混ざってくる。</p>
+        <div class="meta"><span class="tag">組み合わせ</span><span class="tag">絵本</span><span class="tag">静かなホラー</span></div>
+        <div class="play"><span class="date">2026.10.27</span><a class="btn" href="ehon/">あそぶ ▶</a></div>
+      </div>
+    </article>
+
+  </main>
+
+  <footer>© しょうた ／ つくったゲームは、ここに増えていきます。</footer>
+</div>
+</body>
+</html>

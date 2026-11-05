@@ -1,0 +1,6 @@
+{
+  // エクステン堂（public フォルダの中身をそのまま公開）
+  "name": "extendo",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./public" }
+}
