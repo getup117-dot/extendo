@@ -6,7 +6,7 @@
 | --- | --- |
 | `public/index.html` | サイトのトップ（ゲームの棚） |
 | `public/img/` | カバー画像とシェア用画像 |
-| `public/<ゲーム名>/` | 各ゲーム（matcha / dopagaki / koukai / tenten / ehon） |
+| `public/<ゲーム名>/` | 各ゲーム（osouji / matcha / dopagaki / koukai / tenten / ehon） |
 
 新しいゲームは `public/` にフォルダを1つ足して、トップにカードを1枚足す。
 このリポジトリに変更が入ると、Cloudflare が自動でデプロイします。
