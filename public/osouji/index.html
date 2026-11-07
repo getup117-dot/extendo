@@ -819,7 +819,7 @@ function setupTask(room, t) {
         if (t.rubs % RUB_STEP) return;
         t.k++;
         el.style.opacity = t.k >= n ? 0 : 1 - .7 * t.k / n;
-        popEl(el);
+        if (!t.still) popEl(el);
         if (t.k < n) fx("fx_sparkle", el, .7);
         if (t.k >= n) {
           nd.stop();
@@ -1508,14 +1508,12 @@ function roomAtelier() {
       say("人形も、棚に戻しておきますね！");
       atelierEls.doll = el;
       await sleep(900);
-      atelierEls.letters = layer("hiyori_letters", AT.letters);
+      /* 床の「れお」。消すのはいつでもいい（ほかの片付けと順番は自由） */
+      const lt = layer("hiyori_letters", AT.letters);
+      atelierEls.letters = lt;
+      const t = { type: "clean", art: "hiyori_letters", el: lt, r: AT.letters, n: 5, scrub: true, still: true, say: "床の文字も、ぴかぴかです！" };
+      room.tasks.push(t); setupTask(room, t);
       hideMsg();
-      await sleep(2600);
-      await says(["床の文字も、きれいにしますね！"]);
-      await rubErase(atelierEls.letters, 5, { nudge: 0, bleed: true, still: true });
-      fx("fx_sparkle", atelierEls.letters, 1.8);
-      say("ぴかぴかです！");
-      await sleep(1200);
     } });
   return room;
 }
@@ -1805,7 +1803,6 @@ async function endA() {
   await sleep(900);
   say("ピカピカに整えておきますね！");
   await sleep(1400);
-  popEl(atelierEls.body);
   await sleep(700);
   await roomSparkle();
   await sleep(400);
@@ -1819,8 +1816,11 @@ async function endA() {
   await cine.caption("― ドアが開く ―");
   await cine.image("end_a_kneel2");
   await cine.caption("「……ひより」");
+  await cine.caption("まるで、眠っているみたいだ。");
+  await cine.caption("けれど、息はない。");
+  await cine.caption("何度呼んでも、返事はない。");
   cine.clearCap();
-  await sleep(1200);
+  await sleep(1600);
   cine.close();
   busy = false;
 }
