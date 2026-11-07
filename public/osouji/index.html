@@ -341,9 +341,9 @@ body{display:flex;justify-content:center;align-items:flex-start;
 #cine .cimg.flash::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.85) 100%)}
 #cine .cbox{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);aspect-ratio:1;background-size:cover}
 #cine .kpType{position:absolute;left:53.5%;top:22.5%;transform:translate(-50%,-50%);z-index:3;font:700 7.5cqw/1 monospace;letter-spacing:2.5cqw;color:#26331f}
-#cine .ccap{position:absolute;left:5cqw;right:5cqw;bottom:16cqw;font-size:4.8cqw;font-weight:700;line-height:1.7;white-space:pre-wrap;text-shadow:0 0 1.5cqw #000;opacity:0;transition:opacity .8s;z-index:5}
+#cine .ccap{position:absolute;left:6cqw;right:6cqw;bottom:auto;top:79%;transform:translateY(-50%);font-size:5cqw;font-weight:700;line-height:1.7;white-space:pre-wrap;text-shadow:0 0 1.2cqw #000;background:rgba(10,6,8,.55);border-radius:3cqw;padding:3cqw 4cqw;opacity:0;transition:opacity .8s;z-index:5}
 #cine .ccap.on{opacity:1}
-#cine .ccap.center{bottom:auto;top:50%;transform:translateY(-50%)}
+#cine .ccap.center{bottom:auto;top:50%;transform:translateY(-50%);background:none}
 #cine .siren{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(circle at 85% 10%,rgba(220,40,40,.55),transparent 55%);animation:siren 1.2s steps(2) infinite;opacity:0}
 #cine .siren.on{opacity:1}
 @keyframes siren{50%{background:radial-gradient(circle at 85% 10%,rgba(60,90,220,.45),transparent 55%)}}
