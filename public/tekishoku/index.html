@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>あなたにぴったりのお仕事｜てきしょくナビ</title>
-<meta name="description" content="AIがあなたの適職を診断します。全8問・約2分。……結果は、あなた自身の目でお確かめください。">
+<title>あなたにぴったりのお仕事｜JOBのMARRIAGE</title>
+<meta name="description" content="あなたと幸せになるAI適職診断「JOBのMARRIAGE」。全8問・約2分。……結果は、あなた自身の目でお確かめください。">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="エクステン堂">
 <meta property="og:title" content="あなたにぴったりのお仕事、AIが見つけます｜エクステン堂">
-<meta property="og:description" content="AIがあなたの適職を診断します。全8問・約2分。……結果は、あなた自身の目でお確かめください。">
+<meta property="og:description" content="あなたと幸せになるAI適職診断「JOBのMARRIAGE」。全8問・約2分。……結果は、あなた自身の目でお確かめください。">
 <meta property="og:url" content="https://extendo.getup117.workers.dev/tekishoku/">
 <meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp_tekishoku.jpg">
 <meta property="og:image:width" content="1200">
@@ -38,6 +38,7 @@ button.opt.start{background:#0a4fe6!important;border-color:#0a4fe6!important;bor
 img.still{width:100%;border-radius:14px;display:block;opacity:0;transition:opacity 1.6s}
 img.still.on{opacity:1}
 .brand{font-weight:700;font-size:15px;color:var(--main);letter-spacing:.04em}
+.brand .no{display:inline-block;width:1.25em;height:1.25em;line-height:1.15em;text-align:center;border:1.5px solid var(--stamp);border-radius:50%;color:var(--stamp);font-size:.8em;margin:0 1px;vertical-align:1px}
 .brand small{display:block;font-weight:400;font-size:10.5px;color:var(--sub);letter-spacing:0}
 #ff{font-size:11px;border:1px solid var(--line);background:none;color:var(--sub);border-radius:20px;padding:5px 10px;display:none}
 #ff.on{background:var(--main);color:#fff;border-color:var(--main)}
@@ -150,7 +151,7 @@ img.share{width:100%;border-radius:10px;border:1px solid var(--line)}
 <body class="diag">
 <div id="app">
   <header>
-    <div class="brandwrap"><img id="hicon" src="img/navi.png" alt=""><div class="brand">てきしょくナビ<small>AIがあなたの適職を診断します</small></div></div>
+    <div class="brandwrap"><img id="hicon" src="img/navi.png" alt=""><div class="brand">JOB<span class="no">の</span>MARRIAGE<small>あなたと幸せになるAI適職診断</small></div></div>
     <button id="ff" type="button">既読を早送り</button>
   </header>
   <div id="form">
@@ -313,7 +314,7 @@ function gateSwap(){
 
 // 関門2：ポップアップを全部消して「お断りを確定」を押す（8秒）
 function gatePopups(){
-  const texts = ['本当の本当に、お断りしますか？','私のどこがダメでしたか？（必須）','アンケートにご協力ください（所要時間：一生）','てきしょくナビからの通知を許可しますか？','利用規約が更新されました（第1条：私と結婚する）','お断りの前に、もう一度だけ話しませんか？'];
+  const texts = ['本当の本当に、お断りしますか？','私のどこがダメでしたか？（必須）','アンケートにご協力ください（所要時間：一生）','JOBのMARRIAGEからの通知を許可しますか？','利用規約が更新されました（第1条：私と結婚する）','お断りの前に、もう一度だけ話しませんか？'];
   clearNotifs();
   return new Promise(res => {
     const ov = document.createElement('div'); ov.className = 'overlay';
@@ -378,11 +379,11 @@ function notify(kind, i){
   const n = document.createElement('div'); n.className = 'ntf';
   let av, name, text, via = '';
   if(kind === 'ai'){
-    name = 'ナビ'; text = AI_MSGS[i % AI_MSGS.length]; av = '<div class="av"><img src="img/navi.png" alt=""></div>';
+    name = 'AI'; text = AI_MSGS[i % AI_MSGS.length]; av = '<div class="av"><img src="img/navi.png" alt=""></div>';
   }else{
     const f = FRIENDS[i % FRIENDS.length]; name = f[0]; text = f[1];
     av = `<div class="av" style="background:${f[2]}">${f[0][0]}</div>`;
-    via = '<div class="via">via てきしょくナビ</div>';
+    via = '<div class="via">via JOBのMARRIAGE</div>';
   }
   n.innerHTML = `${av}<div class="bd"><div class="hd"><span>${name}</span><small>今</small></div><div class="tx">${text}</div>${via}</div>`;
   const out = () => { if(!n.isConnected) return; n.classList.add('out'); setTimeout(() => n.remove(), 260); };
@@ -479,7 +480,7 @@ async function erase(){
 async function diagnosis(){
   setTheme('diag'); formEl.style.display = 'none';
   main.innerHTML = `<div class="card center titlecard">
-    <img class="titleimg" src="img/title.jpg" alt="AI適職診断　全8問・約2分">
+    <img class="titleimg" src="img/title.jpg" alt="あなたと幸せになるAI適職診断 JOBのMARRIAGE　全8問・約2分">
     <div class="opts" id="qopts" style="margin-top:6px"></div></div>`;
   await choose([{ label:'診断をはじめる　›', cls:'start' }], null, $('#qopts'));
   for(let i = 0; i < Q.length; i++){
@@ -893,7 +894,7 @@ function makeShare(type){
   g.fillStyle = '#fff'; g.font = 'bold 46px sans-serif'; g.textAlign = 'center';
   g.fillText('適職診断書', W/2, 95);
   g.fillStyle = '#1d2733'; g.textAlign = 'left'; g.font = '28px sans-serif';
-  const rows = [['診断名','てきしょくナビ AI適職診断'],['対象','あなた'],['回答数','8 / 8']];
+  const rows = [['診断名','あなたと幸せになるAI適職診断'],['対象','あなた'],['回答数','8 / 8']];
   rows.forEach((r, i) => { g.fillStyle = '#6b7a8c'; g.fillText(r[0], 70, 240 + i*70); g.fillStyle = '#1d2733'; g.fillText(r[1], 230, 240 + i*70); });
   g.strokeStyle = '#d9e1ec'; g.lineWidth = 2; g.strokeRect(60, 470, W - 120, 220);
   g.fillStyle = '#6b7a8c'; g.font = '26px sans-serif'; g.fillText('あなたにぴったりのお仕事', 90, 520);
