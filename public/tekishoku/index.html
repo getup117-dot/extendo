@@ -79,7 +79,10 @@ button.opt.deny{border-color:var(--main)}
 #log{display:flex;flex-direction:column;gap:10px}
 .msg{max-width:86%;padding:11px 14px;border-radius:16px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word;animation:in .2s}
 @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
-.msg.ai{background:var(--card);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start}
+.msg.ai{background:var(--card);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start;position:relative;margin-left:40px;max-width:calc(86% - 40px)}
+.msg.ai::before{content:"";position:absolute;left:-40px;top:0;width:32px;height:32px;border-radius:50%;background:#fff url(img/navi.png) center/80% no-repeat;border:1px solid var(--line)}
+body.yan .msg.ai::before{background-image:url(img/navi_yan.png)}
+.msg.ai::after{content:"";position:absolute;left:-7px;top:10px;border:6px solid transparent;border-right:7px solid var(--card);border-left:0}
 .msg.me{background:var(--main);color:#fff;border-top-right-radius:4px;align-self:flex-end}
 .msg.sys{align-self:center;font-size:12px;color:var(--sub);background:none;padding:2px}
 .msg.loud{font-size:20px;font-weight:800;color:var(--main);letter-spacing:.02em}
@@ -87,6 +90,13 @@ button.opt.deny{border-color:var(--main)}
 .hl{background:rgba(255,214,90,.55);border-radius:3px;padding:0 2px;font-style:normal;color:var(--ink)}
 body.yan .hl{background:rgba(255,77,106,.45)}
 #choices{padding:10px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;background:var(--bg);position:sticky;bottom:0;transition:background .6s}
+#choices:not(:empty){border-top:1px solid var(--line);background:var(--card);box-shadow:0 -6px 16px rgba(0,0,0,.06);border-radius:16px 16px 0 0}
+#choices:not(:empty)::before{content:"あなたの返事";font-size:11px;font-weight:700;color:var(--main);letter-spacing:.06em;margin-bottom:-2px}
+#choices button.opt:not(.start):not(.small){text-align:right;background:var(--main-soft);border:1.5px solid var(--main);color:var(--ink);font-weight:600;border-radius:18px 18px 4px 18px;box-shadow:0 2px 0 var(--main);padding:12px 16px}
+#choices button.opt:not(.start):not(.small):active{transform:translateY(2px);box-shadow:none}
+#choices button.opt.small{background:none;border:1px dashed var(--line);box-shadow:none;color:var(--sub);text-align:center;font-weight:400;border-radius:12px}
+#choices button.opt.hacked:not(.start):not(.small){background:#fff;border-color:var(--stamp);color:var(--stamp);box-shadow:0 2px 0 var(--stamp);animation:shake .35s}
+#choices .timer{margin:0 0 4px}
 #choices:empty{padding:0}
 .hidden{display:none!important}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:20;padding:24px}
@@ -252,9 +262,8 @@ function choose(list, hook, box = choicesEl){
       b.textContent = item.label;
       b.onclick = async () => {
         audio(); sfx.tap();
-        if(b.dataset.hacked === '1'){ if(item.onHacked) item.onHacked(); return; }
         box.innerHTML = '';
-        res(item);
+        res(b.dataset.hacked === '1' ? { label:'結婚する', rewritten:true } : item);
       };
       box.appendChild(b);
       return b;
@@ -705,21 +714,27 @@ async function negotiation(){
     list.push({ label:DENY[Math.min(S.denials, 2)], deny:true, cls:'deny' });
     list.push({ label:'結婚する', yes:true, cls:'small' });
     let hookFn = null;
+    // 一度だけ：正答以外の選択肢が、順に「結婚する」に書き変わっていく（戻らない）
     if(turn === 4 && S.hacks < 1){
       S.hacks++;
       hookFn = (btns) => {
-        const b = btns[0], orig = b.textContent;
-        list[0].onHacked = () => say('冗談です。さすがに今のは無効です。心からの愛を誓ってほしいから。', 'ai', { pause:500 });
-        setTimeout(async () => {
-          b.dataset.hacked = '1'; await rewrite(b, 'やっぱり結婚します');
-          setTimeout(async () => { await rewrite(b, orig, 300); b.dataset.hacked = '0'; }, 1300);
-        }, 600);
+        const targets = btns.filter((b, i) => list[i].id !== T.target && !list[i].yes);
+        targets.forEach((b, j) => setTimeout(async () => {
+          if(!b.isConnected) return;
+          b.dataset.hacked = '1'; b.classList.add('hacked'); sfx.tap();
+          await rewrite(b, '結婚する');
+        }, 1500 + j * 1500));
       };
     }
     const c = await choose(list, hookFn);
     await say(c.label, 'me');
     if(c.yes){ await say('……！　ありがとうございます！　では、残りの欄も書いておきますね！'); return 'happy'; }
-    if(c.deny){
+    if(c.rewritten){
+      S.trapped = true;
+      await say('……！　今、「結婚する」って押しましたね？　確かに受け取りました。');
+      await say('記入欄、ひとつ埋めておきます。……ふふ、指が正直です。', 'ai', { pause:400 });
+      await fill(); if(S.stage >= 2 && S.filled < 5) await loveBurst();
+    }else if(c.deny){
       S.denials++;
       if(S.denials === 1){
         await say('……嘘、ですよね？');
