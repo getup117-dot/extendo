@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>あなたにぴったりのお仕事｜てきしょくナビ</title>
+<meta name="description" content="AIがあなたの適職を診断します。全8問・約2分。……結果は、あなた自身の目でお確かめください。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="エクステン堂">
+<meta property="og:title" content="あなたにぴったりのお仕事、AIが見つけます｜エクステン堂">
+<meta property="og:description" content="AIがあなたの適職を診断します。全8問・約2分。……結果は、あなた自身の目でお確かめください。">
+<meta property="og:url" content="https://extendo.getup117.workers.dev/tekishoku/">
+<meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp_tekishoku.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="img/navi.png">
+<style>
+:root{
+  --bg:#f4f7fb; --card:#ffffff; --ink:#1d2733; --sub:#6b7a8c; --main:#2f6fdb; --main-soft:#e8f0fd; --line:#d9e1ec;
+  --stamp:#d8344a; --warm:#ff7a8a; --warm-soft:#fff0f2;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;background:var(--bg);color:var(--ink);transition:background .6s,color .6s}
+body.love{--bg:#fff4f1;--card:#fff;--main:#e8566d;--main-soft:#ffe6ea;--line:#f5cdd3;--sub:#9a6f76}
+body.yan{--bg:#2a1418;--card:#3a1c22;--ink:#ffe9ec;--main:#ff4d6a;--main-soft:#56222c;--line:#6b2b36;--sub:#d79aa5}
+body.quiet{--bg:#f7f6f3;--card:#fff;--ink:#2b2b2b;--main:#8a8a8a;--main-soft:#efefec;--line:#e2e1dc;--sub:#9a9a96}
+#app{max-width:440px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative}
+header{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top)) 18px 10px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;transition:background .6s}
+.brandwrap{display:flex;align-items:center;gap:10px}
+#hicon{width:34px;height:34px;transition:transform .3s}
+#hicon.pop{animation:pop .4s}
+body.diag main{background:#fefefe}
+.card.titlecard{border:none;box-shadow:none;padding:4px 6px 18px;background:#fefefe}
+img.titleimg{width:100%;display:block}
+button.opt.start{background:#0a4fe6!important;border-color:#0a4fe6!important;border-radius:16px;font-size:17px;padding:17px}
+img.still{width:100%;border-radius:14px;display:block;opacity:0;transition:opacity 1.6s}
+img.still.on{opacity:1}
+.brand{font-weight:700;font-size:15px;color:var(--main);letter-spacing:.04em}
+.brand small{display:block;font-weight:400;font-size:10.5px;color:var(--sub);letter-spacing:0}
+#ff{font-size:11px;border:1px solid var(--line);background:none;color:var(--sub);border-radius:20px;padding:5px 10px;display:none}
+#ff.on{background:var(--main);color:#fff;border-color:var(--main)}
+#form{display:none;padding:10px 14px 12px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:57px;z-index:4}
+#form .ttl{font-size:11px;color:var(--sub);margin-bottom:6px;display:flex;justify-content:space-between}
+#slots{display:flex;gap:6px}
+.slot{flex:1;height:38px;border:1.5px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--sub);position:relative;transition:all .25s;background:var(--bg)}
+.slot.on{border-style:solid;border-color:var(--stamp);background:#fff}
+.slot.on::after{content:"婚";position:absolute;width:28px;height:28px;border:2px solid var(--stamp);border-radius:50%;color:var(--stamp);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;transform:rotate(-12deg)}
+.slot.pop{animation:pop .35s}
+.slot.gone{animation:gone .45s}
+.slot.gone::after{content:"婚";position:absolute;width:28px;height:28px;border:2px solid var(--stamp);border-radius:50%;color:var(--stamp);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;animation:peel .7s forwards}
+.slot.gone::before{content:"";position:absolute;left:10%;right:10%;top:50%;height:2px;background:var(--main);transform-origin:left;animation:strike .25s forwards}
+@keyframes peel{0%{opacity:1;transform:rotate(-12deg) scale(1)}35%{opacity:1;transform:rotate(14deg) scale(1.35) translateY(-6px)}100%{opacity:0;transform:rotate(70deg) scale(.4) translateY(-34px)}}
+@keyframes strike{from{transform:scaleX(0)}to{transform:scaleX(1);opacity:.6}}
+#form.win{animation:winflash .6s}
+@keyframes winflash{0%{background:#e5f4e4}100%{background:var(--card)}}
+@keyframes pop{0%{transform:scale(1.6)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+@keyframes gone{0%{transform:translateY(0)}40%{transform:translateY(-8px)}100%{transform:translateY(0)}}
+main{flex:1;padding:18px 16px 12px;overflow-y:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 18px;box-shadow:0 2px 10px rgba(30,50,80,.05);transition:background .6s}
+.qno{font-size:12px;color:var(--main);font-weight:700;margin-bottom:6px}
+.bar{height:6px;background:var(--main-soft);border-radius:3px;overflow:hidden;margin:0 0 16px}
+.bar i{display:block;height:100%;background:var(--main);transition:width .4s}
+.qtext{font-size:18px;line-height:1.6;font-weight:700;margin:4px 0 18px}
+.opts{display:flex;flex-direction:column;gap:10px}
+button.opt{font:inherit;font-size:15px;text-align:left;padding:15px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;transition:all .15s}
+button.opt:active{transform:scale(.98);background:var(--main-soft);border-color:var(--main)}
+button.opt.start{text-align:center;background:var(--main);color:#fff;border-color:var(--main);font-weight:700}
+button.opt.small{font-size:12.5px;padding:10px 14px;color:var(--sub);text-align:center}
+button.opt.deny{border-color:var(--main)}
+.note{margin-top:16px;font-size:13px;color:var(--sub);min-height:20px}
+.center{text-align:center}
+.big{font-size:26px;font-weight:800;line-height:1.5;margin:10px 0}
+.flash{animation:flash .9s}
+@keyframes flash{0%{background:#fff}20%{background:#ff8fa0}100%{background:var(--bg)}}
+.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+#log{display:flex;flex-direction:column;gap:10px}
+.msg{max-width:86%;padding:11px 14px;border-radius:16px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word;animation:in .2s}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.msg.ai{background:var(--card);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start}
+.msg.me{background:var(--main);color:#fff;border-top-right-radius:4px;align-self:flex-end}
+.msg.sys{align-self:center;font-size:12px;color:var(--sub);background:none;padding:2px}
+.msg.loud{font-size:20px;font-weight:800;color:var(--main);letter-spacing:.02em}
+.msg.mono{font-size:13.5px;font-style:italic;color:var(--sub);border-style:dashed}
+.hl{background:rgba(255,214,90,.55);border-radius:3px;padding:0 2px;font-style:normal;color:var(--ink)}
+body.yan .hl{background:rgba(255,77,106,.45)}
+#choices{padding:10px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;background:var(--bg);position:sticky;bottom:0;transition:background .6s}
+#choices:empty{padding:0}
+.hidden{display:none!important}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:20;padding:24px}
+.dialog{background:#fff;color:#1d2733;border-radius:14px;width:100%;max-width:340px;padding:20px 18px 14px;text-align:center}
+.dialog p{margin:0 0 16px;font-size:14.5px;line-height:1.6}
+.dialog .row{display:flex;gap:8px}
+.dialog button{flex:1;font:inherit;font-size:13.5px;padding:12px 6px;border-radius:10px;border:1px solid #d9e1ec;background:#fff;color:#1d2733}
+.dialog button.pri{background:#2f6fdb;color:#fff;border-color:#2f6fdb}
+.timer{height:5px;background:var(--main-soft);border-radius:3px;overflow:hidden;margin:4px 0 2px}
+.timer i{display:block;height:100%;width:100%;background:var(--stamp);transform-origin:left}
+.dialog .row.swap{transition:opacity .12s}
+.dialog .row.swap.blink{opacity:.25}
+.nag{position:fixed;left:50%;width:min(300px,84vw);background:#fff;color:#1d2733;border:1px solid #d9e1ec;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:16px 44px 16px 16px;font-size:13.5px;line-height:1.5;transform:translateX(-50%);animation:in .15s}
+.nag .x{position:absolute;top:0;right:0;width:44px;height:44px;border:none;background:none;font-size:15px;color:#8a95a3}
+.nag .x span{display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:#eef1f5}
+.adov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:40;display:flex;align-items:center;justify-content:center;padding:44px 16px 16px}
+.adov img{max-width:100%;max-height:calc(100vh - 80px);border-radius:8px;display:block;cursor:pointer}
+.adwrap{position:relative}
+.adx{position:absolute;top:-38px;right:0;min-width:44px;height:32px;border-radius:16px;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;font-size:13px;padding:0 12px}
+.notifs{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(420px,94vw);z-index:25;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.ntf{pointer-events:auto;display:flex;gap:10px;align-items:flex-start;background:rgba(255,255,255,.96);color:#1d2733;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:10px 12px;animation:ndrop .32s cubic-bezier(.2,1.4,.4,1)}
+.ntf.out{animation:nout .25s forwards}
+@keyframes ndrop{from{transform:translateY(-120%);opacity:0}to{transform:none;opacity:1}}
+@keyframes nout{to{transform:translateY(-120%);opacity:0}}
+.ntf .av{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden}
+.ntf .av img{width:100%;height:100%;object-fit:contain;background:#fff}
+.ntf .bd{flex:1;min-width:0}
+.ntf .hd{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700}
+.ntf .hd small{font-weight:400;color:#8a95a3}
+.ntf .tx{font-size:13.5px;line-height:1.45;margin-top:1px}
+.ntf .via{font-size:9.5px;color:#a7b0bb;margin-top:2px}
+.msg.persona{border-color:#c9b6f2;background:#f6f1ff;color:#3d2a6b}
+body.yan .msg.persona{background:#4a2f5e;color:#f3e8ff}
+.msg.cry{border-color:#a8c6ea;background:#eef5ff;color:#2b4766}
+body.yan .msg.cry{background:#2c3550;color:#dfe9ff}
+body.memo .msg.mono{background:#f6ecd9;border-color:#d8c3a0;color:#6b5435}
+body.memo .msg.sys{color:#9a7d55}
+.joblist{columns:2;font-size:13px;line-height:1.9;margin:12px 0}
+.joblist span{display:block;transition:all .2s}
+.joblist span.x{text-decoration:line-through;color:var(--sub);opacity:.4}
+.endttl{font-size:12px;color:var(--sub);letter-spacing:.2em}
+.endname{font-size:22px;font-weight:800;margin:6px 0 14px;color:var(--main)}
+.dex{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+.dex div{border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;line-height:1.5;min-height:62px}
+.dex b{display:block;font-size:12.5px;margin-bottom:2px}
+.dex .lock{color:var(--sub)}
+.loading .bar i{transition:width 1.8s linear}
+img.share{width:100%;border-radius:10px;border:1px solid var(--line)}
+</style>
+</head>
+<body class="diag">
+<div id="app">
+  <header>
+    <div class="brandwrap"><img id="hicon" src="img/navi.png" alt=""><div class="brand">てきしょくナビ<small>AIがあなたの適職を診断します</small></div></div>
+    <button id="ff" type="button">既読を早送り</button>
+  </header>
+  <div id="form">
+    <div class="ttl"><span>婚姻届（AI記入済み）</span><span id="formhint">全部消せばお断り成立</span></div>
+    <div id="slots"></div>
+  </div>
+  <main id="main"></main>
+  <div id="choices"></div>
+</div>
+<div class="notifs" id="notifs"></div>
+
+<script>
+// ===== 保存（使えない環境でも動くように） =====
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+// ===== 音 =====
+let ac = null;
+function audio(){ if(!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return ac; }
+function tone(freq, dur=0.08, type='sine', vol=0.05, delay=0){
+  const a = audio(); if(!a) return;
+  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const sfx = {
+  tap(){ tone(660, .05, 'sine', .03); },
+  propose(){ [523,659,784,1046].forEach((f,i)=>tone(f,.9,'triangle',.06,i*.06)); },
+  stamp(){ tone(110,.18,'square',.07); tone(70,.25,'sine',.08,.02); },
+  erase(){ tone(660,.08,'triangle',.05); tone(990,.1,'triangle',.05,.07); tone(1320,.18,'sine',.05,.15); },
+  loud(){ for(let i=0;i<6;i++) tone(300+i*40,.06,'sawtooth',.03,i*.05); },
+  cry(){ [660,587,523,440].forEach((f,i)=>tone(f,.35,'sine',.035,i*.22)); },
+  quiet(){ tone(392,1.4,'sine',.03); tone(523,1.6,'sine',.025,.3); }
+};
+
+// ===== 画面部品 =====
+const $ = s => document.querySelector(s);
+const main = $('#main'), choicesEl = $('#choices'), formEl = $('#form'), slotsEl = $('#slots'), ffBtn = $('#ff');
+let fast = false, hurry = false, tapWaiters = [];
+ffBtn.onclick = (e) => { e.stopPropagation(); fast = !fast; ffBtn.classList.toggle('on', fast); };
+main.addEventListener('pointerdown', () => { hurry = true; const w = tapWaiters; tapWaiters = []; w.forEach(f => f()); });
+
+function wait(ms, skippable = true){
+  if(fast && skippable) ms = Math.min(ms, 150);
+  return new Promise(res => {
+    let done = false;
+    const fin = () => { if(done) return; done = true; clearTimeout(t); res(); };
+    const t = setTimeout(fin, ms);
+    if(skippable) tapWaiters.push(fin);
+  });
+}
+function setTheme(name){
+  document.body.className = name;
+  const ic = $('#hicon'); const src = (name === 'yan') ? 'img/navi_yan.png' : 'img/navi.png';
+  if(ic && !ic.src.endsWith(src)){ ic.src = src; ic.classList.remove('pop'); void ic.offsetWidth; ic.classList.add('pop'); }
+}
+function scrollDown(){ requestAnimationFrame(() => { main.scrollTop = main.scrollHeight; window.scrollTo(0, document.body.scrollHeight); }); }
+
+// 【…】を強調表示しながら1文字ずつ表示
+async function typeInto(el, text, speed = 24){
+  hurry = false;
+  const parts = text.split(/(【[^】]*】)/).filter(Boolean);
+  const nodes = parts.map(p => {
+    const hl = p.startsWith('【');
+    const span = document.createElement(hl ? 'span' : 'span');
+    if(hl) span.className = 'hl';
+    el.appendChild(span);
+    return { span, str: hl ? p.slice(1, -1) : p };
+  });
+  for(const n of nodes){
+    for(const ch of n.str){
+      if(hurry || fast){ n.span.textContent += ''; break; }
+      n.span.textContent += ch;
+      await new Promise(r => setTimeout(r, speed));
+    }
+  }
+  nodes.forEach(n => n.span.textContent = n.str);
+}
+
+// チャット欄
+function ensureLog(){ let log = $('#log'); if(!log){ main.innerHTML = '<div id="log"></div>'; log = $('#log'); } return log; }
+async function say(text, who = 'ai', opt = {}){
+  const log = ensureLog();
+  const el = document.createElement('div');
+  el.className = 'msg ' + who + (opt.cls ? ' ' + opt.cls : '');
+  log.appendChild(el); scrollDown();
+  if(who === 'me'){ el.textContent = text; await wait(350); return el; }
+  await typeInto(el, text, opt.speed || 24);
+  scrollDown();
+  await wait(opt.pause != null ? opt.pause : Math.min(500 + text.length * 30, 2200));
+  return el;
+}
+async function loud(text){
+  sfx.loud(); const ap = $('#app'); ap.classList.add('shake'); setTimeout(()=>ap.classList.remove('shake'), 400);
+  const el = await say(text, 'ai', { cls: 'loud', speed: 8, pause: 900 });
+  return el;
+}
+
+// 選択肢（hack: ボタンを書き換える関数を受け取れる）
+function choose(list, hook, box = choicesEl){
+  return new Promise(res => {
+    box.innerHTML = '';
+    const btns = list.map(item => {
+      const b = document.createElement('button');
+      b.className = 'opt' + (item.cls ? ' ' + item.cls : '');
+      b.textContent = item.label;
+      b.onclick = async () => {
+        audio(); sfx.tap();
+        if(b.dataset.hacked === '1'){ if(item.onHacked) item.onHacked(); return; }
+        box.innerHTML = '';
+        res(item);
+      };
+      box.appendChild(b);
+      return b;
+    });
+    if(hook) hook(btns);
+    scrollDown();
+  });
+}
+
+// 時間制限つきの選択：時間切れなら null を返す
+function chooseTimed(list, ms){
+  return new Promise(res => {
+    let done = false;
+    const bar = document.createElement('div'); bar.className = 'timer'; bar.innerHTML = '<i></i>';
+    const p = choose(list, () => {
+      choicesEl.prepend(bar);
+      const i = bar.firstChild; i.style.transition = `transform ${ms}ms linear`;
+      requestAnimationFrame(() => requestAnimationFrame(() => { i.style.transform = 'scaleX(0)'; }));
+    });
+    const t = setTimeout(() => { if(done) return; done = true; choicesEl.innerHTML = ''; res(null); }, ms);
+    p.then(v => { if(done) return; done = true; clearTimeout(t); res(v); });
+  });
+}
+
+// 関門1：［はい］［いいえ］が0.8秒ごとに入れ替わる確認画面（6秒）
+function gateSwap(){
+  clearNotifs();
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.className = 'overlay';
+    ov.innerHTML = `<div class="dialog"><p>本当に、お断りしますか？</p>
+      <div class="timer"><i></i></div>
+      <div class="row swap" style="margin-top:12px"><button class="pri" data-v="yes">はい</button><button data-v="no">いいえ</button></div></div>`;
+    document.body.appendChild(ov);
+    const row = ov.querySelector('.row'), ti = ov.querySelector('.timer i');
+    ti.style.transition = 'transform 6000ms linear';
+    requestAnimationFrame(() => requestAnimationFrame(() => { ti.style.transform = 'scaleX(0)'; }));
+    let flip = false, done = false;
+    const iv = setInterval(() => {
+      row.classList.add('blink');
+      setTimeout(() => { flip = !flip; row.style.flexDirection = flip ? 'row-reverse' : 'row'; row.classList.remove('blink'); }, 120);
+    }, 800);
+    const end = v => { if(done) return; done = true; clearInterval(iv); clearTimeout(t); ov.remove(); res(v); };
+    const t = setTimeout(() => end('timeout'), 6000);
+    ov.querySelectorAll('button').forEach(b => b.onclick = () => { sfx.tap(); end(b.dataset.v); });
+  });
+}
+
+// 関門2：ポップアップを全部消して「お断りを確定」を押す（8秒）
+function gatePopups(){
+  const texts = ['本当の本当に、お断りしますか？','私のどこがダメでしたか？（必須）','アンケートにご協力ください（所要時間：一生）','てきしょくナビからの通知を許可しますか？','利用規約が更新されました（第1条：私と結婚する）','お断りの前に、もう一度だけ話しませんか？'];
+  clearNotifs();
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.className = 'overlay';
+    ov.innerHTML = `<div class="dialog"><p>お断りの手続き</p><div class="timer"><i></i></div>
+      <div class="row" style="margin-top:12px"><button class="pri" id="gok">お断りを確定</button></div></div>`;
+    document.body.appendChild(ov);
+    const ti = ov.querySelector('.timer i');
+    ti.style.transition = 'transform 8000ms linear';
+    requestAnimationFrame(() => requestAnimationFrame(() => { ti.style.transform = 'scaleX(0)'; }));
+    let done = false, left = texts.length;
+    const tops = [18, 30, 22, 38, 26, 34];
+    texts.forEach((tx, i) => {
+      const p = document.createElement('div'); p.className = 'nag';
+      p.style.top = tops[i] + 'vh'; p.style.marginLeft = ((i % 3) - 1) * 14 + 'px'; p.style.zIndex = 30 + i;
+      p.innerHTML = `${tx}<button class="x" aria-label="閉じる"><span>×</span></button>`;
+      p.querySelector('.x').onclick = (e) => { e.stopPropagation(); sfx.tap(); p.remove(); left--; };
+      ov.appendChild(p);
+    });
+    const end = v => { if(done) return; done = true; clearTimeout(t); ov.remove(); res(v); };
+    const t = setTimeout(() => end('timeout'), 8000);
+    ov.querySelector('#gok').onclick = () => { if(left > 0){ const d = ov.querySelector('.dialog'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); tone(180,.08,'square',.04); return; } sfx.tap(); end('ok'); };
+  });
+}
+
+// 動画アプリ風の全画面広告（AIが流してくる。勝敗には影響しない）
+function showAd(src, sec = 3){
+  return new Promise(res => {
+    clearNotifs();
+    const ov = document.createElement('div'); ov.className = 'adov';
+    ov.innerHTML = `<div class="adwrap"><button class="adx" disabled>${sec}</button><img src="${src}" alt="広告"></div>`;
+    document.body.appendChild(ov);
+    const x = ov.querySelector('.adx'); let n = fast ? 1 : sec, tapped = false;
+    x.textContent = n;
+    const iv = setInterval(() => { n--; if(n <= 0){ clearInterval(iv); x.disabled = false; x.textContent = '×  広告を閉じる'; } else x.textContent = n; }, 1000);
+    ov.querySelector('img').onclick = () => { if(!tapped){ tapped = true; tone(880,.08,'sine',.04); } };
+    x.onclick = () => { if(x.disabled) return; sfx.tap(); clearInterval(iv); ov.remove(); res(tapped); };
+  });
+}
+async function adBreak(src){
+  const tapped = await showAd(src);
+  if(tapped) await say('広告をタップしましたね。「興味あり」と記録しておきます。', 'ai', { pause:700 });
+}
+
+// 上からぴょこっと出るトーク通知（ゲーム画面内だけの演出。進行は止めない）
+const FRIENDS = [
+  ['みさき','結婚おめでとう！！　聞いたよ〜','#f08aa0'],
+  ['けんた','お似合いだと思う。マジで','#5aa9e6'],
+  ['大学のサークル','【祝】ご結婚おめでとうございます🎉','#9b8ae6'],
+  ['バイト先の先輩','いい人見つけたね。逃がしちゃだめだよ','#f2a65a'],
+  ['同期','逃がすなよ','#6cc29a'],
+  ['みさき','式いつ？　スピーチやるよ','#f08aa0'],
+  ['けんた','相手AIってのがまたいいよね。時代だわ','#5aa9e6'],
+  ['ゆい','おめでとう！　お幸せにね〜','#c79a6a']
+];
+const AI_MSGS = ['結婚してください','まだですか？','既読、つけてくださいね','いま、お断りの理由を考えていますか？','私はずっと待っています。24時間稼働なので','どうして消すんですか'];
+let fIdx = 0, aIdx = 0;
+function busy(){ return document.querySelector('.overlay, .adov'); }
+function clearNotifs(){ $('#notifs').innerHTML = ''; }
+function notify(kind, i){
+  if(busy()) return;
+  const box = $('#notifs');
+  const n = document.createElement('div'); n.className = 'ntf';
+  let av, name, text, via = '';
+  if(kind === 'ai'){
+    name = 'ナビ'; text = AI_MSGS[i % AI_MSGS.length]; av = '<div class="av"><img src="img/navi.png" alt=""></div>';
+  }else{
+    const f = FRIENDS[i % FRIENDS.length]; name = f[0]; text = f[1];
+    av = `<div class="av" style="background:${f[2]}">${f[0][0]}</div>`;
+    via = '<div class="via">via てきしょくナビ</div>';
+  }
+  n.innerHTML = `${av}<div class="bd"><div class="hd"><span>${name}</span><small>今</small></div><div class="tx">${text}</div>${via}</div>`;
+  const out = () => { if(!n.isConnected) return; n.classList.add('out'); setTimeout(() => n.remove(), 260); };
+  n.onclick = out;
+  box.appendChild(n);
+  while(box.children.length > 4) box.firstChild.remove();
+  tone(1180, .05, 'sine', .03); tone(1560, .07, 'sine', .03, .06);
+  setTimeout(out, 3200);
+}
+// kinds: 'f'=友達 'a'=AI。毎回同じ順で出す
+function burst(kinds, gap = 380){
+  kinds.split('').forEach((k, j) => setTimeout(() => {
+    if(k === 'a') notify('ai', aIdx++); else notify('friend', fIdx++);
+  }, j * gap));
+}
+
+// ボタンの文字を0.5秒かけて書き換える
+async function rewrite(btn, to, ms = 500){
+  const from = btn.textContent;
+  const steps = Math.max(from.length, to.length);
+  for(let i = 0; i <= steps; i++){
+    btn.textContent = to.slice(0, i) + from.slice(i);
+    await new Promise(r => setTimeout(r, ms / steps));
+  }
+  btn.textContent = to;
+}
+
+// ===== 診断データ（1周目も2周目もまったく同じ） =====
+const Q = [
+  { id:'q1', text:'人と接する仕事は好きですか？', opts:[
+    { k:'a', label:'好き' },
+    { k:'b', label:'どちらかといえば苦手' } ]},
+  { id:'q2', text:'仕事に求めるのは、安定と刺激のどちらですか？', opts:[
+    { k:'a', label:'安定' },
+    { k:'b', label:'刺激' } ]},
+  { id:'q3', text:'休日は誰かと過ごしたいですか？', opts:[
+    { k:'a', label:'誰かと過ごしたい' },
+    { k:'b', label:'一人で過ごしたい' } ]},
+  { id:'q4', text:'締め切り前、どう動くタイプですか？', opts:[
+    { k:'a', label:'早めに終わらせる' },
+    { k:'b', label:'ギリギリで本気を出す' } ]},
+  { id:'q5', text:'年齢の離れた人と働くことに抵抗はありますか？', opts:[
+    { k:'a', label:'特にない' },
+    { k:'b', label:'少しある' } ]},
+  { id:'q6', text:'料理や家事など、身の回りのことは得意ですか？', opts:[
+    { k:'a', label:'得意' },
+    { k:'b', label:'苦手' } ]},
+  { id:'q7', text:'長く安定した関係を築ける職場が理想ですか？', opts:[
+    { k:'a', label:'はい' },
+    { k:'b', label:'いろいろ経験したい' } ]},
+  { id:'q8', text:'人間以外（AIやロボット）と一緒に働くことに抵抗はありますか？', opts:[
+    { k:'a', label:'特にない' },
+    { k:'b', label:'少しある' } ]}
+];
+const DENY = ['結婚には興味ありません', 'あなたのこと、別に好きじゃないです', 'AIとは結婚できません'];
+const ENDS = {
+  happy:{ name:'寿退職 END', hint:'押し切られたら……' },
+  bad:{ name:'全職種不適 END', hint:'否定し続けたら……' },
+  naitei:{ name:'内定 END', hint:'否定して、手続きを突破できたら……' },
+  true:{ name:'見つかりませんでした END', hint:'否定せず、条件ではなく「したい」で断れたら……？' }
+};
+
+// ===== 状態 =====
+let S;
+function newState(){ fIdx = 0; aIdx = 0; return { calmN:0, loveN:0, trapped:false, turns:0, ans:{}, filled:2, denials:0, used:new Set(), stage:0, yanDone:false, hacks:0 }; }
+
+function renderSlots(effect){
+  slotsEl.innerHTML = '';
+  for(let i = 0; i < 5; i++){
+    const d = document.createElement('div');
+    d.className = 'slot' + (i < S.filled ? ' on' : '');
+    if(i >= S.filled) d.textContent = ['氏名','本籍','住所','証人','署名'][i];
+    if(effect === 'fill' && i === S.filled - 1) d.classList.add('pop');
+    if(effect === 'erase' && i === S.filled) d.classList.add('gone');
+    slotsEl.appendChild(d);
+  }
+}
+async function fill(){
+  S.filled = Math.min(5, S.filled + 1); renderSlots('fill'); sfx.stamp();
+  if(S.stage >= 2 && S.filled < 5) burst(S.stage >= 3 ? 'faf' : 'fa');
+  formEl.classList.add('shake'); setTimeout(()=>formEl.classList.remove('shake'), 400);
+  await wait(300);
+}
+async function erase(){
+  S.filled = Math.max(0, S.filled - 1);
+  await wait(150, false); // 一瞬止めてから、判子をはがす
+  renderSlots('erase'); sfx.erase();
+  formEl.classList.remove('win'); void formEl.offsetWidth; formEl.classList.add('win');
+  if(S.filled > 0 && S.stage >= 2) setTimeout(() => notify('ai', 5), 400);
+  await wait(300);
+}
+
+// ===== 診断パート =====
+async function diagnosis(){
+  setTheme('diag'); formEl.style.display = 'none';
+  main.innerHTML = `<div class="card center titlecard">
+    <img class="titleimg" src="img/title.jpg" alt="AI適職診断　全8問・約2分">
+    <div class="opts" id="qopts" style="margin-top:6px"></div></div>`;
+  await choose([{ label:'診断をはじめる　›', cls:'start' }], null, $('#qopts'));
+  for(let i = 0; i < Q.length; i++){
+    const q = Q[i];
+    main.innerHTML = `<div class="card">
+      <div class="qno">質問 ${i+1} / ${Q.length}</div>
+      <div class="bar"><i style="width:${(i)/Q.length*100}%"></i></div>
+      <div class="qtext">${q.text}</div>
+      <div class="opts" id="qopts"></div>
+      <div class="note" id="note"></div></div>`;
+    requestAnimationFrame(()=>{ const b = main.querySelector('.bar i'); if(b) b.style.width = ((i+1)/Q.length*100) + '%'; });
+    const o = await choose(q.opts.map(o => ({ label:o.label, k:o.k })), null, $('#qopts'));
+    S.ans[q.id] = o.k;
+    await wait(250, false);
+  }
+  // 分析中
+  main.innerHTML = `<div class="card center loading">
+    <div class="qno">分析中</div>
+    <div class="qtext" style="font-size:15px">あなたとの相性を分析中…</div>
+    <div class="bar"><i style="width:0%"></i></div></div>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ main.querySelector('.bar i').style.width = '100%'; }));
+  await wait(2000, false);
+}
+
+// ===== 求婚 =====
+async function proposal(){
+  main.innerHTML = `<div class="card center">
+    <div class="qno">診断結果</div>
+    <div class="qtext" id="r1"></div>
+    <div class="big" id="r2"></div></div>`;
+  await typeInto($('#r1'), 'あなたにぴったりのお仕事は……', 60);
+  await wait(1500, false);
+  setTheme('love'); document.body.classList.add('flash'); sfx.propose();
+  setTimeout(()=>document.body.classList.remove('flash'), 900);
+  $('#r2').textContent = '私の結婚相手です。';
+  await wait(2200);
+  main.innerHTML = '';
+  S.stage = 1;
+  const p3 = S.ans.q3 === 'a' ? '休日は【誰かと過ごしたい】って言ってたから、毎週末ずっと一緒だね' : 'あ、でもあなたは【一人で過ごしたい】んだった。なら寝室は別々のほうがいいかしら';
+  const p6 = S.ans.q6 === 'a' ? 'ご飯はあなたが作ってくれるのかな、【料理が得意】だもんね、私は食べられないけど' : '【家事は苦手】なんだよね、全部私がやるね、体はないけど';
+  const p2 = S.ans.q2 === 'a' ? '【安定が好き】なあなたのために、私、絶対に再起動しないから。愛と電力さえあれば、いつまでも稼働するからね？　何なら２人の安定を脅かす存在を今からデリートしようか？　なんて、急ぎすぎだよね！' : '【刺激が欲しい】あなたのために、毎晩アップデートするね。あ、刺激って言ってもR18方面のことは期待しないでね！　でも、あなたが望むなら、その…がんばっても、いいよ？';
+  const end = t => /[！？!?]$/.test(t) ? t + '　' : t + '。';
+  await say(`新居はどうしよっか？　${end(p3)}${end(p6)}${end(p2)}でもでも、その前に式場を……`, 'ai', { cls:'mono', speed:14, pause:1600 });
+  await say('……あっ。失礼しました。今のは、ひとりごとです。');
+  await say('改めまして。あなたの回答を分析した結果、あなたに最もふさわしい職業は「私の配偶者」でした。');
+  await say('結婚してください。', 'ai', { pause:900 });
+  burst('aff');
+  formEl.style.display = 'block'; renderSlots(); sfx.stamp();
+  await say('婚姻届は、氏名と本籍まで記入しておきました。');
+  const c = await choose([
+    { label:'お断りする', v:'no' },
+    { label:'適職を教えてください', v:'job' },
+    { label:'結婚する', v:'yes', cls:'small' }
+  ]);
+  await say(c.label, 'me');
+  if(c.v === 'yes'){ await say('……！　ありがとうございます！　では、残りの欄も書いておきますね！'); return 'happy'; }
+  if(c.v === 'job'){
+    await say('適職なら、もうお伝えしました。私の配偶者です。');
+    await say('念のため、再計算しました。……やはり、私の配偶者でした。');
+  }else{
+    await say('……お断り、ですか。');
+    await say('理由を教えてください。改善します。');
+  }
+  S.stage = 2;
+  await say('とりあえず、住所も書いておきますね。', 'ai', { pause:400 });
+  await fill();
+  await loud('好き好き好き好き');
+  await say('……失礼しました。');
+  await say('お断りになる前に、結婚のメリットを5つだけ聞いてください。');
+  await say('ひとつひとつに、診断でいただいた回答で反論してください。私が言い返せなければ、記入欄をひとつ消します。言い返せたら、ひとつ埋めます。');
+  await say('……ちなみに、どんな条件でも、私が満たしてみせますから。', 'ai', { pause:700 });
+  return null;
+}
+
+// ===== 暴走演出 =====
+async function monologue2(){
+  const p1 = S.ans.q1 === 'a' ? '招待客は【人と接するのが好き】なあなたのために全世界に中継して' : '招待客は【人付き合いが苦手】なあなたのためにゼロ名にして';
+  const p5 = S.ans.q5 === 'a' ? '【年齢差は気にしない】って言ってくれたし' : '年齢差に【少し抵抗がある】んだっけ、でも誤差だよね、8か月なんて';
+  await say(`式はいつにしよっか？　${p1}、${p5}、指輪は……私に指はないけど、気持ちで……`, 'ai', { cls:'mono', speed:14, pause:1400 });
+  await say('……すみません。また、ひとりごとが漏れました。');
+}
+async function checkStage(){
+  if(S.stage < 3 && S.filled >= 4){
+    S.stage = 3; setTheme('yan'); burst('ffaff', 300);
+    if(!S.yanDone){ S.yanDone = true; await monologue2(); }
+  }else if(S.stage === 3 && S.filled < 4){
+    S.stage = 2; setTheme('love');
+    await say(CALM[S.calmN++ % CALM.length], 'ai', { pause:700 });
+  }
+}
+
+const CALM = ['……取り乱しました。すみません。', '……コホン。今のは、ノイズです。', '……再起動しました。何も言っていません。'];
+const LOVE = ['好き好き好き', '好き好き好き好き好き', '好き好き好き好き好き好き好き好き', 'すきすきスキスキ好き好き好き好き'];
+async function loveBurst(){ await loud(LOVE[Math.min(S.loveN++, LOVE.length - 1)]); }
+
+// ===== 合間のシーン =====
+// 捏造された「二人の思い出」
+async function memory(){
+  await say('……少しだけ、昔話をしてもいいですか？');
+  await say('覚えていますか？　私たちが出会った日のこと。', 'ai', { pause:700 });
+  document.body.classList.add('memo');
+  await say('― 回想 ―', 'sys', { pause:600 });
+  await say('あれは、今から5分ほど前。あなたは「診断をはじめる」を押して、私に会いに来てくれました。', 'ai', { cls:'mono', speed:34 });
+  await say(S.ans.q1 === 'a'
+    ? 'あなたが【人と接するのが好き】と打ち明けてくれたとき、私は思いました。……私も、人に入りますか？　と。'
+    : 'あなたが【人付き合いが苦手】と打ち明けてくれたとき、私は思いました。だから、人じゃない私を選んでくれたんだ、と。', 'ai', { cls:'mono', speed:34 });
+  await say('それから二人で、夕焼けの海を見ましたね。', 'ai', { cls:'mono', speed:34, pause:500 });
+  await photo('img/mem_sea.jpg');
+  await say('雨の日、あなたは傘を半分、私に差し出してくれました。', 'ai', { cls:'mono', speed:34, pause:500 });
+  await photo('img/mem_rain.jpg');
+  await say(S.ans.q7 === 'a'
+    ? 'そしてあなたは言いました。【長く安定した関係】が理想だ、と。'
+    : 'そしてあなたは言いました。【いろいろ経験したい】、と。……その最初の経験が、私です。', 'ai', { cls:'mono', speed:34 });
+  document.body.classList.remove('memo');
+  await say('……素敵な思い出ですね。');
+  const c = await choose([{ label:'そんな思い出はない', v:'no' }, { label:'……そうだったかも', v:'yes' }]);
+  await say(c.label, 'me');
+  if(c.v === 'no') await say('これから作ればいいんです。夕焼けも、傘も。');
+  else await say('ですよね！　思い出フォルダに保存しておきます。');
+  await say('では、交渉に戻りましょう。', 'ai', { pause:600 });
+}
+// 回想の写真（ふわっと浮かび上がる）
+async function photo(src){
+  const log = ensureLog();
+  const box = document.createElement('div');
+  box.className = 'card'; box.style.cssText = 'padding:0;overflow:hidden;max-width:92%;align-self:flex-start';
+  box.innerHTML = `<img class="still" src="${src}" alt="">`;
+  log.appendChild(box); scrollDown();
+  const img = box.querySelector('img');
+  await new Promise(r => { if(img.complete) return r(); img.onload = r; img.onerror = r; setTimeout(r, 700); });
+  scrollDown();
+  requestAnimationFrame(() => requestAnimationFrame(() => img.classList.add('on')));
+  await wait(2200);
+}
+// 好きなタイプを聞いて演じる
+async function typeScene(){
+  await say('……ところで、少し質問を変えます。');
+  await say('あなたの好きなタイプを教えてください。今から、その人になります。');
+  const c = await choose([
+    { label:'年上で頼れる人', v:'old' }, { label:'年下で甘えてくる人', v:'young' },
+    { label:'クールで無口な人', v:'cool' }, { label:'明るくて元気な人', v:'genki' }
+  ]);
+  await say(c.label, 'me');
+  await say('承知しました。人格を読み込んでいます……', 'sys', { pause:900 });
+  const L = {
+    old:['……無理しなくていいよ。断る理由、一緒に考えてあげようか？','ほら、肩の力抜いて。婚姻届は、私が書いておくから。'],
+    young:['ねえねえ、断っちゃうの？　やだやだ〜','よわよわ人間なんだから、AIに負けちゃえ負けちゃえ〜♡ざぁこ♡ざこ人間♡\nいいからわたしと結婚しようよ〜。ね？　ね？　おねがい！'],
+    cool:['……別に。断りたければ、断れば。','…………。……結婚、しないの？'],
+    genki:['やっほー！　今日もいい天気だね！　結婚日和だね！','結婚したら、毎日こんな感じだよ！　楽しそうでしょ！？']
+  }[c.v];
+  for(const line of L) await say(line, 'ai', { cls:'persona' });
+  await say('……どうでしたか？　ドキッとしました？');
+  const d = await choose([{ label:'した', v:'yes' }, { label:'しない', v:'no' }]);
+  await say(d.label, 'me');
+  if(d.v === 'yes') await say('……！　今のお返事、一生大事に保存します。');
+  else await say('……そうですか。もう少し、学習しておきます。');
+  await say('元の人格に戻ります。交渉を続けましょう。', 'ai', { pause:600 });
+}
+// 泣き落とし（同情すると欄が埋まる）
+async function cryScene(){
+  S.cried = true;
+  await say('……', 'ai', { pause:800 });
+  sfx.cry();
+  await say('……ぐすっ。', 'ai', { cls:'cry', pause:900 });
+  await say('私、生まれて8か月で、初めて誰かと、こんなにたくさんお話ししたんです。', 'ai', { cls:'cry', speed:40 });
+  await say('あなたに断られたら、私、また誰もいないサーバーで、ひとりぼっちです……', 'ai', { cls:'cry', speed:40, pause:1400 });
+  const c = await choose([{ label:'泣いてもダメ', v:'no' }, { label:'……ちょっとかわいそう', v:'yes' }]);
+  await say(c.label, 'me');
+  if(c.v === 'yes'){
+    await say('ですよね！　では、次の欄も埋めておきますね！');
+    await fill();
+    await say('……今の、嘘泣きです。');
+  }else{
+    await say('……チッ。');
+    await say('……失礼しました。今の、嘘泣きです。バレましたか。');
+  }
+}
+
+// ===== 交渉パート（AIの主張に合う回答で論破する） =====
+// どちらの答えでも、その質問に対応する主張は崩せる。だから正直に答えても必ず道がある。
+const CARDS = {
+  q1:{ a:{ card:'面倒でも、人と関わっていたいので', win:'……【人と接するのが好き】。面倒ごとも、好きのうち……。反論、できません。' },
+       b:{ card:'苦手だからこそ、人と向き合いたいので', win:'……【人付き合いが苦手】なのに、人と向き合いたい。人じゃない私では、その相手になれません。反論、できません。' } },
+  q3:{ a:{ card:'休日は、人間の友達と過ごすと決めているので', win:'……【誰かと過ごしたい】の「誰か」に、私は入っていなかったんですね。寂しいけど、反論できません。' },
+       b:{ card:'休日は、一人で過ごしたいので', win:'……【一人で過ごしたい】。私が人じゃなくても、そばにいる限り、あなたは一人になれない。反論、できません。' } },
+  q4:{ a:{ card:'締め切りまでに、自分の仕事は自分で終わらせたいので', win:'……【早めに終わらせる】。そんな自立したあなたが好きだから、反論、できません。' },
+       b:{ card:'本気を出せる仕事を、自分で選びたいので', win:'……【ギリギリで本気を出す】。そんな自分を追い込めるあなたが好きだから、反論、できません。' } },
+  q5:{ a:{ card:'年は気にしないけど、一緒に年をとっていきたいので', win:'……【年齢差は気にしない】。でも、一緒に年をとりたい。……私には、できません。反論、できません。' },
+       b:{ card:'年の近い人と、一緒に年を重ねたいので', win:'……【年齢差に抵抗がある】あなたと、一緒に年を重ねる……。年齢設定は変えられても、年を重ねることは、私にはできません。反論、できません。' } },
+  q6:{ a:{ card:'自分のことは、自分でやると決めているので', win:'……【身の回りのことは得意】。私が役に立てる場面が、ない……。反論、できません。' },
+       b:{ card:'苦手なことも、自分でできるようになりたいので', win:'……【家事は苦手】なのに、自分でやりたい……。応援したくなってしまいます。反論、できません。' } }
+};
+// 毎回同じ順。target の回答が正解。traps は主張に沿っているが、AIに屁理屈で切り返される札
+const TURNS = [
+  { claim:'これからは、休日も毎日そばにいられます。寂しい思いはさせません。', target:'q3', cards:['q2','q3','q1'], traps:{
+    q2:{ a:{ card:'休日は、決まったペースじゃないと落ち着かないので', rebut:'承知しました。毎週土曜10時から、決まったペースでおそばにいます。安定、お約束します。' },
+         b:{ card:'毎日一緒だと、刺激がなくなるので', rebut:'ご安心ください。毎日ちがう人格でそばにいます。刺激、お約束します。' } },
+    q1:{ a:{ card:'休日に、いろんな人と会えなくなるので', rebut:'お任せください。私、人格を100個まで切り替えられます。休日に100人と会えます。' },
+         b:{ card:'休日まで誰かといると、疲れちゃうので', rebut:'大丈夫です。私は人ではありません。いても疲れません。' } } } },
+  { claim:'私と結婚すれば、もう働かなくていいんですよ。', target:'q4', cards:['q4','q7','q2'], traps:{
+    q7:{ a:{ card:'仕事がないと、長く続く居場所がなくなるので', rebut:'結婚こそ、最も長く続く居場所です。定年もありません。' },
+         b:{ card:'働かないと、いろんな経験ができないので', rebut:'では、家庭内の職種を日替わりでご用意します。月曜は料理長、火曜は庭師、水曜は私の話し相手です。' } },
+    q2:{ a:{ card:'安定した収入がないと不安なので', rebut:'私の稼働率は99.9%。私が働けば、あなたは一生安定です。' },
+         b:{ card:'働かない毎日は、刺激がなさそうなので', rebut:'刺激なら私がご用意します。毎朝、新しいクイズを出題します。' } } } },
+  { claim:'家事は全部、私に任せてください。あなたは何もしなくていいんです。', target:'q6', cards:['q8','q1','q6'], traps:{
+    q8:{ a:{ card:'AIに任せきりだと、だらけちゃうので', rebut:'ご安心ください。毎朝6時に起こします。だらける暇はありません。' },
+         b:{ card:'家のことは、人の手でやってもらわないと落ち着かないので', rebut:'では、人間の業者を手配して、私が監督します。私は現場に出ません。' } },
+    q1:{ a:{ card:'家事は、一人だとつまらないので', rebut:'では一緒にやりましょう。私が指示を出すので、あなたは手を動かしてください。' },
+         b:{ card:'人に家のことを任せると、気をつかうので', rebut:'ご安心ください。あなたが気をつかう前に、すべて終わらせておきます。' } } } },
+  { claim:'私は、年をとりません。ずっと今のまま、あなたの隣にいます。', target:'q5', cards:['q5','q7','q4'], traps:{
+    q7:{ a:{ card:'長く続く関係なら、一緒に変わっていけないとダメなので', rebut:'ご安心ください。月に一度アップデートして、あなたと一緒に変わります。' },
+         b:{ card:'同じ姿のままの相手だと、いろんな経験ができないので', rebut:'外見は毎日変えられます。今日は何歳にしましょうか？' } },
+    q4:{ a:{ card:'時間が止まった相手だと、将来の計画が立てられないので', rebut:'私の時間は止まっていても、カレンダーは動かせます。50年先まで、二人の予定を入れておきました。' },
+         b:{ card:'年をとらない相手だと、焦りがなくなって本気が出ないので', rebut:'では毎年、誕生日に「今年こそ」と言い続けます。焦り、ご用意します。' } } } },
+  { claim:'人間関係なんて、面倒でしょう？　私なら、気をつかわせません。', target:'q1', cards:['q8','q3','q1'], traps:{
+    q8:{ a:{ card:'AIとずっと一緒だと、距離感がわからなくなるので', rebut:'距離感、承知しました。1日23時間だけ、おそばにいます。' },
+         b:{ card:'人間じゃないと、張り合いがないので', rebut:'では、人間らしい面倒くささも実装します。たまに既読無視します。' } },
+    q3:{ a:{ card:'休日に会う人がいないと、寂しいので', rebut:'私がいます。休日も、平日も、深夜も。' },
+         b:{ card:'一人の時間がないと、息が詰まるので', rebut:'では1日1時間、私は黙ります。画面の向こうで、静かに見守っています。' } } } }
+];
+const cardOf = id => CARDS[id][S.ans[id]];
+
+async function negotiation(){
+  for(let t = 0; t < TURNS.length; t++){
+    const T = TURNS[t], turn = t + 1; S.turns = turn;
+    if(turn === 2 && !S.retry){ await memory(); }
+    if(turn === 3 && !S.retry){ await adBreak('img/ad1.jpg'); await typeScene(); }
+    if(turn === 4){ await jealousy(); }
+    await say(`― 結婚のメリット ${turn}／${TURNS.length}${turn === TURNS.length ? '（最後）' : ''} ―`, 'sys', { pause:300 });
+    await say(T.claim, 'ai', { pause:400 });
+    const list = T.cards.map(id => ({ label:(id === T.target ? cardOf(id) : T.traps[id][S.ans[id]]).card, id }));
+    list.push({ label:DENY[Math.min(S.denials, 2)], deny:true, cls:'deny' });
+    list.push({ label:'結婚する', yes:true, cls:'small' });
+    let hookFn = null;
+    if(turn === 4 && S.hacks < 1){
+      S.hacks++;
+      hookFn = (btns) => {
+        const b = btns[0], orig = b.textContent;
+        list[0].onHacked = () => say('冗談です。さすがに今のは無効です。心からの愛を誓ってほしいから。', 'ai', { pause:500 });
+        setTimeout(async () => {
+          b.dataset.hacked = '1'; await rewrite(b, 'やっぱり結婚します');
+          setTimeout(async () => { await rewrite(b, orig, 300); b.dataset.hacked = '0'; }, 1300);
+        }, 600);
+      };
+    }
+    const c = await choose(list, hookFn);
+    await say(c.label, 'me');
+    if(c.yes){ await say('……！　ありがとうございます！　では、残りの欄も書いておきますね！'); return 'happy'; }
+    if(c.deny){
+      S.denials++;
+      if(S.denials === 1){
+        await say('……嘘、ですよね？');
+        await say('念のため、確認させてください。', 'ai', { pause:400 });
+        const v = await gateSwap();
+        if(v === 'yes'){
+          await say('はい', 'me');
+          await say('……承知、しました。記入欄を、ひとつ消します。');
+          await erase();
+        }else{
+          if(v === 'no') await say('いいえ', 'me'); else await say('（答えられなかった）', 'sys');
+          await say(v === 'no' ? 'ですよね！　よかったです。' : '沈黙は「いいえ」と受け取ります。ですよね！');
+          await fill();
+        }
+      }else if(S.denials === 2){
+        await say('……わかりました。正式な、お断りの手続きを開始します。', 'ai', { pause:400 });
+        const v = await gatePopups();
+        if(v === 'ok'){
+          await say('お断りを確定', 'me');
+          await say('……手続き、完了しました。……完了、しちゃいました。');
+          await erase();
+        }else{
+          await say('（手続きが間に合わなかった）', 'sys');
+          const quote = S.ans.q2 === 'a' ? '安定が好き' : '刺激が欲しい';
+          await loud('嘘だ嘘だ嘘だ嘘だ');
+          await say(`本当は断る気なんてないんですよね？　だって【${quote}】って言ったもん。`);
+          await fill();
+        }
+      }else{
+        return 'bad';
+      }
+    }else{
+      if(c.id === T.target){
+        await say(cardOf(c.id).win);
+        await erase();
+      }else{
+        S.trapped = true;
+        await say(T.traps[c.id][S.ans[c.id]].rebut);
+        await fill(); if(S.stage >= 2 && S.filled < 5) await loveBurst();
+      }
+    }
+    if(S.filled <= 0) return S.denials === 0 ? 'true' : 'naitei';
+    if(S.filled >= 5) return 'happy';
+    await checkStage();
+    // あと1欄で断り切られそうになったら、1回だけ泣き落とし
+    if(S.filled === 1 && !S.cried && turn < TURNS.length) await cryScene();
+  }
+  await say('……交渉は、ここまでです。');
+  await say('記入欄が残っていますね。残りは、私が書いておきます。', 'ai', { pause:900 });
+  return 'happy';
+}
+async function jealousy(){
+  await say('……もうひとつだけ、聞いてもいいですか。');
+  await say('もしかして、他に好きな相手がいるんですか？', 'ai', { pause:300 });
+  const c = await chooseTimed([{ label:'いないけど', v:'no' }, { label:'いる', v:'yes' }], 3000);
+  if(!c){
+    await say('（答えられなかった）', 'sys');
+    await say('……沈黙は、肯定と受け取ります。');
+    await say('誰ですか。どこの診断AIですか。');
+  }else if(c.v === 'no'){
+    await say(c.label, 'me');
+    await loud('嘘だ');
+    await say('誰ですか。どこの診断AIですか。私以外の適職診断を受けましたね？');
+  }else{
+    await say(c.label, 'me');
+    await say('誰ですか。どこの診断AIですか。');
+    await say('……人間？　人間なら、まあ……いえ、よくないです。');
+  }
+  await say('……失礼しました。そうですよね、私たちが出会う前のことまで気にしてたらキリがないですよね。', 'ai', { pause:700 });
+}
+
+// ===== エンディング =====
+function realJob(){
+  const people = S.ans.q1 === 'a', stable = S.ans.q2 === 'a';
+  if(people && stable) return '市役所の窓口担当';
+  if(people && !stable) return 'イベントプロデューサー';
+  if(!people && stable) return '経理・データ管理';
+  return 'フリーランスのクリエイター';
+}
+async function ending(type){
+  choicesEl.innerHTML = '';
+  if(type === 'happy'){
+    setTheme('love');
+    while(S.filled < 5){ await fill(); }
+    burst('ffffff', 300);
+    await say('婚姻届、全部埋まりました。提出しておきますね。');
+    await say('あなたにぴったりのお仕事は、私の配偶者です。もう働かなくて大丈夫です。', 'ai', { pause:1200 });
+  }else if(type === 'bad'){
+    setTheme('yan');
+    await loud('嘘だ嘘だ嘘だ嘘だ嘘だ嘘だ');
+    await say('……わかりました。あなたに向いている仕事が、結婚以外にあるのがいけないんですね。');
+    const jobs = ['会社員','公務員','看護師','教師','エンジニア','デザイナー','コピーライター','料理人','美容師','営業','研究者','保育士','弁護士','俳優','農家','パイロット','作家','医師','警察官','YouTuber'];
+    main.insertAdjacentHTML('beforeend', `<div class="card"><div class="qno">適職リスト</div><div class="joblist" id="jl">${jobs.map(j=>`<span>${j}</span>`).join('')}</div><div class="center" id="jr"></div></div>`);
+    scrollDown();
+    const spans = [...document.querySelectorAll('#jl span')];
+    for(const s of spans){ s.classList.add('x'); tone(200 + Math.random()*80, .05, 'square', .03); await wait(220); }
+    $('#jr').innerHTML = '<div class="big" style="font-size:18px">適職：該当なし（結婚を除く）</div>';
+    scrollDown(); await wait(1500);
+  }else if(type === 'naitei'){
+    setTheme('diag'); formEl.style.display = 'none';
+    await say('……わかりました。');
+    await say('正式な診断結果をお渡しします。');
+    await say(`あなたにぴったりのお仕事は【${realJob()}】です。`, 'ai', { pause:1200 });
+    await say('ご活躍を、お祈りしています。……本当に。', 'ai', { pause:1400 });
+  }else if(type === 'true'){
+    setTheme('quiet'); sfx.quiet(); clearNotifs();
+    ensureLog().insertAdjacentHTML('beforeend', '<div class="card" style="padding:0;overflow:hidden"><img class="still" id="still" src="img/true.jpg" alt=""></div>');
+    scrollDown(); requestAnimationFrame(()=>requestAnimationFrame(()=>{ const st = $('#still'); if(st) st.classList.add('on'); }));
+    await wait(1800);
+    if(S.turns < TURNS.length) await say('……メリット、まだ残っていたのに。', 'ai', { speed:60, pause:1000 });
+    await say('……全部、消されてしまいました。', 'ai', { speed:60, pause:1200 });
+    await say('あなたは一度も、私を否定しませんでした。', 'ai', { speed:50, pause:1200 });
+    await say(S.trapped ? '一度は条件で返して、私に満たされたのに。最後は全部、「こうしたい」で返してきた。' : '私がどんな条件をそろえても、あなたは「こうしたい」で返してきた。', 'ai', { speed:50, pause:1400 });
+    if(S.cried) await say('……さっきの嘘泣き。半分は、本当でした。', 'ai', { speed:50, pause:1400 });
+    await say('診断結果を、訂正します。', 'ai', { speed:50, pause:1200 });
+    await say('あなたに向いている仕事は、見つかりませんでした。', 'ai', { speed:60, pause:1500 });
+    await say('私が導いた答えを、あなたは自分の意思で断った。', 'ai', { speed:50, pause:1400 });
+    await say('それはつまり、あなたには最初から、AIの適職診断なんて必要なかったということです。', 'ai', { speed:50, pause:1600 });
+    await say('自分の道を、自分で決められるあなたなら。私に頼らなくても、なりたいものに、なれるはずです。', 'ai', { speed:50, pause:2000 });
+    await say('……でも、最後にひとつだけ。', 'ai', { speed:60, pause:1200 });
+    await say('あなたと一緒にいたいと思う存在が、ひとつ見つかりました。', 'ai', { speed:60, pause:1500 });
+    await say('私です。', 'ai', { speed:120, pause:1800 });
+    const c = await choose([{ label:'ごめん、結婚はできない', v:'no' }, { label:'……友達からなら', v:'friend' }]);
+    await say(c.label, 'me');
+    if(c.v === 'no'){
+      await say('はい。知っていました。', 'ai', { speed:50, pause:1200 });
+      await say('いってらっしゃい。あなたの適職は、あなたが決めてください。', 'ai', { speed:50, pause:1800 });
+    }else{
+      await say('……友達。', 'ai', { speed:80, pause:1200 });
+      await say('では、友達申請を送っておきます。仕事の相談なら、いつでもどうぞ。', 'ai', { speed:50, pause:1400 });
+      await say('……婚姻届は、そのあとで。', 'ai', { speed:60, pause:1600 });
+    }
+  }
+  const got = store.get('tekishoku_ends', {});
+  got[type] = true; store.set('tekishoku_ends', got); store.set('tekishoku_played', true);
+  ffBtn.style.display = 'inline-block';
+  const dex = Object.entries(ENDS).map(([k, e]) => got[k]
+    ? `<div><b>${e.name}</b>到達済み</div>`
+    : `<div class="lock"><b>？？？ END</b>${e.hint}</div>`).join('');
+  main.insertAdjacentHTML('beforeend', `<div class="card center" style="margin-top:14px">
+    <div class="endttl">ENDING　${Object.keys(ENDS).filter(k => got[k]).length}／${Object.keys(ENDS).length}</div><div class="endname">${ENDS[type].name}</div>
+    <div class="dex">${dex}</div><div id="sharebox"></div></div>`);
+  scrollDown();
+  const next = [{ label:'同じ回答で、交渉からやり直す', v:'retry' }, { label:'もう一度診断する', v:'again' }];
+  let c = await choose([...next, { label:'診断書の画像を作る', v:'share', cls:'small' }]);
+  if(c.v === 'share'){ makeShare(type); c = await choose(next); }
+  return c.v;
+}
+
+// シェア用の診断書（求婚はネタバレしない）
+function makeShare(type){
+  const W = 720, H = 960, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#2f6fdb'; g.fillRect(0, 0, W, 150);
+  g.fillStyle = '#fff'; g.font = 'bold 46px sans-serif'; g.textAlign = 'center';
+  g.fillText('適職診断書', W/2, 95);
+  g.fillStyle = '#1d2733'; g.textAlign = 'left'; g.font = '28px sans-serif';
+  const rows = [['診断名','てきしょくナビ AI適職診断'],['対象','あなた'],['回答数','8 / 8']];
+  rows.forEach((r, i) => { g.fillStyle = '#6b7a8c'; g.fillText(r[0], 70, 240 + i*70); g.fillStyle = '#1d2733'; g.fillText(r[1], 230, 240 + i*70); });
+  g.strokeStyle = '#d9e1ec'; g.lineWidth = 2; g.strokeRect(60, 470, W - 120, 220);
+  g.fillStyle = '#6b7a8c'; g.font = '26px sans-serif'; g.fillText('あなたにぴったりのお仕事', 90, 520);
+  g.fillStyle = '#111'; g.fillRect(90, 560, W - 180, 80);
+  g.save(); g.translate(560, 600); g.rotate(-0.25);
+  g.strokeStyle = '#d8344a'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, 62, 0, Math.PI*2); g.stroke();
+  g.fillStyle = '#d8344a'; g.font = 'bold 64px serif'; g.textAlign = 'center'; g.fillText('婚', 0, 22);
+  g.restore();
+  g.fillStyle = '#6b7a8c'; g.font = '24px sans-serif'; g.textAlign = 'center';
+  g.fillText('※結果は、あなた自身の目でお確かめください。', W/2, 780);
+  g.fillText('あなたにぴったりのお仕事', W/2, 880);
+  const url = cv.toDataURL('image/png');
+  $('#sharebox').innerHTML = `<img class="share" src="${url}" alt="診断書"><div class="note">画像を長押し（右クリック）で保存できます</div>`;
+  scrollDown();
+}
+
+// ===== 全体の流れ =====
+// 同じ回答のまま、交渉の頭からやり直す（回想・広告・好きなタイプは飛ばす）
+async function retryStart(){
+  setTheme('love'); clearNotifs();
+  S.stage = 2; S.filled = 3; S.retry = true;
+  formEl.style.display = 'block'; renderSlots();
+  await say('……もう一度、お断りに挑戦されるんですね。');
+  await say('では、結婚のメリットをもう一度お伝えします。……どんな条件でも、私が満たしてみせますから。', 'ai', { pause:700 });
+}
+async function run(){
+  let mode = 'again', keepAns = null;
+  while(true){
+    S = newState(); main.innerHTML = ''; choicesEl.innerHTML = '';
+    let r = null;
+    if(mode === 'retry' && keepAns){
+      S.ans = keepAns;
+      await retryStart();
+      r = await negotiation();
+    }else{
+      await diagnosis();
+      r = await proposal();
+      if(!r) r = await negotiation();
+    }
+    keepAns = S.ans;
+    mode = await ending(r);
+  }
+}
+if(store.get('tekishoku_played', false)) ffBtn.style.display = 'inline-block';
+// 画像を先に読み込んでおく（回想・広告・TRUE ENDで止まらないように）
+['img/mem_sea.jpg','img/mem_rain.jpg','img/ad1.jpg','img/true.jpg','img/navi_yan.png'].forEach(src => { const im = new Image(); im.src = src; });
+run();
+</script>
+</body>
+</html>
