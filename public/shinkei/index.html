@@ -173,6 +173,9 @@ body.has-mascot .res-mascot img{display:block} body.has-mascot .res-mascot .emo{
 .bubble.gone{opacity:0;transform:translateY(6px);pointer-events:none}
 .themes button.rnd{grid-column:1/-1}
 .home-link{font-size:12px;font-weight:800;color:var(--ink);margin:4px 0 18px}
+.dlg-mascot{display:block;width:110px;height:110px;object-fit:contain;margin:0 auto 6px}
+.dlg-mascot.think{animation:think 1.1s ease-in-out infinite}
+@keyframes think{0%,100%{transform:rotate(-8deg) translateY(0)}50%{transform:rotate(8deg) translateY(-8px)}}
 </style>
 </head>
 <body>
@@ -428,10 +431,11 @@ const MASCOT = { normal:"mascot-normal.png", ok:"mascot-correct.png", ng:"mascot
 const MASCOT_EMO = { normal:"🧠", ok:"💡", ng:"💦", clear:"🎉" };
 let mascotReady = 0;
 Object.values(MASCOT).forEach(n => tryImg(n, () => { if(++mascotReady === 4) document.body.classList.add("has-mascot"); }));
+function mascotHTML(mood, cls){ return mascotReady === 4 ? `<img class="dlg-mascot ${cls || ""}" src="${ASSET + MASCOT[mood]}" alt="">` : `<span class="big">${MASCOT_EMO[mood]}</span>`; }
 function setMascot(el, mood){ el.querySelector(".emo").textContent = MASCOT_EMO[mood]; el.querySelector("img").src = ASSET + MASCOT[mood]; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
 
 /* ================= タイトル画面 ================= */
-const state = { mode:"solo", themeId:"drama", diff:DIFFS[0], aiTheme:null, aiText:"" };
+const state = { mode:"solo", themeId:"drama", diff:DIFFS[1], aiTheme:null, aiText:"" };
 
 function buildTitle(){
   const list = $("themeList");
@@ -479,12 +483,12 @@ async function onStart(){
   if(state.themeId === "random") return startGame(randomTheme());
   if(state.themeId !== "ai") return startGame(THEMES.find(t => t.id === state.themeId));
   const text = $("aiInput").value.trim();
-  if(!text){ await dialog(`<span class="big">✍️</span>テーマを入力してください<p>例：国と首都、ジブリ映画と公開年</p>`, "OK"); return; }
+  if(!text){ await dialog(`${mascotHTML("ng")}テーマを入力してください<p>例：国と首都、ジブリ映画と公開年</p>`, "OK"); return; }
   if(state.aiTheme && state.aiText === text && state.aiTheme.pairs.length >= state.diff.pairs) return startGame(state.aiTheme);
   const today = new Date().toISOString().slice(0,10);
   const used = Number(store("shinkei-ai-" + today) || 0);
-  if(used >= AI_DAILY_LIMIT){ await dialog(`<span class="big">😴</span>今日のAI生成はここまで<p>1日${AI_DAILY_LIMIT}回までです。また明日あそんでね。</p>`, "OK"); return; }
-  dialog(`<span class="big"><span class="spin">🧠</span></span>のうみそフル回転中…<p>「${esc(text)}」のカードを作っています。<br>30秒ほどかかります。</p>`);
+  if(used >= AI_DAILY_LIMIT){ await dialog(`${mascotHTML("ng")}今日のAI生成はここまで<p>1日${AI_DAILY_LIMIT}回までです。また明日あそんでね。</p>`, "OK"); return; }
+  dialog(`${mascotHTML("normal", "think")}のうみそフル回転中…<p>「${esc(text)}」のカードを作っています。<br>30秒ほどかかります。</p>`);
   try{
     const theme = await generateAiTheme(text, state.diff.pairs);
     store("shinkei-ai-" + today, String(used + 1));
@@ -493,7 +497,7 @@ async function onStart(){
     startGame(theme);
   }catch(err){
     hideDialog();
-    await dialog(`<span class="big">💦</span>お題を作れませんでした<p>${esc(err.message || "通信エラー")}</p>`, "もどる");
+    await dialog(`${mascotHTML("ng")}お題を作れませんでした<p>${esc(err.message || "通信エラー")}</p>`, "もどる");
   }
 }
 
@@ -522,7 +526,7 @@ let G = null;
 
 function startGame(theme){
   const { pick, relation } = pickBoard(theme, state.diff.pairs);
-  if(!pick){ dialog(`<span class="big">💦</span>盤面を作れませんでした`, "OK"); return; }
+  if(!pick){ dialog(`${mascotHTML("ng")}盤面を作れませんでした`, "OK"); return; }
   const cards = shuffle([
     ...pick.map((p,i) => ({ side:"a", text:p[0] })),
     ...pick.map((p,i) => ({ side:"b", text:p[1] }))
