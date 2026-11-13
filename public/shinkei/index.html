@@ -176,6 +176,16 @@ body.has-mascot .res-mascot img{display:block} body.has-mascot .res-mascot .emo{
 .dlg-mascot{display:block;width:110px;height:110px;object-fit:contain;margin:0 auto 6px}
 .dlg-mascot.think{animation:think 1.1s ease-in-out infinite}
 @keyframes think{0%,100%{transform:rotate(-8deg) translateY(0)}50%{transform:rotate(8deg) translateY(-8px)}}
+.panel h3 small{font-size:10px;font-weight:500;letter-spacing:0}
+.mylist{display:flex;flex-direction:column;gap:8px}
+.myrow{display:flex;gap:6px}
+.mybtn{flex:1;text-align:left;padding:8px 12px;border:2.5px solid var(--ink);border-radius:12px;background:var(--white);box-shadow:3px 3px 0 var(--ink);display:flex;flex-direction:column;min-width:0}
+.mybtn .nm{font-size:14px;font-weight:800;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mybtn .sub{font-size:11px;color:#666;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mybtn.on{background:var(--pink)} .mybtn.on .sub{color:var(--ink)}
+.mydel{width:40px;flex:none;border:2.5px solid var(--ink);border-radius:12px;background:var(--white);font-size:18px;font-weight:800}
+.dlg-btns{display:flex;gap:8px;justify-content:center}
+.dlg-btns button.sub{background:var(--white);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -202,6 +212,11 @@ body.has-mascot .res-mascot img{display:block} body.has-mascot .res-mascot .emo{
       <input id="aiInput" maxlength="30" placeholder="例：ジブリ映画と公開年／国と首都" autocomplete="off">
       <p>AIがお題を作ります。AIはまちがえることがあるので、正解とちがう組み合わせが混ざるかもしれません。</p>
     </div>
+  </div>
+
+  <div class="panel" id="myPanel" style="display:none">
+    <h3>つくったお題 <small>（このスマホに保存）</small></h3>
+    <div class="mylist" id="myList"></div>
   </div>
 
   <div class="panel">
@@ -434,6 +449,53 @@ Object.values(MASCOT).forEach(n => tryImg(n, () => { if(++mascotReady === 4) doc
 function mascotHTML(mood, cls){ return mascotReady === 4 ? `<img class="dlg-mascot ${cls || ""}" src="${ASSET + MASCOT[mood]}" alt="">` : `<span class="big">${MASCOT_EMO[mood]}</span>`; }
 function setMascot(el, mood){ el.querySelector(".emo").textContent = MASCOT_EMO[mood]; el.querySelector("img").src = ASSET + MASCOT[mood]; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
 
+/* ================= つくったお題の保存 ================= */
+const MY_KEY = "shinkei-my-themes", MY_MAX = 30;
+function loadMy(){ try{ const a = JSON.parse(store(MY_KEY) || "[]"); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function saveMy(list){ store(MY_KEY, JSON.stringify(list.slice(0, MY_MAX))); }
+function rememberAi(theme, text){
+  const list = loadMy().filter(t => t.prompt !== text);
+  list.unshift({ id: "my" + Date.now(), prompt: text, name: theme.name, a: theme.a, b: theme.b, pairs: theme.pairs, created: Date.now() });
+  saveMy(list); renderMy();
+}
+function toTheme(t){
+  return { id: t.id, name: t.name, a: t.a, b: t.b, pairs: t.pairs, isAi: true,
+    hintA: (a,b) => `「${a}」→「${b}」`, hintB: (b,a) => `「${b}」→「${a}」` };
+}
+function renderMy(){
+  const list = loadMy(), box = $("myList");
+  $("myPanel").style.display = list.length ? "" : "none";
+  box.innerHTML = "";
+  list.forEach(t => {
+    const row = document.createElement("div"); row.className = "myrow";
+    const b = document.createElement("button"); b.className = "mybtn"; b.dataset.id = "my:" + t.id;
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = t.name;
+    const sub = document.createElement("span"); sub.className = "sub"; sub.textContent = `${t.a} × ${t.b}・${t.pairs.length}組`;
+    b.append(nm, sub);
+    b.onclick = () => { state.themeId = "my:" + t.id; refreshTitle(); };
+    const del = document.createElement("button"); del.className = "mydel"; del.textContent = "×"; del.setAttribute("aria-label", "削除");
+    del.onclick = async () => {
+      if(!(await choose(`${mascotHTML("ng")}「${esc(t.name)}」を削除しますか？<p>消したお題は元に戻せません。</p>`, "削除する", "やめる"))) return;
+      saveMy(loadMy().filter(x => x.id !== t.id));
+      if(state.themeId === "my:" + t.id) state.themeId = "drama";
+      renderMy(); refreshTitle();
+    };
+    row.append(b, del); box.appendChild(row);
+  });
+  refreshTitle();
+}
+function choose(html, yes, no){
+  return new Promise(res => {
+    $("dialog").innerHTML = html;
+    const wrap = document.createElement("div"); wrap.className = "dlg-btns";
+    const bn = document.createElement("button"); bn.textContent = no; bn.className = "sub";
+    const by = document.createElement("button"); by.textContent = yes;
+    bn.onclick = () => { $("overlay").classList.remove("show"); res(false); };
+    by.onclick = () => { $("overlay").classList.remove("show"); res(true); };
+    wrap.append(bn, by); $("dialog").appendChild(wrap); $("overlay").classList.add("show");
+  });
+}
+
 /* ================= タイトル画面 ================= */
 const state = { mode:"solo", themeId:"drama", diff:DIFFS[1], aiTheme:null, aiText:"" };
 
@@ -464,6 +526,7 @@ function refreshTitle(){
   $("modeSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === state.mode));
   $("themeList").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.id === state.themeId));
   $("diffSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === state.diff.id));
+  $("myList").querySelectorAll(".mybtn").forEach(b => b.classList.toggle("on", b.dataset.id === state.themeId));
   $("aiBox").classList.toggle("show", state.themeId === "ai");
 }
 function show(id){ document.querySelectorAll(".screen").forEach(s => s.classList.toggle("show", s.id === id)); }
@@ -481,6 +544,12 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">"
 
 async function onStart(){
   if(state.themeId === "random") return startGame(randomTheme());
+  if(state.themeId.startsWith("my:")){
+    const t = loadMy().find(x => "my:" + x.id === state.themeId);
+    if(!t){ state.themeId = "drama"; refreshTitle(); return; }
+    if(t.pairs.length < state.diff.pairs){ await dialog(`${mascotHTML("ng")}カードが足りません<p>このお題は${t.pairs.length}組なので、むずかしさを下げてください。</p>`, "OK"); return; }
+    return startGame(toTheme(t));
+  }
   if(state.themeId !== "ai") return startGame(THEMES.find(t => t.id === state.themeId));
   const text = $("aiInput").value.trim();
   if(!text){ await dialog(`${mascotHTML("ng")}テーマを入力してください<p>例：国と首都、ジブリ映画と公開年</p>`, "OK"); return; }
@@ -493,6 +562,7 @@ async function onStart(){
     const theme = await generateAiTheme(text, state.diff.pairs);
     store("shinkei-ai-" + today, String(used + 1));
     state.aiTheme = theme; state.aiText = text;
+    rememberAi(theme, text);
     hideDialog();
     startGame(theme);
   }catch(err){
@@ -724,7 +794,7 @@ function confetti(){
   }
 }
 
-buildTitle();
+buildTitle(); renderMy();
 </script>
 </body>
 </html>
