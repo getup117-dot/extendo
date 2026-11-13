@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>神経ド衰弱</title>
+<meta name="description" content="神経衰弱×クイズ。ドラマと主演、ことわざの前半と後半…正しい組み合わせを2枚めくって揃えよう。テーマを入れるとAIがお題を作ってくれる。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="エクステン堂">
+<meta property="og:title" content="神経ド衰弱｜エクステン堂">
+<meta property="og:description" content="神経衰弱×クイズ。ドラマと主演、ことわざの前半と後半…正しい組み合わせを2枚めくって揃えよう。テーマを入れるとAIがお題を作ってくれる。">
+<meta property="og:url" content="https://extendo.getup117.workers.dev/shinkei/">
+<meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp_shinkei.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f2e8; --white:#ffffff; --ink:#1a1a1a; --pink:#ff48b0; --blue:#0078bf;
+  --pink-soft:#ffd6ec; --blue-soft:#cfe6f5; --p1:var(--pink); --p2:var(--blue);
+  --back-img:none; --bg-img:none;
+  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:"M PLUS Rounded 1c",system-ui,sans-serif;color:var(--ink);
+  background:var(--grain),var(--paper);overflow:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+body.has-bg{background:var(--bg-img) center/cover no-repeat fixed,var(--paper)}
+button{font-family:inherit;cursor:pointer;color:var(--ink)}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px)}
+.screen.show{display:flex}
+
+/* タイトル */
+#title{overflow-y:auto;gap:14px}
+.logo{font-family:"Dela Gothic One",sans-serif;font-size:46px;line-height:1.1;margin-top:14px;color:var(--ink);white-space:nowrap;letter-spacing:.01em}
+.logo .do{display:inline-block;position:relative;color:var(--pink);font-size:1.3em;transform:rotate(-10deg) translateY(3px);
+  text-shadow:3px 2px 0 var(--blue);mix-blend-mode:multiply}
+.title-mascot{width:110px;height:110px;object-fit:contain;margin:-8px 0 -6px}
+.logo-img{max-width:min(92vw,420px);display:none}
+.tagline{margin:-6px 0 2px;font-size:14px;font-weight:800;letter-spacing:.08em;background:var(--ink);color:var(--paper);padding:3px 10px;transform:rotate(-1deg)}
+.panel{width:min(100%,440px)}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:800;letter-spacing:.12em}
+.panel h3::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--pink);margin-right:6px;vertical-align:0;box-shadow:3px 0 0 var(--blue)}
+.seg{display:flex;gap:8px}
+.seg button,.themes button{border:2.5px solid var(--ink);border-radius:12px;background:var(--white);box-shadow:3px 3px 0 var(--ink);transition:transform .08s}
+.seg button:active,.themes button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.seg button{flex:1;padding:10px 4px;font-size:15px;font-weight:800;line-height:1.2}
+.seg button small{display:block;font-size:10px;font-weight:500;margin-top:2px}
+.seg button.on,.themes button.on{background:var(--blue);color:var(--white)}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.themes button{display:flex;align-items:center;gap:8px;padding:9px 10px;font-size:14px;font-weight:800;text-align:left}
+.themes button .ic{width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:22px}
+.themes button .ic img{width:100%;height:100%;object-fit:contain}
+.themes button.ai{grid-column:1/-1;border-style:dashed;box-shadow:none}
+.themes button.ai.on{background:var(--pink);color:var(--ink)}
+.ai-box{display:none;margin-top:10px}
+.ai-box.show{display:block}
+.ai-box input{width:100%;padding:12px;border-radius:12px;border:2.5px solid var(--ink);font-size:16px;font-family:inherit;background:var(--white);color:var(--ink)}
+.ai-box p{margin:6px 0 0;font-size:11px;line-height:1.5;color:#555}
+.start{width:min(100%,440px);padding:14px;border-radius:14px;border:2.5px solid var(--ink);background:var(--pink);color:var(--ink);
+  font-family:"Dela Gothic One",sans-serif;font-size:26px;box-shadow:5px 5px 0 var(--ink);margin:6px 0 10px}
+.start:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--ink)}
+.howto{font-size:12px;line-height:1.8;width:min(100%,440px)}
+.howto b{background:linear-gradient(transparent 55%,var(--pink-soft) 55%)}
+
+/* プレイ */
+#play{padding-top:calc(env(safe-area-inset-top) + 8px)}
+.hud{width:100%;max-width:520px;display:flex;align-items:center;gap:8px;font-weight:800}
+.hud .tname{flex:1;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.hud .stat{font-size:14px;background:var(--ink);color:var(--paper);padding:4px 10px;border-radius:20px;white-space:nowrap}
+.hud .quit{background:var(--white);border:2px solid var(--ink);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800}
+.players{width:100%;max-width:520px;display:none;gap:8px;margin-top:8px}
+.players.show{display:flex}
+.pl{flex:1;padding:6px 10px;border-radius:10px;background:var(--white);border:2.5px solid var(--ink);font-weight:800;font-size:14px;
+  display:flex;justify-content:space-between;opacity:.45;transition:.2s}
+.pl.turn{opacity:1;box-shadow:3px 3px 0 var(--ink)}
+.pl1.turn{background:var(--pink)} .pl2.turn{background:var(--blue);color:var(--white)}
+.ai-badge{display:none;margin-top:6px;font-size:11px;background:var(--ink);color:var(--paper);padding:2px 10px;border-radius:20px;font-weight:800}
+.ai-badge.show{display:block}
+.grid{display:grid;gap:7px;margin:10px auto 0;justify-content:center}
+.card{perspective:700px;position:relative}
+.card .inner{position:absolute;inset:0;transition:transform .35s;transform-style:preserve-3d}
+.card.up .inner,.card.done .inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:10px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;
+  border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+/* リソグラフ風の裏面：ピンクとブルーの2版を少しずらして刷った感じ */
+.back{background:var(--grain),radial-gradient(circle,var(--pink) 1.2px,transparent 1.6px) 0 0/7px 7px,var(--paper);
+  box-shadow:3px 3px 0 var(--ink),inset 0 0 0 5px var(--paper),inset 0 0 0 7.5px var(--blue)}
+.back::before{content:"";position:absolute;left:50%;top:50%;width:52%;aspect-ratio:1;border-radius:50%;background:var(--pink);
+  transform:translate(-48%,-48%)}
+.back::after{content:"ド";position:absolute;inset:0;display:grid;place-items:center;font-family:"Dela Gothic One",sans-serif;font-weight:800;
+  color:var(--blue);mix-blend-mode:multiply;font-size:28px;transform:translate(-2px,-1px)}
+body.has-back .back{background:var(--back-img) center/cover,var(--paper)}
+body.has-back .back::before,body.has-back .back::after{display:none}
+.front{transform:rotateY(180deg);background:var(--white);display:flex;flex-direction:column}
+.front .lab{align-self:center;margin-top:5px;font-size:10px;font-weight:800;padding:1px 8px;border-radius:20px;letter-spacing:.04em}
+.side-a .lab{background:var(--pink);color:var(--ink)} .side-b .lab{background:var(--blue);color:var(--white)}
+.side-a .front{border-color:var(--ink)} 
+.front .txt{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px 4px 6px;
+  font-weight:800;line-height:1.15;word-break:normal;overflow-wrap:anywhere;text-wrap:balance}
+.card.done .face{box-shadow:none}
+.card.done .front{background:var(--paper)}
+.card.done .front .txt{opacity:.45}
+.card.done.o1 .front{background:var(--pink-soft)}
+.card.done.o2 .front{background:var(--blue-soft)}
+.card.hit .front{animation:hit .5s}
+@keyframes hit{0%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.12)}100%{transform:rotateY(180deg) scale(1)}}
+.card.miss .front{animation:shake .4s}
+@keyframes shake{0%,100%{margin-left:0}25%{margin-left:-4px}75%{margin-left:4px}}
+
+.bottom{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 8px);display:flex;align-items:flex-end;gap:8px;padding:0 10px;max-width:540px;margin:0 auto}
+.mascot{width:64px;height:64px;flex:none;display:grid;place-items:center;font-size:44px}
+.mascot img{width:100%;height:100%;object-fit:contain;display:none}
+body.has-mascot .mascot img{display:block} body.has-mascot .mascot .emo{display:none}
+.bubble{flex:1;background:var(--white);color:var(--ink);border:2.5px solid var(--ink);border-radius:14px;padding:8px 12px;font-size:13px;font-weight:800;
+  line-height:1.5;position:relative;min-height:46px;display:flex;align-items:center}
+.bubble::before{content:"";position:absolute;left:-10px;bottom:12px;width:14px;height:14px;background:var(--white);border-left:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(45deg)}
+.bubble .hl-ok{color:var(--blue)}.bubble .hl-ng{color:var(--pink)}
+
+/* 結果 */
+#result{overflow-y:auto;gap:12px}
+#result h2{font-family:"Dela Gothic One";font-size:36px;margin:18px 0 0}
+.res-mascot{font-size:72px;width:120px;height:120px;display:grid;place-items:center}
+.res-mascot img{width:100%;height:100%;object-fit:contain;display:none}
+body.has-mascot .res-mascot img{display:block} body.has-mascot .res-mascot .emo{display:none}
+.res-stats{font-size:17px;font-weight:800;text-align:center;line-height:1.8}
+.res-stats .best{background:var(--pink);padding:2px 10px;border-radius:20px;font-size:13px}
+.review{background:var(--white);border:2.5px solid var(--ink);border-radius:14px;padding:12px;box-shadow:3px 3px 0 var(--ink)}
+.review ul{list-style:none;margin:0;padding:0;font-size:13px;font-weight:800}
+.review li{display:flex;gap:6px;padding:6px 0;border-bottom:1.5px dashed #ccc}
+.review li:last-child{border-bottom:none}
+.review li span:first-child{flex:1;text-align:right}
+.review li span:last-child{flex:1}
+.review li i{font-style:normal;color:var(--pink)}
+.btns{display:flex;gap:10px;width:min(100%,440px);margin:6px 0 14px}
+.btns button{flex:1;padding:13px;border-radius:12px;border:2.5px solid var(--ink);font-size:16px;font-weight:800;box-shadow:3px 3px 0 var(--ink)}
+.btns .again{background:var(--pink)}
+.btns .home{background:var(--white)}
+
+/* お知らせ */
+.overlay{position:fixed;inset:0;background:rgba(26,26,26,.45);display:none;align-items:center;justify-content:center;z-index:10;padding:20px}
+.overlay.show{display:flex}
+.dialog{background:var(--white);border:2.5px solid var(--ink);box-shadow:5px 5px 0 var(--ink);border-radius:16px;padding:20px;max-width:340px;width:100%;text-align:center;font-weight:800;line-height:1.6}
+.dialog .big{font-size:44px;display:block;margin-bottom:6px}
+.dialog .spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dialog button{margin-top:14px;padding:10px 24px;border-radius:10px;border:2.5px solid var(--ink);background:var(--blue);color:var(--white);font-size:15px;font-weight:800}
+.dialog p{font-size:13px;font-weight:500;margin:6px 0 0}
+
+/* 仕上げ */
+.logo{text-shadow:2px 2px 0 var(--pink-soft)}
+.themes button{font-size:13.5px;padding:8px 9px;line-height:1.2}
+.start{position:sticky;bottom:6px;z-index:2;flex:none;outline:8px solid var(--paper)}
+.hud{gap:5px}.hud .quit{padding:3px 8px;white-space:nowrap}.hud .stat{padding:4px 8px;font-size:13px}.hud .quit.off{opacity:.5}
+.mascot.pop,.res-mascot.pop{animation:pop .45s}
+@keyframes pop{0%{transform:scale(.8) rotate(-6deg)}55%{transform:scale(1.15) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
+.title-mascot{animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+.card:not(.up):not(.done):active .inner{transform:scale(.95)}
+.conf{position:absolute;top:-16px;width:8px;height:14px;border-radius:2px;pointer-events:none;animation:fall 2s ease-in forwards}
+@keyframes fall{to{transform:translateY(70vh) rotate(var(--r));opacity:0}}
+.mascot{position:relative;cursor:pointer}
+.hint-tag{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:800;
+  background:var(--blue);color:var(--white);border:2px solid var(--ink);border-radius:20px;padding:0 6px;line-height:1.5}
+.hint-tag.off{background:var(--white);color:var(--ink)}
+.bubble{cursor:pointer;transition:opacity .2s,transform .2s}
+.bubble.gone{opacity:0;transform:translateY(6px);pointer-events:none}
+.themes button.rnd{grid-column:1/-1}
+.home-link{font-size:12px;font-weight:800;color:var(--ink);margin:4px 0 18px}
+</style>
+</head>
+<body>
+
+<!-- タイトル -->
+<section id="title" class="screen show">
+  <div class="logo" id="logoText">神経<span class="do">ド</span>衰弱</div>
+  <img class="logo-img" id="logoImg" alt="神経ド衰弱">
+  <img class="title-mascot" src="assets/mascot-normal.png" alt="" onerror="this.remove()">
+  <p class="tagline">知っているのに、思い出せない。</p>
+
+  <div class="panel">
+    <h3>あそびかた</h3>
+    <div class="seg" id="modeSeg">
+      <button data-v="solo" class="on">ひとりで<small>タイムと手数に挑戦</small></button>
+      <button data-v="duo">ふたりで<small>交互にめくって対戦</small></button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>テーマ</h3>
+    <div class="themes" id="themeList"></div>
+    <div class="ai-box" id="aiBox">
+      <input id="aiInput" maxlength="30" placeholder="例：ジブリ映画と公開年／国と首都" autocomplete="off">
+      <p>AIがお題を作ります。AIはまちがえることがあるので、正解とちがう組み合わせが混ざるかもしれません。</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>むずかしさ</h3>
+    <div class="seg" id="diffSeg"></div>
+  </div>
+
+  <button class="start" id="startBtn">スタート</button>
+  <div class="howto">
+    カードを2枚めくって、<b>正しい組み合わせ</b>なら獲得。<br>
+    同じ答えのカードが何枚もあることも。<b>どれと組んでも正解</b>です。
+  </div>
+  <a class="home-link" href="/">← エクステン堂にもどる</a>
+</section>
+
+<!-- プレイ -->
+<section id="play" class="screen">
+  <div class="hud">
+    <div class="tname" id="hudTheme"></div>
+    <div class="stat" id="hudStat"></div>
+    <button class="quit" id="muteBtn">♪</button>
+    <button class="quit" id="quitBtn">やめる</button>
+  </div>
+  <div class="players" id="players">
+    <div class="pl pl1" id="pl1"><span>プレイヤー1</span><span id="sc1">0</span></div>
+    <div class="pl pl2" id="pl2"><span>プレイヤー2</span><span id="sc2">0</span></div>
+  </div>
+  <div class="ai-badge" id="aiBadge">AIが作ったお題・まちがいがあるかも</div>
+  <div class="grid" id="grid"></div>
+  <div class="bottom">
+    <div class="mascot" id="mascot"><span class="emo">🧠</span><img alt=""><span class="hint-tag" id="hintTag">ヒントON</span></div>
+    <div class="bubble" id="bubble"></div>
+  </div>
+</section>
+
+<!-- 結果 -->
+<section id="result" class="screen">
+  <h2 id="resTitle">おみごと！</h2>
+  <div class="res-mascot" id="resMascot"><span class="emo">🎉</span><img alt=""></div>
+  <div class="res-stats" id="resStats"></div>
+  <div class="panel review">
+    <h3>今回の答え</h3>
+    <ul id="reviewList"></ul>
+  </div>
+  <div class="btns">
+    <button class="home" id="homeBtn">テーマをえらぶ</button>
+    <button class="again" id="againBtn">もう一回</button>
+  </div>
+</section>
+
+<div class="overlay" id="overlay"><div class="dialog" id="dialog"></div></div>
+
+<script>
+"use strict";
+/* ================= お題データ =================
+   pairs: [左のカード, 右のカード]
+   同じ文字のカードは何枚あってもよい（どれと組んでも正解）。
+   ただし「1枚に対して違う相手が2つ以上正解」になる組み合わせ（W主演など）は入れない。 */
+const THEMES = [
+  { id:"drama", name:"ドラマ × 主演", a:"ドラマ", b:"主演", emoji:"📺", img:"icon-drama.png",
+    hintA:(a,b)=>`「${a}」の主演は「${b}」`, hintB:(b,a)=>`「${b}」の主演ドラマは「${a}」`,
+    pairs:[
+      ["半沢直樹","堺雅人"],["リーガル・ハイ","堺雅人"],["VIVANT","堺雅人"],
+      ["HERO","木村拓哉"],["教場","木村拓哉"],
+      ["ガリレオ","福山雅治"],["龍馬伝","福山雅治"],
+      ["下町ロケット","阿部寛"],["ドラゴン桜","阿部寛"],["結婚できない男","阿部寛"],
+      ["家政婦のミタ","松嶋菜々子"],["やまとなでしこ","松嶋菜々子"],
+      ["逃げるは恥だが役に立つ","新垣結衣"],["ドクターX","米倉涼子"],["古畑任三郎","田村正和"],
+      ["孤独のグルメ","松重豊"],["相棒","水谷豊"],["踊る大捜査線","織田裕二"],
+      ["花より男子","井上真央"],["アンナチュラル","石原さとみ"],["3年B組金八先生","武田鉄矢"],
+      ["ごくせん","仲間由紀恵"],["コード・ブルー","山下智久"]
+    ]},
+  { id:"busho", name:"戦国武将", a:"苗字", b:"名前", emoji:"⛩️", img:"icon-busho.png",
+    hintA:(a,b)=>`「${a}」といえば「${a}${b}」`, hintB:(b,a)=>`「${b}」は「${a}${b}」`,
+    pairs:[
+      ["徳川","家康"],["徳川","秀忠"],["徳川","家光"],["徳川","慶喜"],
+      ["豊臣","秀吉"],["豊臣","秀頼"],["武田","信玄"],["武田","勝頼"],
+      ["真田","幸村"],["真田","昌幸"],["織田","信長"],["上杉","謙信"],
+      ["伊達","政宗"],["毛利","元就"],["前田","利家"],["明智","光秀"],["石田","三成"],
+      ["今川","義元"],["加藤","清正"],["柴田","勝家"],["本多","忠勝"],["長宗我部","元親"]
+    ]},
+  { id:"kotowaza", name:"ことわざ", a:"前半", b:"後半", emoji:"📜", img:"icon-kotowaza.png",
+    hintA:(a,b)=>`「${a}${b}」`, hintB:(b,a)=>`「${a}${b}」`,
+    pairs:[
+      ["猿も","木から落ちる"],["犬も歩けば","棒に当たる"],["石の上にも","三年"],["急がば","回れ"],
+      ["花より","団子"],["猫に","小判"],["豚に","真珠"],["二兎を追う者は","一兎をも得ず"],
+      ["塵も積もれば","山となる"],["能ある鷹は","爪を隠す"],["七転び","八起き"],["百聞は","一見にしかず"],
+      ["笑う門には","福来る"],["雨降って","地固まる"],["弘法にも","筆の誤り"],["河童の","川流れ"],
+      ["果報は","寝て待て"],["三人寄れば","文殊の知恵"],["早起きは","三文の徳"],["鬼に","金棒"],
+      ["馬の耳に","念仏"],["井の中の蛙","大海を知らず"]
+    ]},
+  { id:"bungo", name:"文豪 × 作品", a:"作品", b:"作者", emoji:"✒️", img:"icon-bungo.png",
+    hintA:(a,b)=>`『${a}』の作者は「${b}」`, hintB:(b,a)=>`「${b}」の作品は『${a}』`,
+    pairs:[
+      ["坊っちゃん","夏目漱石"],["こころ","夏目漱石"],["吾輩は猫である","夏目漱石"],
+      ["人間失格","太宰治"],["走れメロス","太宰治"],["斜陽","太宰治"],
+      ["羅生門","芥川龍之介"],["蜘蛛の糸","芥川龍之介"],["鼻","芥川龍之介"],
+      ["銀河鉄道の夜","宮沢賢治"],["注文の多い料理店","宮沢賢治"],
+      ["雪国","川端康成"],["伊豆の踊子","川端康成"],["舞姫","森鷗外"],["高瀬舟","森鷗外"],
+      ["たけくらべ","樋口一葉"],["破戒","島崎藤村"],["金閣寺","三島由紀夫"]
+    ]},
+  { id:"manga", name:"マンガ × 作者", a:"マンガ", b:"作者", emoji:"📚", img:"icon-manga.png",
+    hintA:(a,b)=>`『${a}』の作者は「${b}」`, hintB:(b,a)=>`「${b}」の作品は『${a}』`,
+    pairs:[
+      ["ドラゴンボール","鳥山明"],["Dr.スランプ","鳥山明"],
+      ["SLAM DUNK","井上雄彦"],["バガボンド","井上雄彦"],
+      ["タッチ","あだち充"],["H2","あだち充"],
+      ["名探偵コナン","青山剛昌"],["YAIBA","青山剛昌"],
+      ["鉄腕アトム","手塚治虫"],["ブラック・ジャック","手塚治虫"],["火の鳥","手塚治虫"],
+      ["うる星やつら","高橋留美子"],["らんま1/2","高橋留美子"],["犬夜叉","高橋留美子"],
+      ["幽☆遊☆白書","冨樫義博"],["HUNTER×HUNTER","冨樫義博"],
+      ["ONE PIECE","尾田栄一郎"],["NARUTO","岸本斉史"],["鬼滅の刃","吾峠呼世晴"],["進撃の巨人","諫山創"],
+      ["ちびまる子ちゃん","さくらももこ"],["クレヨンしんちゃん","臼井儀人"],["ドラえもん","藤子・F・不二雄"]
+    ]},
+  { id:"movie", name:"映画 × 監督", a:"映画", b:"監督", emoji:"🎬", img:"icon-movie.png",
+    hintA:(a,b)=>`『${a}』の監督は「${b}」`, hintB:(b,a)=>`「${b}」の監督作は『${a}』`,
+    pairs:[
+      ["となりのトトロ","宮崎駿"],["千と千尋の神隠し","宮崎駿"],["もののけ姫","宮崎駿"],["魔女の宅急便","宮崎駿"],
+      ["火垂るの墓","高畑勲"],["かぐや姫の物語","高畑勲"],
+      ["君の名は。","新海誠"],["天気の子","新海誠"],["すずめの戸締まり","新海誠"],
+      ["サマーウォーズ","細田守"],["時をかける少女","細田守"],
+      ["七人の侍","黒澤明"],["羅生門","黒澤明"],
+      ["HANA-BI","北野武"],["菊次郎の夏","北野武"],
+      ["東京物語","小津安二郎"],["万引き家族","是枝裕和"],["おくりびと","滝田洋二郎"],["耳をすませば","近藤喜文"],["ゴジラ-1.0","山崎貴"]
+    ]},
+  { id:"song", name:"平成ヒット曲", a:"曲", b:"歌手", emoji:"🎤", img:"icon-song.png",
+    hintA:(a,b)=>`「${a}」を歌うのは「${b}」`, hintB:(b,a)=>`「${b}」の曲は「${a}」`,
+    pairs:[
+      ["世界に一つだけの花","SMAP"],["夜空ノムコウ","SMAP"],
+      ["First Love","宇多田ヒカル"],["Automatic","宇多田ヒカル"],
+      ["負けないで","ZARD"],["揺れる想い","ZARD"],
+      ["チェリー","スピッツ"],["ロビンソン","スピッツ"],
+      ["innocent world","Mr.Children"],["名もなき詩","Mr.Children"],
+      ["Hero","安室奈美恵"],["CAN YOU CELEBRATE?","安室奈美恵"],
+      ["TSUNAMI","サザンオールスターズ"],["LOVEマシーン","モーニング娘。"],["粉雪","レミオロメン"],
+      ["小さな恋のうた","MONGOL800"],["天体観測","BUMP OF CHICKEN"],["さくらんぼ","大塚愛"],
+      ["桜坂","福山雅治"],["島唄","THE BOOM"],["ハナミズキ","一青窈"],["キセキ","GReeeeN"],
+      ["Lemon","米津玄師"],["マリーゴールド","あいみょん"]
+    ]},
+  { id:"capital", name:"国 × 首都", a:"国", b:"首都", emoji:"🌏", img:"icon-capital.png",
+    hintA:(a,b)=>`${a}の首都は「${b}」`, hintB:(b,a)=>`「${b}」は${a}の首都`,
+    pairs:[
+      ["アメリカ","ワシントンD.C."],["イギリス","ロンドン"],["フランス","パリ"],["ドイツ","ベルリン"],
+      ["イタリア","ローマ"],["スペイン","マドリード"],["中国","北京"],["韓国","ソウル"],
+      ["タイ","バンコク"],["エジプト","カイロ"],["オーストラリア","キャンベラ"],["カナダ","オタワ"],
+      ["ブラジル","ブラジリア"],["トルコ","アンカラ"],["インド","ニューデリー"],["ロシア","モスクワ"],
+      ["ベトナム","ハノイ"],["ギリシャ","アテネ"],["ケニア","ナイロビ"],["スイス","ベルン"]
+    ]},
+  { id:"kencho", name:"県庁所在地", a:"都道府県", b:"県庁所在地", emoji:"🗾", img:"icon-kencho.png",
+    hintA:(a,b)=>`${a}の県庁所在地は「${b}」`, hintB:(b,a)=>`「${b}」は${a}の県庁所在地`,
+    pairs:[
+      ["北海道","札幌市"],["岩手県","盛岡市"],["宮城県","仙台市"],["茨城県","水戸市"],
+      ["栃木県","宇都宮市"],["群馬県","前橋市"],["埼玉県","さいたま市"],["神奈川県","横浜市"],
+      ["石川県","金沢市"],["山梨県","甲府市"],["愛知県","名古屋市"],["三重県","津市"],
+      ["滋賀県","大津市"],["兵庫県","神戸市"],["島根県","松江市"],["香川県","高松市"],
+      ["愛媛県","松山市"],["沖縄県","那覇市"]
+    ]},
+  { id:"yoji", name:"四字熟語", a:"前半", b:"後半", emoji:"🈴", img:"icon-yoji.png",
+    hintA:(a,b)=>`「${a}${b}」`, hintB:(b,a)=>`「${a}${b}」`,
+    pairs:[
+      ["一石","二鳥"],["一期","一会"],["以心","伝心"],["弱肉","強食"],["四面","楚歌"],["温故","知新"],
+      ["起死","回生"],["自業","自得"],["十人","十色"],["半信","半疑"],["異口","同音"],["単刀","直入"],
+      ["大器","晩成"],["花鳥","風月"],["試行","錯誤"],["電光","石火"],["優柔","不断"],["臨機","応変"],
+      ["危機","一髪"],["前代","未聞"],["絶体","絶命"],["七転","八倒"]
+    ]}
+];
+const RANDOM_META = { id:"random", name:"ランダム", emoji:"🎲", img:"icon-random.png" };
+const AI_THEME_META = { id:"ai", name:"AIにおまかせ", emoji:"⚡", img:"icon-ai.png" };
+const DIFFS = [
+  { id:"easy",   label:"かんたん",   pairs:6,  hint:true,  note:"6組・ヒントあり" },
+  { id:"normal", label:"ふつう",     pairs:8,  hint:true,  note:"8組・ヒントあり" },
+  { id:"hard",   label:"むずかしい", pairs:10, hint:false, note:"10組・ヒントなし" }
+];
+const AI_ENDPOINT = "/api/shinkei/generate";
+const AI_DAILY_LIMIT = 10;
+const ASSET = "assets/";
+
+/* ================= 小道具 ================= */
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+const key = (a,b) => a + "\u0000" + b;
+function store(k, v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k, v); }catch(e){ return null; } }
+
+/* 盤面が「どの順番で取っても最後まで揃う」かを調べる。
+   つながっているカードのまとまりごとに、
+   ・左と右の枚数が同じ ・まとまりの中の左右がすべて正解の組み合わせ
+   になっていれば、絶対に詰まない。 */
+function isSolvable(pairs, relation){
+  const parent = {};
+  const find = x => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+  const union = (x,y) => { parent[find(x)] = find(y); };
+  const A = pairs.map(p => "A:"+p[0]), B = pairs.map(p => "B:"+p[1]);
+  [...A, ...B].forEach(n => parent[n] = n);
+  const uA = [...new Set(pairs.map(p=>p[0]))], uB = [...new Set(pairs.map(p=>p[1]))];
+  uA.forEach(a => uB.forEach(b => { if(relation.has(key(a,b))) union("A:"+a, "B:"+b); }));
+  const groups = {};
+  const g = n => (groups[find(n)] ||= { a:new Set(), b:new Set(), na:0, nb:0 });
+  pairs.forEach(p => { const ga = g("A:"+p[0]); ga.a.add(p[0]); ga.na++; const gb = g("B:"+p[1]); gb.b.add(p[1]); gb.nb++; });
+  for(const gr of Object.values(groups)){
+    if(gr.na !== gr.nb) return false;
+    for(const a of gr.a) for(const b of gr.b) if(!relation.has(key(a,b))) return false;
+  }
+  return true;
+}
+
+function pickBoard(theme, n){
+  const relation = new Set(theme.pairs.map(p => key(p[0], p[1])));
+  const hasDupInPool = new Set(theme.pairs.map(p=>p[0])).size < theme.pairs.length || new Set(theme.pairs.map(p=>p[1])).size < theme.pairs.length;
+  let best = null;
+  for(let t=0; t<400; t++){
+    const pick = shuffle(theme.pairs).slice(0, n);
+    if(!isSolvable(pick, relation)) continue;
+    const dup = new Set(pick.map(p=>p[0])).size < n || new Set(pick.map(p=>p[1])).size < n;
+    best = pick;
+    if(!hasDupInPool || dup) break;   // 重複カードがある盤面を優先
+  }
+  return { pick: best, relation };
+}
+
+/* ================= 素材画像（あれば使う） ================= */
+function tryImg(name, ok){ const im = new Image(); im.onload = () => ok(im.src); im.src = ASSET + name; }
+tryImg("card-back.jpg", src => { document.documentElement.style.setProperty("--back-img", `url("${src}")`); document.body.classList.add("has-back"); });
+tryImg("bg.png", src => { document.documentElement.style.setProperty("--bg-img", `url("${src}")`); document.body.classList.add("has-bg"); });
+tryImg("logo.png", src => { $("logoImg").src = src; $("logoImg").style.display = "block"; $("logoText").style.display = "none"; });
+const MASCOT = { normal:"mascot-normal.png", ok:"mascot-correct.png", ng:"mascot-miss.png", clear:"mascot-clear.png" };
+const MASCOT_EMO = { normal:"🧠", ok:"💡", ng:"💦", clear:"🎉" };
+let mascotReady = 0;
+Object.values(MASCOT).forEach(n => tryImg(n, () => { if(++mascotReady === 4) document.body.classList.add("has-mascot"); }));
+function setMascot(el, mood){ el.querySelector(".emo").textContent = MASCOT_EMO[mood]; el.querySelector("img").src = ASSET + MASCOT[mood]; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+
+/* ================= タイトル画面 ================= */
+const state = { mode:"solo", themeId:"drama", diff:DIFFS[0], aiTheme:null, aiText:"" };
+
+function buildTitle(){
+  const list = $("themeList");
+  [...THEMES, RANDOM_META, AI_THEME_META].forEach(t => {
+    const b = document.createElement("button");
+    b.dataset.id = t.id; if(t.id === "ai") b.classList.add("ai"); if(t.id === "random") b.classList.add("rnd");
+    const ic = document.createElement("span"); ic.className = "ic"; ic.textContent = t.emoji;
+    tryImg(t.img, src => { ic.textContent = ""; const im = document.createElement("img"); im.src = src; ic.appendChild(im); });
+    const nm = document.createElement("span"); nm.textContent = t.id === "ai" ? "AIにお題をつくってもらう" : t.id === "random" ? "ランダム（どれが出るかはお楽しみ）" : t.name;
+    b.append(ic, nm);
+    b.onclick = () => { state.themeId = t.id; refreshTitle(); if(t.id==="ai") $("aiInput").focus(); };
+    list.appendChild(b);
+  });
+  DIFFS.forEach(d => {
+    const b = document.createElement("button"); b.dataset.v = d.id;
+    b.innerHTML = `${d.label}<small>${d.note}</small>`;
+    b.onclick = () => { state.diff = d; refreshTitle(); };
+    $("diffSeg").appendChild(b);
+  });
+  $("modeSeg").querySelectorAll("button").forEach(b => b.onclick = () => { state.mode = b.dataset.v; refreshTitle(); });
+  $("startBtn").onclick = onStart;
+  $("aiInput").addEventListener("keydown", e => { if(e.key === "Enter") onStart(); });
+  refreshTitle();
+}
+function refreshTitle(){
+  $("modeSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === state.mode));
+  $("themeList").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.id === state.themeId));
+  $("diffSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === state.diff.id));
+  $("aiBox").classList.toggle("show", state.themeId === "ai");
+}
+function show(id){ document.querySelectorAll(".screen").forEach(s => s.classList.toggle("show", s.id === id)); }
+
+function dialog(html, btn){
+  return new Promise(res => {
+    $("dialog").innerHTML = html;
+    if(btn){ const b = document.createElement("button"); b.textContent = btn; b.onclick = () => { $("overlay").classList.remove("show"); res(); }; $("dialog").appendChild(b); }
+    $("overlay").classList.add("show");
+    if(!btn) res();
+  });
+}
+const hideDialog = () => $("overlay").classList.remove("show");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function onStart(){
+  if(state.themeId === "random") return startGame(randomTheme());
+  if(state.themeId !== "ai") return startGame(THEMES.find(t => t.id === state.themeId));
+  const text = $("aiInput").value.trim();
+  if(!text){ await dialog(`<span class="big">✍️</span>テーマを入力してください<p>例：国と首都、ジブリ映画と公開年</p>`, "OK"); return; }
+  if(state.aiTheme && state.aiText === text && state.aiTheme.pairs.length >= state.diff.pairs) return startGame(state.aiTheme);
+  const today = new Date().toISOString().slice(0,10);
+  const used = Number(store("shinkei-ai-" + today) || 0);
+  if(used >= AI_DAILY_LIMIT){ await dialog(`<span class="big">😴</span>今日のAI生成はここまで<p>1日${AI_DAILY_LIMIT}回までです。また明日あそんでね。</p>`, "OK"); return; }
+  dialog(`<span class="big"><span class="spin">🧠</span></span>のうみそフル回転中…<p>「${esc(text)}」のカードを作っています。<br>30秒ほどかかります。</p>`);
+  try{
+    const theme = await generateAiTheme(text, state.diff.pairs);
+    store("shinkei-ai-" + today, String(used + 1));
+    state.aiTheme = theme; state.aiText = text;
+    hideDialog();
+    startGame(theme);
+  }catch(err){
+    hideDialog();
+    await dialog(`<span class="big">💦</span>お題を作れませんでした<p>${esc(err.message || "通信エラー")}</p>`, "もどる");
+  }
+}
+
+async function generateAiTheme(text, n){
+  let res;
+  try{
+    res = await fetch(AI_ENDPOINT, { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ theme:text, pairs:n }) });
+  }catch(e){ throw new Error("この画面ではAI生成が使えません。エクステン堂に載せたあとで使えるようになります。"); }
+  let data = null; try{ data = await res.json(); }catch(e){}
+  if(!res.ok || !data) throw new Error(res.status === 404 ? "この画面ではAI生成が使えません。エクステン堂に載せたあとで使えるようになります。" : ((data && data.error) || "AIの調子が悪いみたいです。少しあとで試してください。"));
+  if(!data.ok) throw new Error(data.error || "このテーマでは作れませんでした。");
+  // 念のため、ブラウザ側でも中身を確かめる
+  const t = data.theme || {};
+  const clean = s => String(s || "").trim().slice(0, 16);
+  const pairs = (Array.isArray(t.pairs) ? t.pairs : []).map(p => [clean(p[0]), clean(p[1])]).filter(p => p[0] && p[1]);
+  const seen = new Set(); const uniq = pairs.filter(p => !seen.has(p[0]) && seen.add(p[0]));
+  if(uniq.length < n) throw new Error("カードが足りませんでした。別のテーマで試してください。");
+  const theme = { id:"ai", name:clean(t.name) || text, a:clean(t.labelA) || "お題", b:clean(t.labelB) || "答え", pairs:uniq, isAi:true };
+  theme.hintA = (a,b) => `「${a}」→「${b}」`; theme.hintB = (b,a) => `「${b}」→「${a}」`;
+  if(!isSolvable(uniq, new Set(uniq.map(p => key(p[0],p[1]))))) throw new Error("うまく組めないカードがありました。もう一度試してください。");
+  return theme;
+}
+
+/* ================= ゲーム本体 ================= */
+let G = null;
+
+function startGame(theme){
+  const { pick, relation } = pickBoard(theme, state.diff.pairs);
+  if(!pick){ dialog(`<span class="big">💦</span>盤面を作れませんでした`, "OK"); return; }
+  const cards = shuffle([
+    ...pick.map((p,i) => ({ side:"a", text:p[0] })),
+    ...pick.map((p,i) => ({ side:"b", text:p[1] }))
+  ]).map((c,i) => ({ ...c, uid:i, state:"down", el:null }));
+  G = { theme, relation, pick, cards, open:[], busy:false, moves:0, start:0, timer:null,
+        duo: state.mode === "duo", turn:0, combo:0, hint: state.diff.hint, score:[0,0], left: pick.length, diff: state.diff };
+  $("hudTheme").textContent = (state.themeId === "random" && !theme.isAi ? "🎲 " : "") + theme.name;
+  $("players").classList.toggle("show", G.duo);
+  $("aiBadge").classList.toggle("show", !!theme.isAi);
+  $("sc1").textContent = "0"; $("sc2").textContent = "0";
+  renderGrid(); updateHud(); refreshHint();
+  setMascot($("mascot"), "normal");
+  say((state.themeId === "random" && !theme.isAi ? `お題は「${esc(theme.name)}」！ ` : "") + (G.duo ? `プレイヤー1からスタート！` : `よーい、ド衰弱！ 2枚めくってね`));
+  show("play");
+  layout();
+}
+
+function renderGrid(){
+  const grid = $("grid"); grid.innerHTML = "";
+  G.cards.forEach(c => {
+    const el = document.createElement("div"); el.className = "card side-" + c.side;
+    const inner = document.createElement("div"); inner.className = "inner";
+    const back = document.createElement("div"); back.className = "face back";
+    const front = document.createElement("div"); front.className = "face front";
+    const lab = document.createElement("div"); lab.className = "lab"; lab.textContent = c.side === "a" ? G.theme.a : G.theme.b;
+    const txt = document.createElement("div"); txt.className = "txt"; txt.textContent = c.text;
+    front.append(lab, txt); inner.append(back, front); el.appendChild(inner);
+    el.onclick = () => flip(c);
+    c.el = el; c.txtEl = txt; grid.appendChild(el);
+  });
+}
+
+function layout(){
+  if(!G) return;
+  const cols = G.cards.length <= 12 ? 3 : 4, rows = Math.ceil(G.cards.length / cols), gap = 7;
+  $("grid").style.marginTop = "10px";
+  const W = Math.min(window.innerWidth - 28, 520);
+  const top = $("grid").getBoundingClientRect().top;
+  const H = window.innerHeight - top - 96;
+  const ratio = 1.3;
+  let w = Math.floor((W - gap*(cols-1)) / cols);
+  const maxW = Math.floor((H - gap*(rows-1)) / rows / ratio);
+  w = Math.max(56, Math.min(w, maxW, 130));
+  const h = Math.floor(w * ratio);
+  $("grid").style.gridTemplateColumns = `repeat(${cols}, ${w}px)`;
+  $("grid").style.marginTop = (10 + Math.max(0, Math.floor((H - (h*rows + gap*(rows-1))) * 0.4))) + "px";
+  G.cards.forEach(c => {
+    c.el.style.width = w + "px"; c.el.style.height = h + "px";
+    const len = [...c.text].reduce((n, ch) => n + (ch.charCodeAt(0) < 256 ? 0.72 : 1), 0);
+    const inner = w - 16;
+    const lines = len <= 5.5 ? 1 : len <= 11 ? 2 : 3;
+    const per = Math.ceil(len / lines);
+    const tok = Math.max(0, ...(c.text.match(/[!-\xff]+/g) || []).map(t => t.length * 0.72));
+    const fs = Math.min(w * 0.3, inner / per * 0.95, tok ? inner / tok * 0.92 : 99);
+    c.txtEl.style.fontSize = fs.toFixed(1) + "px";
+  });
+}
+window.addEventListener("resize", layout);
+
+function updateHud(){
+  if(G.duo){
+    $("hudStat").textContent = `のこり ${G.left}組`;
+    $("pl1").classList.toggle("turn", G.turn === 0); $("pl2").classList.toggle("turn", G.turn === 1);
+    $("sc1").textContent = G.score[0]; $("sc2").textContent = G.score[1];
+  }else{
+    const sec = G.start ? Math.floor((Date.now() - G.start) / 1000) : 0;
+    $("hudStat").textContent = `${G.moves}手 ・ ${fmtTime(sec)}`;
+  }
+}
+const fmtTime = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+function say(html){ $("bubble").innerHTML = html; $("bubble").classList.remove("gone"); }
+
+async function flip(c){
+  if(G.busy || c.state !== "down" || G.open.length >= 2) return;
+  if(!G.start && !G.duo){ G.start = Date.now(); G.timer = setInterval(updateHud, 1000); }
+  c.state = "up"; c.el.classList.add("up"); G.open.push(c); sfx("flip");
+  if(G.open.length < 2) return;
+
+  G.busy = true; G.moves++;
+  const [x, y] = G.open;
+  const a = x.side === "a" ? x : y.side === "a" ? y : null;
+  const b = x.side === "b" ? x : y.side === "b" ? y : null;
+  const ok = a && b && G.relation.has(key(a.text, b.text));
+  await sleep(380);
+
+  if(ok){
+    [x, y].forEach(cc => { cc.state = "done"; cc.el.classList.remove("up"); cc.el.classList.add("done", "hit", G.duo ? (G.turn === 0 ? "o1" : "o2") : "o1"); });
+    G.left--; if(G.duo) G.score[G.turn]++; G.combo++; sfx("ok");
+    setMascot($("mascot"), "ok");
+    say(`<span><span class="hl-ok">${G.combo >= 2 ? G.combo + "連続ピンポーン！" : "ピンポーン！"}</span> ${esc(G.theme.hintA(a.text, b.text))}${G.duo ? `<br>プレイヤー${G.turn+1}、もう一回！` : ""}</span>`);
+    G.open = []; G.busy = false; updateHud();
+    if(G.left === 0){ await sleep(900); finish(); }
+    return;
+  }
+
+  [x, y].forEach(cc => cc.el.classList.add("miss")); G.combo = 0; sfx("ng");
+  setMascot($("mascot"), "ng");
+  let msg = `<span class="hl-ng">ド忘れ…！</span>`;
+  if(G.hint){
+    const hints = [];
+    [x, y].forEach(cc => {
+      if(cc.side === "a"){
+        const ans = [...new Set(G.pick.filter(p => p[0] === cc.text).map(p => p[1]))];
+        hints.push(G.theme.hintA(cc.text, ans.join("・")));
+      }else{
+        const ans = [...new Set(G.pick.filter(p => p[1] === cc.text).map(p => p[0]))];
+        hints.push(G.theme.hintB(cc.text, ans.join("・")));
+      }
+    });
+    msg += " " + [...new Set(hints)].map(esc).join("<br>");
+  }else if(x.side === y.side){
+    msg += ` ${esc(x.side === "a" ? G.theme.a : G.theme.b)}どうしはペアになりません`;
+  }
+  if(G.duo){ G.turn = 1 - G.turn; msg += `<br>プレイヤー${G.turn+1}の番`; }
+  say(`<span>${msg}</span>`);
+  await sleep(G.hint ? 1500 : 1000);
+  [x, y].forEach(cc => { cc.state = "down"; cc.el.classList.remove("up", "miss"); });
+  G.open = []; G.busy = false; updateHud();
+}
+
+function finish(){
+  clearInterval(G.timer); sfx("clear"); confetti();
+  const sec = G.start ? Math.round((Date.now() - G.start) / 1000) : 0;
+  setMascot($("resMascot"), "clear");
+  let stats = "";
+  if(G.duo){
+    const [s1, s2] = G.score;
+    $("resTitle").textContent = s1 === s2 ? "引き分け！" : `プレイヤー${s1 > s2 ? 1 : 2}の勝ち！`;
+    stats = `プレイヤー1：${s1}組　プレイヤー2：${s2}組`;
+  }else{
+    $("resTitle").textContent = "おみごと！";
+    stats = `${G.moves}手 ・ ${fmtTime(sec)}`;
+    if(!G.theme.isAi){
+      const k = `shinkei-best-${G.theme.id}-${G.diff.id}`;
+      const prev = JSON.parse(store(k) || "null");
+      const better = !prev || G.moves < prev.moves || (G.moves === prev.moves && sec < prev.sec);
+      if(better) store(k, JSON.stringify({ moves:G.moves, sec }));
+      stats += `<br><span class="best">${better ? "🏆 自己ベスト更新！" : `自己ベスト：${prev.moves}手 ・ ${fmtTime(prev.sec)}`}</span>`;
+    }
+  }
+  $("resStats").innerHTML = stats;
+  const ul = $("reviewList"); ul.innerHTML = "";
+  G.pick.forEach(p => {
+    const li = document.createElement("li");
+    const s1 = document.createElement("span"); s1.textContent = p[0];
+    const mid = document.createElement("i"); mid.textContent = "×";
+    const s2 = document.createElement("span"); s2.textContent = p[1];
+    li.append(s1, mid, s2); ul.appendChild(li);
+  });
+  show("result");
+}
+
+$("quitBtn").onclick = async () => { clearInterval(G && G.timer); show("title"); };
+$("againBtn").onclick = () => startGame(state.themeId === "random" && !G.theme.isAi ? randomTheme() : G.theme);
+function randomTheme(){ const pool = THEMES.filter(t => !G || t !== G.theme); return pool[Math.floor(Math.random() * pool.length)]; }
+$("homeBtn").onclick = () => show("title");
+
+/* ================= 音と紙吹雪 ================= */
+let AC = null, muted = store("shinkei-mute") === "1";
+function tone(freq, at, dur, type, vol){
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || "sine"; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol || 0.14, AC.currentTime + at);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + at + dur);
+  o.connect(g); g.connect(AC.destination); o.start(AC.currentTime + at); o.stop(AC.currentTime + at + dur + 0.02);
+}
+function sfx(kind){
+  if(muted) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if(AC.state === "suspended") AC.resume();
+    if(kind === "flip") tone(520, 0, 0.06, "triangle", 0.08);
+    if(kind === "ok"){ tone(1319, 0, 0.22); tone(1047, 0.2, 0.45); }
+    if(kind === "ng"){ tone(130, 0, 0.16, "sawtooth", 0.09); tone(130, 0.2, 0.28, "sawtooth", 0.09); }
+    if(kind === "clear") [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.11, 0.3));
+  }catch(e){}
+}
+function refreshMute(){ $("muteBtn").textContent = muted ? "♪OFF" : "♪ON"; $("muteBtn").classList.toggle("off", muted); }
+$("muteBtn").onclick = () => { muted = !muted; store("shinkei-mute", muted ? "1" : "0"); refreshMute(); if(!muted) sfx("flip"); };
+refreshMute();
+function refreshHint(){ const on = !!(G && G.hint); $("hintTag").textContent = on ? "ヒントON" : "ヒントOFF"; $("hintTag").classList.toggle("off", !on); }
+$("mascot").onclick = () => { if(!G) return; G.hint = !G.hint; refreshHint(); sfx("flip"); setMascot($("mascot"), G.hint ? "ok" : "normal"); say(G.hint ? "ヒントON！ はずれたら正解を教えるよ" : "ヒントOFF！ 自力でがんばって"); };
+$("bubble").onclick = () => $("bubble").classList.add("gone");
+function confetti(){
+  document.querySelectorAll(".conf").forEach(e => e.remove());
+  for(let i = 0; i < 28; i++){
+    const d = document.createElement("div"); d.className = "conf";
+    d.style.left = (Math.random() * 100) + "%";
+    d.style.background = i % 2 ? "var(--pink)" : "var(--blue)";
+    d.style.animationDelay = (Math.random() * 0.5) + "s";
+    d.style.setProperty("--r", (Math.random() * 720 - 360) + "deg");
+    $("result").appendChild(d);
+    setTimeout(() => d.remove(), 2600);
+  }
+}
+
+buildTitle();
+</script>
+</body>
+</html>
