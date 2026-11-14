@@ -182,7 +182,7 @@ function fallbackInfo(){const p=a=>a[(Math.random()*a.length)|0];const sp=p(['�
   line:p(['……ここ、来たことある気がする。','ねえ、明日もこの道で待ってて。','遅いよ。……ずっと待ってたんだから。','たぶん、ここから全部はじまったんだ。']),
   scene:`${sp}がこの場所で立ち止まる、物語の転機になる場面。`,cast:''};}
 const DAY_LIMIT=20;
-function dayCount(add){try{const k='seichi_draw_'+new Date().toISOString().slice(0,10);let n=+(localStorage.getItem(k)||0);if(add){n++;localStorage.setItem(k,n);}return n;}catch(e){return 0;}}
+function dayCount(add){try{const k='seichi_v2_'+new Date().toISOString().slice(0,10);let n=+(localStorage.getItem(k)||0);if(add){n++;localStorage.setItem(k,n);}return n;}catch(e){return 0;}}
 
 async function makeInfo(){
  wait(true,'……あれ？この景色、どこかで…',['見たことある気がする…','たしか、あのアニメの…','ちょっと待って、思い出すから']);
