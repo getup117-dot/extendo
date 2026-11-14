@@ -47,6 +47,7 @@ h1 small{display:block;font-size:18px;color:var(--blue);margin-bottom:2px}
 .btn.primary{background:var(--accent);color:#fff}
 .btn.dark{background:var(--ink);color:#fff}
 .btn.wide{grid-column:1/-1}
+#postX{background:#000}
 .btn:disabled{opacity:.5}
 section.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
 h2{margin:0 0 12px;font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
@@ -96,7 +97,7 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
     </div>
 
     <section class="panel" id="infoPanel">
-      <h2>捏造されたアニメ</h2>
+      <h2>登場シーン</h2>
       <div class="info" id="infoView"></div>
       <details>
         <summary>設定を自分で書き換える</summary>
@@ -114,10 +115,14 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
     </section>
 
     <section class="panel">
-      <h2>SNSに投稿するなら</h2>
+      <h2>Xに投稿する</h2>
       <div class="info" id="capTxt"></div>
-      <div class="actions"><button id="copyCap" class="btn dark wide">文章をコピー</button></div>
-      <p class="note" id="copyMsg"></p>
+      <div class="actions">
+        <button id="postX" class="btn dark wide">𝕏 画像つきでXに投稿</button>
+        <button id="copyCap" class="btn">文章をコピー</button>
+        <button id="textX" class="btn">文章だけでXを開く</button>
+      </div>
+      <p class="note" id="copyMsg">「画像つきでXに投稿」を押すと共有メニューが開きます。そこでXを選んでください。</p>
     </section>
   </div>
 
@@ -141,7 +146,7 @@ function wait(on,t,lines){$('#wait').classList.toggle('on',on);clearInterval(wai
  const w=$('#waitTitle');w.classList.toggle('hide',!lines||!lines.length);if(!lines||!lines.length)return;let i=0;w.textContent=lines[0];
  waitTimer=setInterval(()=>{i=(i+1)%lines.length;w.textContent=lines[i];},3200);}
 function showErr(t){const e=$('#err');e.classList.toggle('hide',!t);e.textContent=t||'';}
-function setBusy(b){busy=b;['#redraw','#remake','#another'].forEach(id=>$(id).disabled=b);$('#save').disabled=b||!resultBlob;}
+function setBusy(b){busy=b;['#redraw','#remake','#another'].forEach(id=>$(id).disabled=b);['#save','#postX'].forEach(id=>$(id).disabled=b||!resultBlob);}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function caption(){const I=S.info;if(!I)return'';return `『${I.title}』第${I.episode}話「${I.subtitle}」の聖地に来ました。${S.place?S.place+'。':''}${I.speaker?I.speaker+'が':''}「${I.line}」って言ったあの場所、本当にあった……！ #どこでも聖地 #聖地巡礼`;}
@@ -236,6 +241,12 @@ $('#save').onclick=async()=>{if(!resultBlob)return;
  const file=new File([resultBlob],`seichi_${Date.now()}.jpg`,{type:'image/jpeg'});
  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:caption()});return;}}catch(e){if(e&&e.name==='AbortError')return;}
  const a=document.createElement('a');a.href=URL.createObjectURL(resultBlob);a.download=file.name;document.body.appendChild(a);a.click();a.remove();};
+function openX(){window.open('https://x.com/intent/post?text='+encodeURIComponent(caption()),'_blank','noopener');}
+$('#textX').onclick=openX;
+$('#postX').onclick=async()=>{if(!resultBlob)return;
+ const file=new File([resultBlob],`seichi_${Date.now()}.jpg`,{type:'image/jpeg'});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:caption()});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ openX();$('#copyMsg').textContent='この端末では画像を直接渡せないので、文章だけでXを開きました。画像は「保存・シェア」で保存して添付してください。';};
 $('#copyCap').onclick=async()=>{try{await navigator.clipboard.writeText(caption());$('#copyMsg').textContent='コピーしました';}catch(e){$('#copyMsg').textContent='コピーできませんでした。上の文章を長押しで選んでください。';}};
 })();
 </script>
