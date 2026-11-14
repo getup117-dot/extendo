@@ -59,6 +59,17 @@ const clip = (s, n) => [...String(s ?? "").trim()].slice(0, n).join("");
 
 /* ---------- 設定の捏造（Claude） ---------- */
 // 設定が学園ものに偏らないよう、ジャンルと主人公像を毎回くじ引きで決める
+// タイトルの型も毎回くじ引き（同じ言葉・同じ形が続かないように）
+const TITLE_PATTERNS = [
+  "短い名詞ひとつかふたつ（例の形：『〇〇』『〇〇と〇〇』）",
+  "ラノベ風の長い文章タイトル（例の形：『〇〇したら〇〇だった件』『〇〇なのに〇〇してしまう』）",
+  "カタカナ語や英単語を使った響き重視のタイトル",
+  "主人公の名前やあだ名が入ったタイトル（例の形：『〇〇さんは〇〇』）",
+  "セリフや呼びかけの形のタイトル（例の形：『〇〇しようよ、〇〇』）",
+  "ひらがな多めの柔らかいタイトル",
+  "漢字の熟語を組み合わせた硬めのタイトル",
+  "数字や記号が入ったタイトル（例の形：『〇〇の365日』『〇〇×〇〇』）",
+];
 const GENRE_POOL = [
   ["お仕事もの", "配達員・郵便局員・駅員・清掃員・町工場の職人など、働く大人"],
   ["グルメ", "定食屋の店主、食べ歩きが趣味の会社員、屋台の料理人"],
@@ -86,7 +97,7 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - 写真に写っているもの（建物・看板・階段・手すり・道・空・植物・時間帯・天気など）を具体的に拾い、劇中の場面に結びつける。
 - 実在する作品名・キャラクター名・制作会社名・実在の人物は使わない。似せない。
 - 指定されたジャンルと主人公像を必ず守る。学園もの・制服・放課後に寄せない（ジャンルが「青春・学園」のときだけ使ってよい）。登場人物の年齢・職業・種族も幅広く。
-- タイトルは実在しそうな深夜アニメ／ライトノベル原作っぽく（8〜20字）。
+- タイトルは実在しそうなTVアニメっぽく、指定された「タイトルの型」で（4〜24字）。写真に写っている物の名前（路地裏・路地・レンガ・パレット・電柱・壁・坂・階段など）や「放課後」はタイトルに入れない。物語のテーマや主人公で名付ける。写真の物はサブタイトルや場面で使う。
 - サブタイトルは話数タイトルらしく（5〜16字）。
 - セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。
 - cast は、このカットに映る登場人物の見た目（1〜2人、髪型・服装・ポーズ）を60字以内で。健全な内容にする。
@@ -96,7 +107,7 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - 性的・暴力的・差別的な内容は入れない。
 
 出力はJSONだけ（説明やコードブロックは付けない）：
-{"title":"","episode":1から12の数字,"subtitle":"","speaker":"キャラの下の名前","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","style":"seishun","card":{"x":0.5,"y":0.45}}`;
+{"title":"","episode":1,"subtitle":"","speaker":"キャラの下の名前","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","style":"seishun","card":{"x":0.5,"y":0.45}}`;
 
 async function handleInfo(request, env) {
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "AIの捏造はまだ準備中です。" }, 503);
@@ -115,7 +126,7 @@ async function handleInfo(request, env) {
         model: CLAUDE_MODEL, max_tokens: 800, system: INFO_SYSTEM,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.image } },
-          { type: "text", text: `ジャンル：${genre}${hero ? `\n主人公像のヒント：${hero}` : ""}\n撮影場所のメモ：${place || "なし"}` },
+          { type: "text", text: `ジャンル：${genre}${hero ? `\n主人公像のヒント：${hero}` : ""}\nタイトルの型：${TITLE_PATTERNS[Math.floor(Math.random() * TITLE_PATTERNS.length)]}\n撮影場所のメモ：${place || "なし"}` },
         ] }],
       }),
     });
@@ -125,7 +136,7 @@ async function handleInfo(request, env) {
     const s = text.indexOf("{"), e = text.lastIndexOf("}");
     const v = JSON.parse(text.slice(s, e + 1));
     return json({ ok: true, info: {
-      title: clip(v.title, 30), episode: Math.min(99, Math.max(1, parseInt(v.episode) || 1)),
+      title: clip(v.title, 30), episode: 1 + Math.floor(Math.random() * 24), // 話数はAIに任せると偏るので、1〜24話からランダム
       subtitle: clip(v.subtitle, 24), speaker: clip(v.speaker, 10), line: clip(v.line, 40),
       scene: clip(v.scene, 60), cast: clip(v.cast, 80),
       style: STYLE_EN[v.style] ? v.style : "seishun",
