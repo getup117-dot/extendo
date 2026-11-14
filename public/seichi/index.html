@@ -36,9 +36,9 @@ h1 small{display:block;font-size:18px;color:var(--blue);margin-bottom:2px}
 .preview img{display:block;width:100%;height:auto}
 .wait{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(20,24,36,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;text-align:center;padding:20px}
 .wait.on{display:flex}
-.wait b{font-size:17px;font-weight:900}
+.wait b{font-size:19px;font-weight:900;line-height:1.5;max-width:92%}
 .wait p{margin:0;font-size:12.5px;opacity:.85;line-height:1.7}
-.wait .ttl{font-family:"Dela Gothic One",sans-serif;font-size:15px;opacity:1;background:rgba(255,255,255,.14);padding:6px 12px;border-radius:999px}
+.wait .ttl{font-size:15px;font-weight:700;opacity:1;background:rgba(255,255,255,.14);padding:8px 14px;border-radius:999px;max-width:92%}
 .spin{width:38px;height:38px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .err{background:#fff0f0;border:1.5px solid #ffc9cb;color:#b4232a;border-radius:12px;padding:12px;font-size:13.5px;line-height:1.6;margin-top:12px}
@@ -84,7 +84,7 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
   <div id="studio" class="hide">
     <div class="preview">
       <img id="out" alt="聖地巡礼写真">
-      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">30秒ほど。画面はこのままで</p></div>
+      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">（30秒ほどかかります。画面はこのままで）</p></div>
     </div>
     <div class="err hide" id="err"></div>
 
@@ -136,7 +136,10 @@ let photo=null, photoURL='', resultBlob=null, busy=false;
 /* ---------- UI部品 ---------- */
 function chips(el,items,cur,on){el.innerHTML='';items.forEach(([v,l])=>{const b=document.createElement('button');b.className='chip'+(v===cur?' on':'');b.textContent=l;b.onclick=()=>{[...el.children].forEach(c=>c.classList.remove('on'));b.classList.add('on');on(v);};el.appendChild(b);});}
 
-function wait(on,t,title){$('#wait').classList.toggle('on',on);if(t)$('#waitT').textContent=t;const w=$('#waitTitle');w.classList.toggle('hide',!title);if(title)w.textContent=title;}
+let waitTimer=null;
+function wait(on,t,lines){$('#wait').classList.toggle('on',on);clearInterval(waitTimer);if(!on)return;if(t)$('#waitT').textContent=t;
+ const w=$('#waitTitle');w.classList.toggle('hide',!lines||!lines.length);if(!lines||!lines.length)return;let i=0;w.textContent=lines[0];
+ waitTimer=setInterval(()=>{i=(i+1)%lines.length;w.textContent=lines[i];},3200);}
 function showErr(t){const e=$('#err');e.classList.toggle('hide',!t);e.textContent=t||'';}
 function setBusy(b){busy=b;['#redraw','#remake','#another'].forEach(id=>$(id).disabled=b);$('#save').disabled=b||!resultBlob;}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -194,7 +197,7 @@ const DAY_LIMIT=20;
 function dayCount(add){try{const k='seichi_draw_'+new Date().toISOString().slice(0,10);let n=+(localStorage.getItem(k)||0);if(add){n++;localStorage.setItem(k,n);}return n;}catch(e){return 0;}}
 
 async function makeInfo(){
- wait(true,'架空アニメを捏造しています…');
+ wait(true,'……あれ？この景色、どこかで…',['見たことある気がする…','たしか、あのアニメの…','ちょっと待って、思い出すから']);
  try{const v=await api('/api/seichi/info',{image:scaled(768,.85),genre:S.genre==='おまかせ'?'':S.genre,place:S.place});S.info=v.info;}
  catch(e){S.info=fallbackInfo();}
  showInfo();
@@ -204,7 +207,7 @@ async function show(blob){resultBlob=blob;$('#out').src=URL.createObjectURL(blob
 async function makeFrame(){
  if(dayCount()>=DAY_LIMIT)throw new Error(`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`);
  G=plan();
- wait(true,'劇中カットを描いています…','『'+S.info.title+'』');
+ const I=S.info;wait(true,`あ！ここ『${I.title}』の聖地じゃん！`,[`ほら、第${I.episode}話の…`,`「${I.subtitle}」の回！`,...(I.line?[`${I.speaker?I.speaker+'が':''}「${I.line}」って言うとこ！`]:[]),'劇中カット、いま探してくるね…']);
  const f=await api('/api/seichi/draw',{mode:'frame',image:toB64(G.real,'image/jpeg',.9),w:1536,h:1024,
   style:S.info.style||S.style,chars:S.chars,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast});
  frameImg=await loadImg(f.image);dayCount(true);
