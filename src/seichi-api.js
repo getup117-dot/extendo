@@ -126,9 +126,9 @@ function framePrompt(b) {
     ? `Add a TV-style Japanese subtitle at the bottom center in white text with a thin dark outline that reads exactly: 「${line}」`
     : "No text anywhere.";
   return [
-    "Redraw this photo as a single frame (a screenshot) of a high-quality Japanese TV anime.",
-    "CRITICAL: keep exactly the same framing, camera angle, perspective and scale. Every building outline, roof line, wall edge, window, pole, pipe, wire, road edge and curb must stay at exactly the same position and size in the image, so the drawing can be laid precisely over the photo. Do not crop, zoom, shift, add or remove any structure.",
-    "Small details may change freely: textures, signs, text on objects, clutter can be simplified or reinterpreted in anime style.",
+    "Completely repaint this photo as a single frame (a screenshot) of a high-quality Japanese TV anime. The entire image, edge to edge, must become hand-drawn anime art: flat cel shading, clean ink outlines, simplified painted textures. No photographic texture, noise or realism may remain anywhere (walls, bricks, asphalt, poles, pipes, metal all become anime-painted).",
+    "At the same time, keep exactly the same framing, camera angle, perspective and scale. Every building outline, roof line, wall edge, window, pole, pipe, wire, road edge and curb must stay at exactly the same position and size in the image, so the drawing can be laid precisely over the photo. Do not crop, zoom, shift, add or remove any structure.",
+    "Small details may change freely: textures, signs, text on objects and clutter can be simplified or reinterpreted. Only the big outlines must stay in place.",
     `Style: detailed hand-painted anime background art, clean line art, cel-shaded, ${style}. The sky may be replaced with an anime sky.`,
     people, sub,
     "No logos, watermarks or user interface.",
