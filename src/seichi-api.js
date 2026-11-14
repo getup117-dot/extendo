@@ -4,7 +4,7 @@
 //   → Claude が写真を見て、架空アニメの設定（タイトル・話数・サブタイトル・セリフ・場面・登場人物）を捏造する
 //   → { ok:true, info:{ title, episode, subtitle, speaker, line, scene, cast } }
 //
-// POST /api/seichi/draw  { image:"<写真のjpeg base64>", w, h, style:"seishun", chars:1, sub:true, line, scene, cast }
+// POST /api/seichi/draw  { image:"<写真のjpeg base64>", mask:"<カードと手を置く場所を透明にしたpng>", w, h, style:"seishun", chars:1, sub:true, line, scene, cast }
 //   → GPT（OpenAI の画像API）が、写真の前に「同じ場所のアニメのカード」を手で掲げた聖地巡礼写真に編集する
 //   → { ok:true, image:"data:image/jpeg;base64,..." }
 //
@@ -124,12 +124,12 @@ function drawPrompt(b) {
     : "There is no text at all on the card.";
   return [
     "Edit this photo into a realistic anime pilgrimage photo (聖地巡礼写真), the kind fans take when they visit a real location that appears in an anime.",
-    "Keep the real photo as the background: the same place, composition, camera angle, lighting and photographic look. Do not stylize the background.",
-    "In the foreground, add one real human hand (natural, photorealistic skin and fingers, holding it like a person taking the photo with a phone) holding up a glossy printed photo card in landscape orientation, roughly the size of a postcard, held at arm's length so it covers about half the width of the photo.",
-    "The card shows a still frame from a high-quality Japanese TV anime that depicts exactly the same place from the same angle, so the buildings, poles, wires, roads, walls and other lines in the card line up and continue with the real background behind the card.",
+    "Only edit inside the transparent area of the mask. Everything outside it must stay exactly as in the original photo.",
+    "Inside the masked area, add one real human hand (natural, photorealistic skin and fingers, as if the person taking the photo with a phone is holding it) coming from the bottom of the frame, holding up a glossy printed photo card in landscape orientation. The card fills the large rectangular part of the masked area; the hand fills the lower part that reaches the bottom edge.",
+    "The card shows a still frame from a high-quality Japanese TV anime depicting exactly the part of the real scene that the card covers, at the same position and scale, so that buildings, poles, pipes, wires, roads, walls and every other line continue seamlessly from the real background into the card across all four card edges. The whole card area is anime art, edge to edge, including walls and pipes.",
     `Anime frame style: detailed hand-painted anime background art, clean line art, cel-shaded, ${style}. ${people}`,
     sub,
-    "Make it look like a real photograph: the card has a slight perspective, soft shadow and subtle reflection; the hand and card are in focus and the background is very slightly softer.",
+    "Make it look like a real photograph of a real card: slight thickness, soft shadow on the hand and a subtle glossy reflection.",
     "No other text, logos, watermarks or user interface anywhere.",
   ].join("\n");
 }
@@ -155,12 +155,15 @@ async function handleDraw(request, env) {
   if (tooMany(ip, "draw", 6, 10 * 60 * 1000)) return json({ ok: false, error: "10分に6枚までです。少し休憩してから。" }, 429);
 
   const prompt = drawPrompt(body);
+  const maskB64 = String(body.mask ?? "").replace(/^data:image\/\w+;base64,/, "");
+  const mask = maskB64 && maskB64.length < MAX_B64 ? b64ToBlob(maskB64, "image/png") : null;
   const models = env.OPENAI_IMAGE_MODEL ? [env.OPENAI_IMAGE_MODEL] : IMAGE_MODELS;
   let lastErr = "";
   for (const model of models) {
     const fd = new FormData();
     fd.append("model", model);
     fd.append("image", b64ToBlob(body.image, "image/jpeg"), "photo.jpg");
+    if (mask) fd.append("mask", mask, "mask.png");
     fd.append("prompt", prompt);
     fd.append("size", sizeFor(model, body.w, body.h));
     fd.append("quality", "medium");
