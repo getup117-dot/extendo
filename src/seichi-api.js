@@ -122,12 +122,12 @@ async function handleInfo(request, env) {
 const STYLE_REFS = ["/seichi/style/target_color.jpg", "/seichi/style/target_sheet.jpg"];
 const MY_STYLE = [
   "Drawing style: match the artist's style shown in the reference images. Reference 1 (the colored girl) shows the target finish and coloring. Reference 2 (the character sheet) shows the character designs, faces and the loose line feel.",
-  "Line work: loose, lively hand-drawn lines like the references: slightly sketchy, a few overlapping or doubled strokes and open line ends, varying a little in pressure, but readable and finished. Near-black line color. Never vector-smooth or mechanical, and never messy construction lines.",
+  "Line work on the CHARACTERS: loose, lively hand-drawn lines like the references: slightly sketchy, a few overlapping or doubled strokes and open line ends, varying a little in pressure, but readable and finished. Near-black line color. Never messy construction lines.",
   "Coloring: hand-made TV anime coloring like reference 1, NOT AI-looking. No airbrush, no texture, no noise, no grain, no glow, bloom, rim light, lens flare, light rays, sparkles or bokeh anywhere.",
-  "Characters: flat color fills, one solid color per area (hair, skin, uniform, socks, shoes), with no shading, no highlights and no gradients, except tiny blush marks on the cheeks like the references.",
-  "Background: more richly colored than the characters, like a soft hand-painted anime background: natural, slightly soft colors with a couple of hard-edged shadow and light tones, a colored sky with simple clouds, gentle daylight. Materials like bricks and asphalt are suggested with a few loose lines and color patches, not photo-real detail.",
+  "Characters: mostly flat color fills, one solid color per area (hair, skin, uniform, socks, shoes), plus at most one light, subtle hard-edged shadow tone like reference 1, and tiny blush marks on the cheeks. No highlights, no gradients.",
+  "Background: NOT drawn in the ballpoint/sketchy line style. A clean, hand-painted TV anime background: neat thin outlines (or color edges without outlines), more richly colored than the characters, natural slightly soft colors with a couple of hard-edged shadow and light tones, a colored sky with simple clouds, gentle daylight. Materials like bricks and asphalt are suggested with simple pattern and color patches, not photo-real detail.",
   "People look like the references: simple round faces, bangs drawn as several straight strands, small dot eyes with short expressive eyebrow lines, simple ears, a minimal nose, a big expressive mouth, a few stray hair strands (ahoge). No construction lines across the forehead; hair covers the forehead cleanly.",
-  "The whole picture, people and background, must look drawn by the same artist.",
+  "The characters (sketchy lines) and the clean painted background should still sit together naturally in one anime frame.",
 ].join(" ");
 function framePrompt(b) {
   const chars = Math.min(2, Math.max(0, parseInt(b.chars) || 0));
