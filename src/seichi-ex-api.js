@@ -19,19 +19,8 @@ const HERO_REF = "/seichi-ex/hero/hero_sheet.jpg";
 const HERO_JA = "麦わらのカンカン帽（黒いリボン）、金ぶちの丸いサングラス、口ひげとあごひげ、肩まである黒髪、赤地に白ラインのジャージ（前を開けて黒Tシャツ）、黒いズボンの男";
 const HERO_EN = "a man in his 30s with shoulder-length straight black hair, a straw boater hat (flat crown, flat brim) with a wide black band, small perfectly round dark sunglasses with thin gold wire frames, a mustache and a goatee beard, an open red track jacket with white stripes on the shoulders and sleeves over a plain black T-shirt, and black pants";
 
-// 絵柄：縛りなし。作品ごとに雰囲気に合うものをAIが選ぶ
-const STYLE_EN = {
-  tv: "modern Japanese TV anime: clean line art, cel shading, bright colors, detailed painted background",
-  movie: "Japanese animated feature film: richly painted detailed background, dramatic sky and lighting, cinematic composition",
-  cel90: "1990s hand-painted cel animation: slightly faded film colors, subtle film grain, thick outlines",
-  gekiga: "gritty seinen anime / gekiga style: heavy shadows, strong hatching, intense faces, muted colors",
-  chibi: "cute comedy anime style: super-deformed proportions, big heads, bold outlines, pop bright colors",
-  showa: "1970s Showa-era anime: limited color palette, hand-painted posterlike backgrounds, retro character design",
-  shoujo: "shoujo anime style: soft pastel colors, sparkling atmosphere, delicate thin lines, flowers and light",
-  noir: "dark noir anime: deep shadows, neon accents, rainy cinematic night mood",
-  mecha: "80s-90s mecha anime: sharp angular line art, metallic shading, dramatic speed lines",
-  watercolor: "gentle watercolor slice-of-life anime: soft edges, warm light, airy pastel palette",
-};
+// 絵柄：かっこいい劇画タッチで固定（時間帯や天気は写真に合わせる）
+const GEKIGA_EN = "cool, dramatic Japanese gekiga style like a hard-boiled seinen anime: bold confident ink lines with varied weight, heavy solid black shadows, sharp hatching and cross-hatching on shadows, strong chiaroscuro contrast, intense determined expression with a chiseled face, cinematic low-key lighting, gritty texture, slightly muted rich colors with a few vivid accents (the red jacket). The background is drawn in the same gekiga manner: detailed ink linework, dramatic shadows, textured surfaces. Match the time of day and weather of the photo.";
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -113,12 +102,13 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - role は、この作品での主人公しょうたエクステンドの役どころを16字以内で（例の形：「流しの探偵」）。主人公に別の名前は付けない。
 - セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。speaker はセリフを言うキャラの名前（基本は主人公の「しょうたエクステンド」）。
 - cast は、このカットでの主人公のポーズ・表情・行動を60字以内で。必要なら脇役を1人だけ足してよい（その見た目もここに）。健全な内容にする。
-- style は、作品の雰囲気に一番合うアニメの絵柄を次から1つ：tv（今どきのTVアニメ）／movie（劇場アニメ）／cel90（90年代セル）／gekiga（劇画）／chibi（ギャグ・デフォルメ）／showa（昭和アニメ）／shoujo（少女漫画風）／noir（ノワール・夜）／mecha（80〜90年代ロボアニメ）／watercolor（水彩の日常系）。毎回同じにならないように。
+- 画像AIが失敗しやすいポーズ・構図は絶対に選ばない：帽子・サングラス・顔・髪・ひげに手を当てる、指を組む・手を前で組む、物を持つ・握る（独楽・マイク・スマホ・傘・カップ・武器・カバンの持ち手など）、ピース・指さし・数を数える手・拳を突き出す、手や足をカメラに向かって突き出す、腕組み、手をつなぐ・握手・ハイタッチ、他の人と触れ合う、走る・跳ぶ・戦うなど激しい動き、寝転ぶ、極端なあおり・俯瞰・魚眼、顔のどアップ。
+- 成功しやすいポーズだけ使う：ポケットに手を入れて立つ、腕を自然に下ろして立つ、手を後ろで組む、片手を軽く上げて手を振る（開いた手のひら）、ベンチや段差に座る、壁にもたれる、歩いている途中で振り返る、後ろ姿、少し離れた位置に全身で立つ。目線・表情・立ち姿でかっこよさを出す。scene と line もそれに合わせる。
 - card は、写真の中で「ここがあの場所だ」と一番わかる目印の中心。写真の幅・高さに対する0〜1の割合で。空や地面だけの場所は避ける。
 - 性的・暴力的・差別的な内容は入れない。
 
 出力はJSONだけ（説明やコードブロックは付けない）：
-{"title":"","episode":1,"subtitle":"","role":"","speaker":"","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","style":"tv","card":{"x":0.5,"y":0.45}}`;
+{"title":"","episode":1,"subtitle":"","role":"","speaker":"","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","card":{"x":0.5,"y":0.45}}`;
 
 async function handleInfo(request, env) {
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "AIの捏造はまだ準備中です。" }, 503);
@@ -137,7 +127,7 @@ async function handleInfo(request, env) {
         model: CLAUDE_MODEL, max_tokens: 800, system: INFO_SYSTEM,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.image } },
-          { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${pick(TITLE_PATTERNS)}\n絵柄の候補（この中から合うものを。迷ったらこれ）：${pick(Object.keys(STYLE_EN))}\n撮影場所のメモ：${place || "なし"}` },
+          { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${pick(TITLE_PATTERNS)}\n撮影場所のメモ：${place || "なし"}` },
         ] }],
       }),
     });
@@ -150,7 +140,6 @@ async function handleInfo(request, env) {
       title: clip(v.title, 30), episode: 1 + Math.floor(Math.random() * 24),
       subtitle: clip(v.subtitle, 24), hero: "しょうたエクステンド" + (clip(v.role, 16) ? `（${clip(v.role, 16)}）` : ""), speaker: clip(v.speaker, 12) || "しょうたエクステンド", line: clip(v.line, 40),
       scene: clip(v.scene, 60), cast: clip(v.cast, 80),
-      style: STYLE_EN[v.style] ? v.style : "tv",
       card: { x: Math.min(.95, Math.max(.05, Number(v.card?.x) || .5)), y: Math.min(.95, Math.max(.05, Number(v.card?.y) || .45)) },
     } });
   } catch (e) {
@@ -162,17 +151,17 @@ async function handleInfo(request, env) {
 /* ---------- 劇中カット（GPT） ---------- */
 function framePrompt(b) {
   const scene = clip(b.scene, 60), cast = clip(b.cast, 80), line = clip(b.line, 40);
-  const style = STYLE_EN[b.style] || STYLE_EN.tv;
   const sub = b.sub && line
     ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean white text with a thin dark outline that reads exactly: 「${line}」. Use a modest font size so the whole subtitle fits inside the frame with margins on both sides (two lines if needed); never cut it off at the edge.`
     : "No text anywhere.";
   return [
     "The first image is a photo of a real place. The second image is a reference sheet of the protagonist of this anime (three photos of the same man).",
-    `Redraw the photo as a single frame (a still) of a Japanese anime. Art style: ${style}.`,
+    `Redraw the photo as a single frame (a still) of a Japanese anime. Art style: ${GEKIGA_EN}`,
     "Keep the same framing, camera angle, perspective and scale as the photo. Buildings, roof lines, walls, windows, poles, wires, road edges and curbs stay at the same position and size, so the drawing lines up with the photo. Do not crop, zoom or shift. Small details and text on objects may be simplified.",
     `THE PROTAGONIST (named Shota Extend) MUST APPEAR in this frame, clearly visible and recognizable (not tiny, not hidden): draw the man from the reference sheet as an anime character in the art style above. He is ${HERO_EN}.`,
     "Keep his signature look exactly every time: the straw boater hat with black band, the small round dark sunglasses with gold frames, the mustache and goatee, the shoulder-length black hair and the red track jacket with white stripes over a black T-shirt. Do not draw any brand logo on the jacket.",
     `He stands on the ground at a believable scale${cast ? `. Pose and action: ${cast}` : ""}${scene ? `. Scene: ${scene}` : ""}. If the action mentions one extra character, add only that one original character; otherwise he is the only person.`,
+    "Pose and composition: use only poses that image models draw reliably: standing with hands in pockets, arms hanging naturally, hands behind the back, an open-palm wave, sitting on a bench or step, leaning on a wall, glancing back over the shoulder, seen from behind, full body at a little distance. Never draw: hands touching the hat, sunglasses, face, hair or beard; interlocked or clasped fingers; holding or gripping any object; peace signs, pointing, counting fingers or fists toward the camera; hands or feet reaching toward the camera; crossed arms; touching other people; running, jumping or fighting; extreme low/high angles or fisheye; extreme face close-ups. If the requested action conflicts with this, change the action to a safe pose. Any visible hand is simple, relaxed and anatomically correct with five fingers.",
     "Characters may overlap the background but must not change its structure. Everyone fully clothed and wholesome.",
     sub,
     "No logos, watermarks or user interface. Do not copy the backgrounds of the reference sheet.",
