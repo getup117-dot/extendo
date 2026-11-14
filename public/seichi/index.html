@@ -84,7 +84,7 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
   <div id="studio" class="hide">
     <div class="preview">
       <img id="out" alt="聖地巡礼写真">
-      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">1〜2分かかります。画面はこのままで</p></div>
+      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">1分ほどかかります。画面はこのままで</p></div>
     </div>
     <div class="err hide" id="err"></div>
 
@@ -167,25 +167,31 @@ const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;r
 function scaledCanvas(maxEdge){const k=Math.min(1,maxEdge/Math.max(photo.naturalWidth,photo.naturalHeight));
  const c=mk(Math.round(photo.naturalWidth*k),Math.round(photo.naturalHeight*k));const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,0,0,c.width,c.height);return c;}
 function scaled(maxEdge,q){return scaledCanvas(maxEdge).toDataURL('image/jpeg',q).split(',')[1];}
-// カードと手を置く場所（写真の大きさに対する割合で決める）
-function regions(W,H){
- const r=W/H,cw=W*(r>=1?.62:.82),ch=cw/1.5,cx=W*.5,cy=H*(r>=1?.42:.40);
- const L=cx-cw/2,T=cy-ch/2,R=cx+cw/2,B=cy+ch/2,p=W*.02;
- return {card:[L-p,T-p,R+p,B+p], below:[Math.max(0,L-W*.12),B-ch*.1,Math.min(W,R+W*.12),H]};
-}
-// GPTに渡すマスク：描いていい場所だけ透明
-function maskB64(W,H){const c=mk(W,H),x=c.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,W,H);
- const g=regions(W,H);[g.card,g.below].forEach(([l,t,r,b])=>x.clearRect(l,t,r-l,b-t));return c.toDataURL('image/png').split(',')[1];}
-// 合成：カードと下の帯だけGPTの絵、それ以外は元写真
-async function compose(gptURL){
- const base=scaledCanvas(2048),W=base.width,H=base.height,img=new Image();img.src=gptURL;await img.decode();
- const sm=mk(Math.ceil(W/16),Math.ceil(H/16)),sx=sm.getContext('2d'),g=regions(W,H),k=1/16,f=W*.012;
- sx.fillStyle='#fff';[g.card,g.below].forEach(([l,t,r,b])=>sx.fillRect((l-f)*k,(t-f)*k,(r-l+2*f)*k,(b-t+2*f)*k));
- const t=mk(W,H),tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(img,0,0,W,H);
+// カードの位置（写真の大きさに対する割合で決める。カードは3:2の横長）
+function cardRect(W,H){const r=W/H,cw=W*(r>=1?.62:.82),ch=cw/1.5,cx=W*.5,cy=H*(r>=1?.42:.40);
+ return {L:Math.round(cx-cw/2),T:Math.round(cy-ch/2),cw:Math.round(cw),ch:Math.round(ch)};}
+// 手を描いていい場所（カードの下、手1本分の台形）
+function handPoly(c,H){const B=c.T+c.ch;return [[c.L+.14*c.cw,B-.015*c.ch],[c.L+.50*c.cw,B-.015*c.ch],[c.L+.62*c.cw,H],[c.L+.02*c.cw,H]];}
+function polyPath(x,pts,k){x.beginPath();pts.forEach(([px,py],i)=>i?x.lineTo(px*k,py*k):x.moveTo(px*k,py*k));x.closePath();}
+const toB64=(c,type,q)=>c.toDataURL(type,q).split(',')[1];
+async function loadImg(url){const i=new Image();i.src=url;await i.decode();return i;}
+// 段階1用：カードの部分だけ切り抜く
+function cardCrop(base,c){const t=mk(1536,1024);const x=t.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(base,c.L,c.T,c.cw,c.ch,0,0,1536,1024);return t;}
+// アニメの絵を、切り抜いた場所にぴったり戻して「印刷したカード」にする
+function pasteCard(base,c,frame){const out=mk(base.width,base.height),x=out.getContext('2d');x.drawImage(base,0,0);
+ x.save();x.shadowColor='rgba(0,0,0,.35)';x.shadowBlur=c.cw*.03;x.shadowOffsetY=c.ch*.015;x.fillStyle='#eee';x.fillRect(c.L,c.T,c.cw,c.ch);x.restore();
+ x.imageSmoothingQuality='high';x.drawImage(frame,c.L,c.T,c.cw,c.ch);
+ x.strokeStyle='rgba(240,240,236,.95)';x.lineWidth=Math.max(1,c.cw*.0025);x.strokeRect(c.L+x.lineWidth/2,c.T+x.lineWidth/2,c.cw-x.lineWidth,c.ch-x.lineWidth);
+ return out;}
+// 段階2用：手の場所だけ透明なマスク
+function handMask(W,H,c,k){const m=mk(Math.round(W*k),Math.round(H*k)),x=m.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,m.width,m.height);
+ x.globalCompositeOperation='destination-out';polyPath(x,handPoly(c,H),k);x.fill();return m;}
+// 仕上げ：手の場所だけGPTの絵を使い、ほかはカード入りの写真のまま
+function putHand(comp,c,handImg){const W=comp.width,H=comp.height,sm=mk(Math.ceil(W/12),Math.ceil(H/12)),sx=sm.getContext('2d');
+ sx.fillStyle='#fff';polyPath(sx,handPoly(c,H),1/12);sx.fill();
+ const t=mk(W,H),tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(handImg,0,0,W,H);
  tx.globalCompositeOperation='destination-in';tx.imageSmoothingEnabled=true;tx.drawImage(sm,0,0,W,H);
- base.getContext('2d').drawImage(t,0,0);
- return new Promise(r=>base.toBlob(r,'image/jpeg',.93));
-}
+ const out=mk(W,H),ox=out.getContext('2d');ox.drawImage(comp,0,0);ox.drawImage(t,0,0);return out;}
 
 /* ---------- AI ---------- */
 async function api(path,body){
@@ -209,13 +215,20 @@ async function makeInfo(){
 }
 async function draw(){
  if(dayCount()>=DAY_LIMIT)throw new Error(`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`);
- wait(true,'聖地巡礼写真を撮影しています…','『'+S.info.title+'』');
- const src=scaledCanvas(1536);
- const v=await api('/api/seichi/draw',{image:src.toDataURL('image/jpeg',.9).split(',')[1],mask:maskB64(src.width,src.height),w:photo.naturalWidth,h:photo.naturalHeight,
-  style:S.style,chars:S.chars,sub:S.sub,title:S.info.title,line:S.info.line,scene:S.info.scene,cast:S.info.cast});
+ const base=scaledCanvas(2048),W=base.width,H=base.height,c=cardRect(W,H);
+ const opt={style:S.style,chars:S.chars,sub:S.sub,title:S.info.title,line:S.info.line,scene:S.info.scene,cast:S.info.cast};
+ // 段階1：カードの部分をアニメに描き直す
+ wait(true,'カードの絵を描いています…（1/2）','『'+S.info.title+'』');
+ const f=await api('/api/seichi/draw',{mode:'frame',image:toB64(cardCrop(base,c),'image/jpeg',.9),w:1536,h:1024,...opt});
+ const comp=pasteCard(base,c,await loadImg(f.image));
+ resultBlob=await new Promise(r=>comp.toBlob(r,'image/jpeg',.93));$('#out').src=URL.createObjectURL(resultBlob);
+ // 段階2：カードを持つ手を描き足す
+ wait(true,'カードを掲げて撮影しています…（2/2）','『'+S.info.title+'』');
+ const k=1536/Math.max(W,H),small=mk(Math.round(W*k),Math.round(H*k));small.getContext('2d').drawImage(comp,0,0,small.width,small.height);
+ const h=await api('/api/seichi/draw',{mode:'hand',image:toB64(small,'image/jpeg',.9),mask:toB64(handMask(W,H,c,k),'image/png'),w:small.width,h:small.height});
+ const fin=putHand(comp,c,await loadImg(h.image));
  dayCount(true);
- resultBlob=await compose(v.image);
- $('#out').src=URL.createObjectURL(resultBlob);
+ resultBlob=await new Promise(r=>fin.toBlob(r,'image/jpeg',.93));$('#out').src=URL.createObjectURL(resultBlob);
 }
 async function run(newInfo){
  if(busy||!photo)return;setBusy(true);showErr('');
