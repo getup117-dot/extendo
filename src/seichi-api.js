@@ -119,17 +119,15 @@ async function handleInfo(request, env) {
 //   （位置はアプリ側でぴったり戻すので、輪郭が背景とそろう）
 // 段階2 hand ：アニメのカードを貼った写真に、カードを持つ本物の手とカードの厚み・影を足す（マスクの中だけ）
 // しょうたの絵柄のお手本（public/seichi/style/）。劇中カットを描くたびに写真と一緒にGPTへ渡す
-const STYLE_REFS = ["/seichi/style/ref1.jpg", "/seichi/style/ref2.jpg", "/seichi/style/ref3.jpg", "/seichi/style/ref4.jpg"];
+const STYLE_REFS = ["/seichi/style/target_color.jpg", "/seichi/style/target_sheet.jpg"];
 const MY_STYLE = [
-  "Drawing style: the LINE WORK copies the artist's reference drawings, and the COLORING is a full TV anime.",
-  "Line work: rough hand-drawn ballpoint-pen lines exactly like the references, clearly visible at a glance: thin, drawn fast and wobbly, with many overlapping and doubled strokes, sketchy repeated lines on edges, gaps, overshooting and unfinished line ends, like a quick doodle. Never clean, smooth or vector-like. Keep this rough, casual line quality everywhere, on people and on the whole background. Line color is dark (near black or dark brown, or tinted to match the color of each area), not blue.",
-  "Coloring: hand-made TV anime coloring, NOT AI-looking. No airbrush, no texture, no noise, no grain, no glow, bloom, rim light, lens flare, light rays, sparkles or bokeh anywhere.",
-  "Characters: completely flat color fills only, one solid color per area (hair, skin, uniform, socks, shoes), with NO shading, no shadow tones, no highlights and no gradients at all, like flat paper cut-outs under the rough lines.",
-  "Background: more richly colored than the characters, like a hand-painted anime background: varied but natural colors, base colors plus a couple of hard-edged shadow and light tones, gentle color variation across walls and the road, a colored sky with simple clouds and believable daylight. Materials like bricks and asphalt are suggested with a few rough lines and color patches, not photo-real detail. The contrast between flat characters and a more painted background is intentional.",
-  "The fills may slightly miss the rough lines, like hand-made animation. The whole frame is colored; no white paper shows.",
-  "The reference drawings are rough sketches. Take from them only the character design and the loose line feel. Do NOT copy sketch artifacts: no head-outline or construction lines showing through the hair or crossing the forehead, no guide lines, no scribbled-over corrections, no double outlines of the head. Hair covers the forehead cleanly; the face reads like a finished anime frame drawn in a loose hand.",
-  "People must look like the references, not like typical polished anime: a round head, bangs drawn as several straight vertical strokes, small dot eyes with short eyebrow lines, simple C-shaped ears, a simple line nose and a big expressive mouth, colored with anime cel shading.",
-  "Buildings, walls, poles, wires and roads are drawn with the same rough lines and anime coloring, so the whole picture looks made by the same artist.",
+  "Drawing style: match the artist's style shown in the reference images. Reference 1 (the colored girl) shows the target finish and coloring. Reference 2 (the character sheet) shows the character designs, faces and the loose line feel.",
+  "Line work: loose, lively hand-drawn lines like the references: slightly sketchy, a few overlapping or doubled strokes and open line ends, varying a little in pressure, but readable and finished. Near-black line color. Never vector-smooth or mechanical, and never messy construction lines.",
+  "Coloring: hand-made TV anime coloring like reference 1, NOT AI-looking. No airbrush, no texture, no noise, no grain, no glow, bloom, rim light, lens flare, light rays, sparkles or bokeh anywhere.",
+  "Characters: flat color fills, one solid color per area (hair, skin, uniform, socks, shoes), with no shading, no highlights and no gradients, except tiny blush marks on the cheeks like the references.",
+  "Background: more richly colored than the characters, like a soft hand-painted anime background: natural, slightly soft colors with a couple of hard-edged shadow and light tones, a colored sky with simple clouds, gentle daylight. Materials like bricks and asphalt are suggested with a few loose lines and color patches, not photo-real detail.",
+  "People look like the references: simple round faces, bangs drawn as several straight strands, small dot eyes with short expressive eyebrow lines, simple ears, a minimal nose, a big expressive mouth, a few stray hair strands (ahoge). No construction lines across the forehead; hair covers the forehead cleanly.",
+  "The whole picture, people and background, must look drawn by the same artist.",
 ].join(" ");
 function framePrompt(b) {
   const chars = Math.min(2, Math.max(0, parseInt(b.chars) || 0));
@@ -144,7 +142,7 @@ function framePrompt(b) {
     ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean white text with a thin dark outline that reads exactly: 「${line}」. Use a modest font size so the whole subtitle fits inside the frame with margins on both sides (two lines if needed); never cut it off at the edge.`
     : "No text anywhere.";
   return [
-    "The first image is a photo. The other images are reference drawings by the artist.",
+    "The first image is a photo. The other images are style references by the artist.",
     "Redraw the photo as a single frame (a still) of an anime drawn by this artist.",
     MY_STYLE,
     "Keep exactly the same framing, camera angle, perspective and scale as the photo. Every building outline, roof line, wall edge, window, pole, pipe, wire, road edge and curb must stay at the same position and size, so the drawing lines up with the photo. Do not crop, zoom, shift, add or remove any structure. Small details, textures and text on objects may be simplified or left out.",
