@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>どこでも聖地カメラ</title>
+<meta name="description" content="いつもの街を、架空アニメの聖地に。撮った写真をGPTがアニメのワンシーンに描き直し、現地でカードを持って撮った聖地巡礼写真を捏造します。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="エクステン堂">
+<meta property="og:title" content="どこでも聖地カメラ｜エクステン堂">
+<meta property="og:description" content="いつもの街を、架空アニメの聖地に。撮った写真をGPTがアニメのワンシーンに描き直し、聖地巡礼写真を捏造します。">
+<meta property="og:url" content="https://extendo.getup117.workers.dev/seichi/">
+<meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp_seichi.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Zen+Old+Mincho:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3efe6;--ink:#1c2233;--sub:#6c7282;--accent:#ff5a5f;--blue:#2f6fe4;--card:#fffdf8;--line:#e3ddd0}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px 70px}
+.hero{position:relative;padding:22px 4px 14px}
+.kicker{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.08em}
+h1{margin:0;font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:40px;line-height:1.1;letter-spacing:.01em}
+h1 small{display:block;font-size:18px;color:var(--blue);margin-bottom:2px}
+.stamp{position:absolute;right:6px;top:14px;width:76px;height:76px;border:3px solid var(--accent);border-radius:50%;display:grid;place-items:center;color:var(--accent);font-family:"Zen Old Mincho",serif;font-weight:900;font-size:22px;transform:rotate(-14deg);box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 6px var(--accent);line-height:1}
+.stamp span{font-size:10px;display:block;text-align:center;letter-spacing:.1em;margin-top:2px}
+.pick{display:block;margin-top:14px;background:var(--ink);color:#fff;text-align:center;border-radius:18px;padding:26px 16px;cursor:pointer;font-weight:900;font-size:18px;box-shadow:0 6px 0 #0b0f1c}
+.pick:active{transform:translateY(3px);box-shadow:0 3px 0 #0b0f1c}
+.pick em{display:block;font-style:normal;font-weight:500;font-size:12px;opacity:.7;margin-top:6px}
+.note{font-size:12.5px;color:var(--sub);line-height:1.7;margin:10px 2px}
+.preview{position:relative;border-radius:14px;overflow:hidden;background:#d9d3c6;min-height:200px;box-shadow:0 10px 30px rgba(28,34,51,.18)}
+.preview img{display:block;width:100%;height:auto}
+.busy b small{display:block;font-weight:500;font-size:11px;opacity:.75;text-align:center;margin-top:2px}
+.btn:disabled{opacity:.55}
+.busy{position:absolute;inset:0;display:none;place-items:center;background:rgba(243,239,230,.55);backdrop-filter:blur(2px);font-weight:900;font-size:15px}
+.busy.on{display:grid}
+.busy b{background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0 4px}
+.tabs button,.chip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:9px 4px;font:700 13px "Zen Kaku Gothic New",sans-serif;cursor:pointer}
+.tabs button.on,.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:8px 12px;border-radius:999px}
+section.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
+h2{margin:0 0 12px;font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
+h2::before{content:"";width:6px;height:16px;background:var(--accent);border-radius:3px}
+.sl{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:10px;font-size:13px;font-weight:700;margin:10px 0}
+input[type=range]{width:100%;accent-color:var(--ink)}
+.tg{display:flex;align-items:center;justify-content:space-between;font-size:13.5px;font-weight:700;padding:8px 0;border-top:1px dashed var(--line)}
+.tg:first-of-type{border-top:0}
+.tg input{width:20px;height:20px;accent-color:var(--accent)}
+.btn{border:0;border-radius:12px;padding:12px 14px;font:900 14px "Zen Kaku Gothic New",sans-serif;cursor:pointer;background:#e9e3d6;color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.wide{width:100%}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.fld{display:block;margin-top:10px;font-size:12px;font-weight:700;color:var(--sub)}
+.fld input,.fld textarea{display:block;width:100%;margin-top:4px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:500 15px "Zen Kaku Gothic New",sans-serif;color:var(--ink);background:#fff}
+.fld textarea{resize:vertical;min-height:64px}
+.two{display:grid;grid-template-columns:88px 1fr;gap:8px}
+.msg{font-size:12.5px;color:var(--sub);min-height:1em;margin:8px 2px 0}
+.savebar{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.hint{text-align:center;font-size:12px;color:var(--sub);margin:8px 0 0}
+#capTxt{font-size:14px;line-height:1.7}
+.hide{display:none!important}
+footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="stamp"><div>聖地<span>認定</span></div></div>
+    <p class="kicker">いつもの街を、架空アニメの聖地に。</p>
+    <h1><small>どこでも</small>聖地カメラ</h1>
+  </div>
+
+  <label class="pick" id="pickBtn"><input type="file" id="file" accept="image/*" hidden>📷 写真をえらぶ・撮る<em>風景や街角のスナップがおすすめ</em></label>
+  <p class="note" id="introNote">撮った写真の一部が「アニメのワンシーン」として描き直され、それを手に持って現地で撮った聖地巡礼写真になります。空が写っていると、空もアニメの空に描きかわります。</p>
+
+  <div id="studio" class="hide">
+    <div class="preview"><img id="out" alt="聖地巡礼写真のプレビュー"><div id="busy" class="busy"><b id="busyTxt">現像中…</b></div></div>
+    <p class="hint">画像を長押しでも保存できます</p>
+    <div class="savebar"><button id="dl" class="btn dark wide">📥 画像を保存・シェア</button></div>
+
+    <div class="tabs" id="layouts">
+      <button data-v="hand" class="on">手持ち</button>
+      <button data-v="still">劇中カット</button>
+      <button data-v="compare">比較</button>
+      <button data-v="title">サブタイ</button>
+    </div>
+
+    <section class="panel" id="gptPanel">
+      <h2>GPTで劇中カットを描く</h2>
+      <p class="note" style="margin-top:0">カードの中身を、GPTが写真と同じ構図のアニメのワンシーンに描き直します。1〜2分かかります。先に下の「架空アニメの設定」を作っておくと、その場面が描かれます。</p>
+      <div class="chips" id="chars"></div>
+      <button id="draw" class="btn primary wide" style="margin-top:12px">🎬 劇中カットを描く</button>
+      <p class="msg" id="drawMsg"></p>
+      <div class="chips hide" id="srcSel" style="margin-top:8px"></div>
+    </section>
+
+    <section class="panel" id="cardPanel">
+      <h2>カードの位置</h2>
+      <label class="sl">大きさ<input type="range" id="cSize" min="30" max="95" value="62"></label>
+      <label class="sl">左右<input type="range" id="cX" min="0" max="100" value="50"></label>
+      <label class="sl">上下<input type="range" id="cY" min="0" max="100" value="46"></label>
+      <label class="sl">傾き<input type="range" id="cRot" min="-15" max="15" value="-3"></label>
+      <label class="tg">手を描く<input type="checkbox" id="hand" checked></label>
+      <div class="chips" id="skins" style="margin:4px 0 6px"></div>
+      <label class="tg">カードにも字幕を入れる<input type="checkbox" id="cardSub"></label>
+      <label class="tg">背景を少しぼかす<input type="checkbox" id="bgBlur" checked></label>
+    </section>
+
+    <section class="panel">
+      <h2>画風</h2>
+      <div class="chips" id="styles"></div>
+      <label class="tg" style="margin-top:8px">空をアニメの空にする<input type="checkbox" id="sky" checked></label>
+      <label class="sl">線の強さ<input type="range" id="line" min="0" max="100" value="45"></label>
+      <label class="sl">塗りのタッチ<input type="range" id="brush" min="2" max="8" value="4"></label>
+      <button id="reseed" class="btn wide" style="margin-top:6px">☁ 雲・光をふりなおす</button>
+    </section>
+
+    <section class="panel">
+      <h2>架空アニメの設定</h2>
+      <div class="chips" id="genres"></div>
+      <label class="fld">撮影場所のメモ（任意）<input id="place" placeholder="例：東北沢駅前の坂"></label>
+      <div class="row">
+        <button id="ai" class="btn primary">✨ AIで捏造する</button>
+        <button id="rand" class="btn">🎲 ランダム</button>
+      </div>
+      <p class="msg" id="aiMsg"></p>
+      <label class="fld">作品タイトル<input id="fTitle"></label>
+      <div class="two">
+        <label class="fld">話数<input id="fEp" type="number" min="1" max="99"></label>
+        <label class="fld">サブタイトル<input id="fSub"></label>
+      </div>
+      <label class="fld">セリフ（字幕）<input id="fLine"></label>
+      <label class="fld">話したキャラ<input id="fSpeaker"></label>
+      <label class="fld">どんな場面？<textarea id="fScene"></textarea></label>
+      <label class="fld">登場人物の見た目（GPTが描く人物）<input id="fCast" placeholder="例：黒髪ボブで紺のブレザーの女子高生が振り返る"></label>
+    </section>
+
+    <section class="panel">
+      <h2>SNSに投稿するなら</h2>
+      <div id="capTxt"></div>
+      <div class="row"><button id="copyCap" class="btn dark">文章をコピー</button><button id="another" class="btn">別の写真にする</button></div>
+      <p class="msg" id="copyMsg"></p>
+    </section>
+  </div>
+  <footer>どこでも聖地カメラ — 作品・キャラクターはすべて架空です<br><a href="/" style="color:inherit">← エクステン堂にもどる</a></footer>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const SANS='"Zen Kaku Gothic New", sans-serif', MIN='"Zen Old Mincho", serif', LOGO='"Dela Gothic One", sans-serif';
+const FW=1280, FH=720;
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));return c;};
+const rng=seed=>{let s=(seed*2654435761)>>>0||1;return()=>{s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296;};};
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const tick=()=>new Promise(r=>setTimeout(r,30));
+
+/* ---------- 画風 ---------- */
+const STYLES={
+ seishun:{name:'青春・快晴',sky:['#1d58cf','#3a86ee','#86c3ff','#d9f1ff'],clouds:{n:3,shade:'#9fb3e3',mid:'#e2ebfb',light:'#ffffff'},
+  sat:1.3,con:1.08,bri:.03,sh:[.12,.25,.55],shA:.25,hi:[1,.97,.9],hiA:.15,bloom:.35,bTh:.62,flare:.7,rays:.25,dust:40,dustCol:'255,255,240',vig:.22,vigCol:'20,40,90'},
+ yugure:{name:'放課後の夕暮れ',sky:['#2a2c6c','#76509a','#df7898','#ffad6d','#ffe0a0'],clouds:{n:4,shade:'#6c4a8c',mid:'#e88a88',light:'#ffd5a2'},
+  sat:1.25,con:1.1,bri:-.02,sh:[.32,.16,.42],shA:.38,hi:[1,.74,.5],hiA:.32,bloom:.5,bTh:.58,flare:.85,rays:.35,dust:50,dustCol:'255,220,160',vig:.35,vigCol:'60,20,60',sunLow:true},
+ natsu:{name:'夏の日',sky:['#0a43c6','#1d70e8','#62b0ff','#c8edff'],clouds:{n:2,big:true,shade:'#a3b7dc',mid:'#eef3ff',light:'#ffffff'},
+  sat:1.45,con:1.15,bri:.04,sh:[.05,.25,.45],shA:.25,hi:[1,1,.92],hiA:.15,bloom:.4,bTh:.64,flare:.9,rays:.15,dust:25,dustCol:'255,255,255',vig:.2,vigCol:'10,30,80'},
+ yoru:{name:'夜とネオン',sky:['#040722','#0d1950','#2a2a76','#5c3d8c'],stars:true,
+  sat:1.35,con:1.15,bri:-.13,sh:[.05,.08,.32],shA:.55,hi:[1,.6,.85],hiA:.3,bloom:.8,bTh:.45,flare:0,rays:0,bokeh:35,vig:.45,vigCol:'5,5,30'},
+ retro:{name:'90年代セル',sky:['#5a8bcd','#8bb6e5','#d4e7f1'],clouds:{n:3,shade:'#a7b2c6',mid:'#e5ebee',light:'#fbfbf4'},
+  sat:1.1,con:1.05,bri:.02,sh:[.15,.3,.3],shA:.3,hi:[1,.95,.82],hiA:.25,bloom:.25,bTh:.66,flare:.3,rays:0,dust:0,vig:.4,vigCol:'40,40,20',retro:true}
+};
+const GENRES=['青春','日常','恋愛','SF','ファンタジー','ミステリー','ホラー','スポーツ'];
+const SKINS=[{n:'明るめ',base:'#f4cfb3',shade:'#d79f84',light:'#fde6d6',nail:'#f8dcd2'},{n:'ふつう',base:'#e7b793',shade:'#c08664',light:'#f6d3b8',nail:'#f1cdbd'},{n:'こんがり',base:'#c48b62',shade:'#946042',light:'#dfab84',nail:'#e6bba3'}];
+
+const S={style:'seishun',sky:true,line:45,brush:4,seed:7,layout:'hand',genre:'青春',
+ card:{size:62,x:50,y:46,rot:-3},hand:true,skin:0,cardSub:false,bgBlur:true,place:'',
+ info:{title:'',episode:3,subtitle:'',speaker:'',line:'',scene:'',cast:''},chars:1};
+
+let baseC=null, srcC=null, frameC=null, lastCanvas=null, gptFrame=null, useGpt=false, gptKey='', drawing=false;
+const act=()=>useGpt&&gptFrame?gptFrame:frameC;
+const cardKey=()=>[S.card.size,S.card.x,S.card.y].join(',');
+
+/* ---------- 画像処理 ---------- */
+function kuwaharaGrade(data,w,h,r,st,lineK){
+ const W1=w+1,N=W1*(h+1);
+ const SR=new Int32Array(N),SG=new Int32Array(N),SB=new Int32Array(N),SL=new Int32Array(N),S2=new Float64Array(N);
+ for(let y=0;y<h;y++){let rr=0,gg=0,bb=0,ll=0,l2=0;const row=(y+1)*W1,pr=y*W1;
+  for(let x=0;x<w;x++){const i=(y*w+x)*4,R=data[i],G=data[i+1],B=data[i+2],L=(R*77+G*150+B*29)>>8;
+   rr+=R;gg+=G;bb+=B;ll+=L;l2+=L*L;const k=row+x+1,p=pr+x+1;
+   SR[k]=SR[p]+rr;SG[k]=SG[p]+gg;SB[k]=SB[p]+bb;SL[k]=SL[p]+ll;S2[k]=S2[p]+l2;}}
+ const out=new Uint8ClampedArray(w*h*4),lum=new Float32Array(w*h);
+ for(let y=0;y<h;y++){const ya0=Math.max(0,y-r),yb1=Math.min(h-1,y+r);
+  for(let x=0;x<w;x++){const xa0=Math.max(0,x-r),xb1=Math.min(w-1,x+r);
+   let best=1e18,br=0,bg=0,bb=0;
+   for(let q=0;q<4;q++){const x0=q&1?x:xa0,x1=q&1?xb1:x,y0=q&2?y:ya0,y1=q&2?yb1:y;
+    const a=(y1+1)*W1+x1+1,b=y0*W1+x1+1,c=(y1+1)*W1+x0,d=y0*W1+x0,n=(x1-x0+1)*(y1-y0+1);
+    const sl=SL[a]-SL[b]-SL[c]+SL[d],s2=S2[a]-S2[b]-S2[c]+S2[d],m=sl/n,v=s2/n-m*m;
+    if(v<best){best=v;br=(SR[a]-SR[b]-SR[c]+SR[d])/n;bg=(SG[a]-SG[b]-SG[c]+SG[d])/n;bb=(SB[a]-SB[b]-SB[c]+SB[d])/n;}}
+   const i=y*w+x;lum[i]=.299*br+.587*bg+.114*bb;
+   // grade
+   let R=br/255,G=bg/255,B=bb/255;const L=.299*R+.587*G+.114*B;
+   R=L+(R-L)*st.sat;G=L+(G-L)*st.sat;B=L+(B-L)*st.sat;
+   R=(R-.5)*st.con+.5+st.bri;G=(G-.5)*st.con+.5+st.bri;B=(B-.5)*st.con+.5+st.bri;
+   const ws=(1-L)*(1-L)*st.shA,wh=L*L*st.hiA;
+   R=R*(1-ws)+st.sh[0]*ws;G=G*(1-ws)+st.sh[1]*ws;B=B*(1-ws)+st.sh[2]*ws;
+   R=R*(1-wh)+st.hi[0]*wh;G=G*(1-wh)+st.hi[1]*wh;B=B*(1-wh)+st.hi[2]*wh;
+   out[i*4]=R*255;out[i*4+1]=G*255;out[i*4+2]=B*255;out[i*4+3]=255;}}
+ if(lineK>0){for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;
+  const gx=lum[i-w+1]+2*lum[i+1]+lum[i+w+1]-lum[i-w-1]-2*lum[i-1]-lum[i+w-1];
+  const gy=lum[i+w-1]+2*lum[i+w]+lum[i+w+1]-lum[i-w-1]-2*lum[i-w]-lum[i-w+1];
+  const e=Math.abs(gx)+Math.abs(gy);const l=clamp((e-55)/170,0,1)*lineK;
+  if(l>0){const k=1-.62*l;out[i*4]*=k;out[i*4+1]*=k;out[i*4+2]*=k*1.04;}}}
+ return out;
+}
+function boxBlur(d,w,h,r){const t=new Float32Array(d.length),D=2*r+1;
+ for(let y=0;y<h;y++)for(let c=0;c<4;c++){let s=0;for(let k=-r;k<=r;k++)s+=d[(y*w+clamp(k,0,w-1))*4+c];
+  for(let x=0;x<w;x++){t[(y*w+x)*4+c]=s/D;s+=d[(y*w+Math.min(w-1,x+r+1))*4+c]-d[(y*w+Math.max(0,x-r))*4+c];}}
+ for(let x=0;x<w;x++)for(let c=0;c<4;c++){let s=0;for(let k=-r;k<=r;k++)s+=t[(clamp(k,0,h-1)*w+x)*4+c];
+  for(let y=0;y<h;y++){d[(y*w+x)*4+c]=s/D;s+=t[(Math.min(h-1,y+r+1)*w+x)*4+c]-t[(Math.max(0,y-r)*w+x)*4+c];}}}
+
+function skyMask(src){
+ const mw=320,mh=180,c=mk(mw,mh),x=c.getContext('2d');x.drawImage(src,0,0,mw,mh);
+ const d=x.getImageData(0,0,mw,mh).data,n=mw*mh,cand=new Uint8Array(n);
+ for(let i=0;i<n;i++){const r=d[i*4],g=d[i*4+1],b=d[i*4+2],L=.299*r+.587*g+.114*b,mx=Math.max(r,g,b),mn=Math.min(r,g,b),sat=(mx-mn)/(mx+1);
+  cand[i]=((b>r+6&&b>=g-14&&L>80)||(L>205&&sat<.2))?1:0;}
+ const m=new Uint8Array(n),q=new Int32Array(n);let qh=0,qt=0;
+ for(let i=0;i<mw;i++)if(cand[i]){m[i]=1;q[qt++]=i;}
+ const lim=Math.floor(mh*.88);
+ const df=(a,b)=>Math.abs(d[a*4]-d[b*4])+Math.abs(d[a*4+1]-d[b*4+1])+Math.abs(d[a*4+2]-d[b*4+2]);
+ while(qh<qt){const i=q[qh++],xx=i%mw,yy=(i/mw)|0;
+  const nb=[xx>0?i-1:-1,xx<mw-1?i+1:-1,yy>0?i-mw:-1,yy<lim?i+mw:-1];
+  for(const j of nb){if(j<0||m[j]||!cand[j]||df(i,j)>40)continue;m[j]=1;q[qt++]=j;}}
+ if(qt<n*.04)return null;
+ let sl=0,cols=0,L=0,Rr=0;
+ for(let xx=0;xx<mw;xx++){let low=-1;for(let yy=0;yy<mh;yy++)if(m[yy*mw+xx])low=yy;if(low>=0){sl+=low;cols++;}}
+ for(let i=0;i<n;i++)if(m[i])(i%mw<mw/2?L++:Rr++);
+ const md=x.createImageData(mw,mh);for(let i=0;i<n;i++){md.data[i*4]=md.data[i*4+1]=md.data[i*4+2]=255;md.data[i*4+3]=m[i]*255;}
+ boxBlur(md.data,mw,mh,1);x.putImageData(md,0,0);
+ return {canvas:c,horizon:sl/cols/mh,sunRight:Rr>=L};
+}
+function cumulus(x,cx,base,w,h,R,cl){
+ const cs=[],n=Math.round(14+w/30);
+ for(let i=0;i<n;i++){const t=R(),px=cx-w/2+t*w,prof=Math.pow(Math.sin(Math.PI*t),.8);
+  const r=h*(.12+.28*prof)*(.7+R()*.6);const py=base-r*.5-R()*prof*Math.max(0,h-r*1.2);cs.push([px,Math.min(py,base-r*.3),r]);}
+ x.save();x.beginPath();x.rect(cx-w,base-h*3,w*2,h*3);x.clip();
+ const pass=(col,dx,dy,k)=>{x.fillStyle=col;x.beginPath();for(const[px,py,r]of cs){const X=px+dx*r,Y=py+dy*r;x.moveTo(X+r*k,Y);x.arc(X,Y,r*k,0,Math.PI*2);}x.fill();};
+ pass(cl.shade,0,0,1);pass(cl.mid,-.06,-.12,.88);pass(cl.light,-.14,-.24,.7);
+ x.restore();
+}
+function paintSky(st,info,seed){
+ const c=mk(FW,FH),x=c.getContext('2d'),R=rng(seed);
+ const hz=clamp(info.horizon,.3,.95)*FH;
+ const g=x.createLinearGradient(0,0,0,hz);st.sky.forEach((col,i,a)=>g.addColorStop(i/(a.length-1),col));
+ x.fillStyle=g;x.fillRect(0,0,FW,FH);
+ if(st.stars){
+  for(let i=0;i<240;i++){x.fillStyle=`rgba(255,255,255,${.25+R()*.75})`;x.beginPath();x.arc(R()*FW,R()*hz*.92,R()*1.6+.3,0,7);x.fill();}
+  const mx=FW*(info.sunRight?.8:.2),my=hz*.3;
+  const mg=x.createRadialGradient(mx,my,0,mx,my,160);mg.addColorStop(0,'rgba(255,240,210,.55)');mg.addColorStop(1,'rgba(255,240,210,0)');
+  x.fillStyle=mg;x.fillRect(mx-160,my-160,320,320);x.fillStyle='#fff7df';x.beginPath();x.arc(mx,my,30,0,7);x.fill();
+ }
+ if(st.clouds){const cl=st.clouds;
+  for(let i=0;i<5;i++){x.save();x.globalAlpha=.16+R()*.14;x.fillStyle=cl.light;x.translate(R()*FW,hz*(.08+R()*.4));x.rotate(-.08+R()*.16);x.scale(1,.1);x.beginPath();x.arc(0,0,90+R()*220,0,7);x.fill();x.restore();}
+  for(let i=0;i<cl.n;i++){const big=cl.big&&i===0;
+   const w=big?FW*(.5+R()*.15):FW*(.18+R()*.22),h=big?hz*.8:w*(.33+R()*.2);
+   const cx=big?FW*(info.sunRight?.3:.7):R()*FW,base=big?hz*1.02:hz*(.4+R()*.45);
+   cumulus(x,cx,base,w,h,R,cl);}
+ }
+ return c;
+}
+function bloom(fx,amt,th){
+ const w=200,h=113,s=mk(w,h),x=s.getContext('2d');x.drawImage(fx.canvas,0,0,w,h);
+ const id=x.getImageData(0,0,w,h),d=id.data;
+ for(let i=0;i<d.length;i+=4){const L=(.299*d[i]+.587*d[i+1]+.114*d[i+2])/255,k=Math.max(0,(L-th)/(1-th));d[i]*=k;d[i+1]*=k;d[i+2]*=k;}
+ boxBlur(d,w,h,3);boxBlur(d,w,h,3);x.putImageData(id,0,0);
+ fx.save();fx.globalCompositeOperation='screen';fx.globalAlpha=amt;fx.drawImage(s,0,0,FW,FH);fx.restore();
+}
+function lightFX(fx,st,sky,R){
+ const sunR=sky?sky.sunRight:true;
+ const sx=FW*(sunR?.8:.2),sy=st.sunLow&&sky?clamp(sky.horizon,.3,.9)*FH*.8:FH*.06;
+ fx.save();fx.globalCompositeOperation='screen';
+ if(st.rays>0){fx.save();fx.translate(sx,sy);
+  for(let i=0;i<9;i++){const a=Math.PI*(.15+R()*.7),wd=.012+R()*.035,len=FW*1.3;
+   const g=fx.createLinearGradient(0,0,Math.cos(a)*len,Math.sin(a)*len);g.addColorStop(0,`rgba(255,245,220,${st.rays*(.25+R()*.35)})`);g.addColorStop(1,'rgba(255,245,220,0)');
+   fx.fillStyle=g;fx.beginPath();fx.moveTo(0,0);fx.lineTo(Math.cos(a-wd)*len,Math.sin(a-wd)*len);fx.lineTo(Math.cos(a+wd)*len,Math.sin(a+wd)*len);fx.fill();}
+  fx.restore();}
+ if(st.flare>0){const a=st.flare;
+  let g=fx.createRadialGradient(sx,sy,0,sx,sy,FW*.45);g.addColorStop(0,`rgba(255,250,235,${.95*a})`);g.addColorStop(.07,`rgba(255,238,200,${.55*a})`);g.addColorStop(.35,`rgba(255,200,150,${.15*a})`);g.addColorStop(1,'rgba(0,0,0,0)');
+  fx.fillStyle=g;fx.fillRect(0,0,FW,FH);
+  const dx=FW/2-sx,dy=FH/2-sy;
+  [[.45,26,'140,210,255',.22],[.75,12,'255,210,140',.3],[1.15,58,'150,255,210',.1],[1.45,22,'210,160,255',.2],[1.7,95,'130,180,255',.07]].forEach(([t,r,c,al])=>{
+   const px=sx+dx*t,py=sy+dy*t,gg=fx.createRadialGradient(px,py,r*.4,px,py,r);gg.addColorStop(0,`rgba(${c},${al*a*.6})`);gg.addColorStop(.85,`rgba(${c},${al*a})`);gg.addColorStop(1,`rgba(${c},0)`);
+   fx.fillStyle=gg;fx.beginPath();fx.arc(px,py,r,0,7);fx.fill();});}
+ const dot=(px,py,r,c,al)=>{const g=fx.createRadialGradient(px,py,0,px,py,r);g.addColorStop(0,`rgba(${c},${al})`);g.addColorStop(1,`rgba(${c},0)`);fx.fillStyle=g;fx.beginPath();fx.arc(px,py,r,0,7);fx.fill();};
+ for(let i=0;i<(st.dust||0);i++)dot(R()*FW,R()*FH,2+R()*5,st.dustCol,.3+R()*.6);
+ const bc=['255,120,200','120,200,255','255,210,120','180,140,255'];
+ for(let i=0;i<(st.bokeh||0);i++)dot(R()*FW,FH*(.35+R()*.65),12+R()*38,bc[(R()*4)|0],.12+R()*.2);
+ fx.restore();
+ const vg=fx.createRadialGradient(FW/2,FH/2,FH*.35,FW/2,FH/2,FW*.72);vg.addColorStop(0,`rgba(${st.vigCol},0)`);vg.addColorStop(1,`rgba(${st.vigCol},${st.vig})`);
+ fx.fillStyle=vg;fx.fillRect(0,0,FW,FH);
+}
+function retroFX(fx,R){
+ const t=mk(1000,563);t.getContext('2d').drawImage(fx.canvas,0,0,1000,563);fx.drawImage(t,0,0,FW,FH);
+ const id=fx.getImageData(0,0,FW,FH),d=id.data;
+ for(let i=0;i<d.length;i+=4){const n=(R()-.5)*20;d[i]+=n+4;d[i+1]+=n+2;d[i+2]+=n-4;}
+ for(let y=0;y<FH;y++)for(let x=FW-1;x>=3;x--){const i=(y*FW+x)*4;d[i]=d[i-12];}
+ fx.putImageData(id,0,0);
+}
+
+/* ---------- 写真とカード ---------- */
+function cardGeom(){
+ const W=baseC.width,H=baseC.height,c=S.card;
+ const w=W*c.size/100,h=w*9/16;
+ return {W,H,w,h,cx:W*c.x/100,cy:H*c.y/100,rot:c.rot*Math.PI/180};
+}
+function makeSrc(){
+ const g=cardGeom();let sw=g.w*1.1,sh=g.h*1.1;
+ if(sw>g.W){sw=g.W;sh=sw*9/16;} if(sh>g.H){sh=g.H;sw=sh*16/9;}
+ const sx=clamp(g.cx-sw/2,0,g.W-sw),sy=clamp(g.cy-sh/2,0,g.H-sh);
+ srcC=mk(FW,FH);const x=srcC.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(baseC,sx,sy,sw,sh,0,0,FW,FH);
+}
+async function processFrame(){
+ if(!baseC)return; busy(true); await tick();
+ try{
+  makeSrc();
+  const st=STYLES[S.style],R=rng(S.seed*31+7);
+  const id=srcC.getContext('2d').getImageData(0,0,FW,FH);
+  const out=kuwaharaGrade(id.data,FW,FH,S.brush,st,S.line/100);
+  frameC=mk(FW,FH);const fx=frameC.getContext('2d');fx.putImageData(new ImageData(out,FW,FH),0,0);
+  const sky=S.sky?skyMask(srcC):null;
+  if(sky){const sk=paintSky(st,sky,S.seed),sc=sk.getContext('2d');sc.globalCompositeOperation='destination-in';sc.imageSmoothingQuality='high';sc.drawImage(sky.canvas,0,0,FW,FH);fx.drawImage(sk,0,0);
+   const hz=clamp(sky.horizon,.3,.95)*FH,hg=fx.createLinearGradient(0,hz-FH*.18,0,hz+FH*.08);const last=st.sky[st.sky.length-1];
+   hg.addColorStop(0,'rgba(255,255,255,0)');hg.addColorStop(.7,hexA(last,.22));hg.addColorStop(1,'rgba(255,255,255,0)');
+   fx.save();fx.globalCompositeOperation='screen';fx.fillStyle=hg;fx.fillRect(0,0,FW,FH);fx.restore();}
+  bloom(fx,st.bloom,st.bTh);
+  lightFX(fx,st,sky,R);
+  if(st.retro)retroFX(fx,R);
+ }catch(e){console.error(e);}
+ busy(false);
+ if(gptFrame&&useGpt&&gptKey!==cardKey())$('#drawMsg').textContent='カードを動かしたので、もう一度描くと風景とピッタリ合います。';
+ await renderLayout();
+}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+
+/* ---------- 文字 ---------- */
+async function fonts(text){
+ const F=['500 20px "Zen Kaku Gothic New"','700 20px "Zen Kaku Gothic New"','900 20px "Zen Kaku Gothic New"','900 20px "Zen Old Mincho"','400 20px "Dela Gothic One"'];
+ try{await Promise.all(F.map(f=>document.fonts.load(f,text)));}catch(e){}
+}
+function wrapJ(x,text,maxW,maxL){const L=[];let cur='';for(const ch of text){if(x.measureText(cur+ch).width>maxW&&cur){L.push(cur);cur=ch;}else cur+=ch;}if(cur)L.push(cur);
+ if(maxL&&L.length>maxL){L.length=maxL;L[maxL-1]=L[maxL-1].slice(0,-1)+'…';}return L;}
+function fit(x,tpl,text,maxW,fs){while(fs>10){x.font=tpl.replace('$',fs);if(x.measureText(text).width<=maxW)break;fs-=2;}return fs;}
+function kan(n){const d='〇一二三四五六七八九';n=Math.max(1,Math.min(99,n|0));if(n<10)return d[n];if(n===10)return '十';if(n<20)return '十'+d[n-10];const t=(n/10)|0,o=n%10;return d[t]+'十'+(o?d[o]:'');}
+function subtitle(x,w,h,text){if(!text)return;const fs=Math.round(h*.062);x.font=`700 ${fs}px ${SANS}`;
+ const L=wrapJ(x,text,w*.84,2);x.textAlign='center';x.textBaseline='alphabetic';x.lineJoin='round';
+ L.forEach((t,i)=>{const y=h-h*.075-(L.length-1-i)*fs*1.32;x.lineWidth=fs*.22;x.strokeStyle='rgba(0,0,0,.82)';x.strokeText(t,w/2,y);x.fillStyle='#fff';x.fillText(t,w/2,y);});}
+function still(withSub,marks){
+ const c=mk(FW,FH),x=c.getContext('2d');x.drawImage(act(),0,0);
+ if(withSub)subtitle(x,FW,FH,S.info.line);
+ if(marks){x.save();x.shadowColor='rgba(0,0,0,.5)';x.shadowBlur=8;x.fillStyle='rgba(255,255,255,.92)';
+  x.textBaseline='top';x.textAlign='left';x.font=`900 30px ${SANS}`;x.fillText('#'+String(S.info.episode).padStart(2,'0'),36,30);
+  x.textAlign='right';const fs=fit(x,`400 $px ${LOGO}`,S.info.title,FW*.42,34);x.fillText(S.info.title,FW-36,30);x.restore();}
+ return c;
+}
+
+/* ---------- 手 ---------- */
+function capsule(x,L,wb,wt){x.beginPath();x.moveTo(0,-wb);x.lineTo(L-wt,-wt);x.arc(L-wt,0,wt,-Math.PI/2,Math.PI/2);x.lineTo(0,wb);x.closePath();}
+function skinFill(x,ax,ay,bx,by,sk){const g=x.createLinearGradient(ax,ay,bx,by);g.addColorStop(0,sk.light);g.addColorStop(.5,sk.base);g.addColorStop(1,sk.shade);return g;}
+function finger(x,bx,by,tx,ty,wb,wt,sk,nail){
+ const ang=Math.atan2(ty-by,tx-bx),L=Math.hypot(tx-bx,ty-by);
+ x.save();x.translate(bx,by);x.rotate(ang);x.fillStyle=skinFill(x,0,-wb,0,wb,sk);capsule(x,L,wb,wt);x.fill();
+ x.strokeStyle='rgba(110,55,35,.16)';x.lineWidth=wt*.08;x.beginPath();x.arc(L*.52,0,wt*.85,-.9,.9);x.stroke();
+ if(nail){const nx=L-wt*1.0,g=x.createLinearGradient(nx-wt,0,nx+wt,0);g.addColorStop(0,sk.nail);g.addColorStop(1,'#fff4ef');
+  x.fillStyle=g;x.beginPath();x.ellipse(nx,-wt*.1,wt*.92,wt*.62,0,0,7);x.fill();
+  x.fillStyle='rgba(255,255,255,.8)';x.beginPath();x.ellipse(nx+wt*.42,-wt*.32,wt*.3,wt*.09,-.25,0,7);x.fill();
+  x.strokeStyle='rgba(150,90,70,.28)';x.lineWidth=wt*.06;x.beginPath();x.ellipse(nx,-wt*.1,wt*.92,wt*.62,0,0,7);x.stroke();}
+ x.restore();
+}
+/* カードの裏側：カード下端から見える手 */
+function drawPalm(x,cw,ch,sk){
+ const u=ch,ex=-cw/2,ey=ch/2;
+ x.save();x.translate(ex+u*.06,ey-u*.06);x.rotate(.12);
+ const g=x.createLinearGradient(-u*.3,0,u*.3,0);g.addColorStop(0,sk.shade);g.addColorStop(.35,sk.base);g.addColorStop(.7,sk.light);g.addColorStop(1,sk.shade);
+ x.fillStyle=g;x.beginPath();x.roundRect(-u*.27,0,u*.54,u*6,[u*.22,u*.22,0,0]);x.fill();
+ // 指の関節の影（カードの縁の下にうっすら）
+ x.strokeStyle='rgba(110,55,35,.14)';x.lineWidth=u*.006;
+ for(let i=0;i<3;i++){x.beginPath();x.moveTo(-u*.05+i*u*.1,u*.12);x.quadraticCurveTo(-u*.02+i*u*.1,u*.2,-u*.06+i*u*.1,u*.27);x.stroke();}
+ x.restore();
+}
+/* カードの表側：親指 */
+function drawThumb(x,cw,ch,sk){
+ const u=ch,bx=-cw/2-u*.06,by=ch/2+u*.02,tx=-cw/2+u*.2,ty=ch/2-u*.2,wb=u*.075,wt=u*.058;
+ const ang=Math.atan2(ty-by,tx-bx),L=Math.hypot(tx-bx,ty-by);
+ x.save();x.beginPath();x.rect(-cw/2,-ch/2,cw,ch);x.clip();x.translate(bx+u*.018,by+u*.03);x.rotate(ang);
+ x.shadowColor='rgba(0,0,0,.5)';x.shadowBlur=u*.05;x.fillStyle='rgba(0,0,0,.28)';capsule(x,L,wb,wt);x.fill();x.restore();
+ x.save();x.translate(bx-u*.03,by+u*.12);x.rotate(.35);x.fillStyle=skinFill(x,-u*.13,0,u*.13,0,sk);x.beginPath();x.ellipse(0,0,u*.13,u*.2,0,0,7);x.fill();x.restore();
+ finger(x,bx,by,tx,ty,wb,wt,sk,true);
+}
+/* ---------- レイアウト ---------- */
+function layHand(){
+ const g=cardGeom(),c=mk(g.W,g.H),x=c.getContext('2d');
+ x.drawImage(baseC,0,0);
+ if(S.bgBlur){const t=mk(g.W/3,g.H/3);t.getContext('2d').drawImage(baseC,0,0,t.width,t.height);x.globalAlpha=.7;x.imageSmoothingQuality='high';x.drawImage(t,0,0,g.W,g.H);x.globalAlpha=1;}
+ const cw=g.w,ch=g.h,sk=SKINS[S.skin];
+ x.save();x.translate(g.cx,g.cy);x.rotate(g.rot);
+ if(S.hand)drawPalm(x,cw,ch,sk);
+ x.save();x.shadowColor='rgba(0,0,0,.38)';x.shadowBlur=ch*.1;x.shadowOffsetY=ch*.035;x.fillStyle='#f7f7f4';x.fillRect(-cw/2,-ch/2,cw,ch);x.restore();
+ x.drawImage(still(S.cardSub,false),-cw/2,-ch/2,cw,ch);
+ const gl=x.createLinearGradient(-cw/2,-ch/2,cw/2,ch/2);gl.addColorStop(0,'rgba(255,255,255,.14)');gl.addColorStop(.42,'rgba(255,255,255,0)');gl.addColorStop(.55,'rgba(255,255,255,.07)');gl.addColorStop(1,'rgba(255,255,255,0)');
+ x.fillStyle=gl;x.fillRect(-cw/2,-ch/2,cw,ch);
+ x.strokeStyle='rgba(0,0,0,.18)';x.lineWidth=Math.max(1,ch*.004);x.strokeRect(-cw/2,-ch/2,cw,ch);
+ if(S.hand)drawThumb(x,cw,ch,sk);
+ x.restore();
+ return c;
+}
+function pill(x,px,py,text,fs,bg,fg){x.font=`900 ${fs}px ${SANS}`;const w=x.measureText(text).width+fs*1.2,h=fs*1.7;
+ x.fillStyle=bg;x.beginPath();x.roundRect(px,py,w,h,h/2);x.fill();x.fillStyle=fg;x.textAlign='left';x.textBaseline='middle';x.fillText(text,px+fs*.6,py+h/2+1);return w;}
+function layCompare(){
+ const W=1080,fh=608,hd=130,inf=200,ft=96,H=hd+fh+inf+fh+ft,c=mk(W,H),x=c.getContext('2d'),I=S.info;
+ x.fillStyle='#f3efe6';x.fillRect(0,0,W,H);
+ x.fillStyle='#1c2233';x.fillRect(0,0,W,hd);
+ x.fillStyle='#ff5a5f';x.font=`900 24px ${SANS}`;x.textAlign='left';x.textBaseline='alphabetic';x.fillText('聖地巡礼レポート',40,48);
+ x.fillStyle='#fff';fit(x,`400 $px ${LOGO}`,I.title,W-220,46);x.fillText(I.title,40,104);
+ x.save();x.translate(985,65);x.rotate(-.22);x.strokeStyle='#ff5a5f';x.lineWidth=4;x.beginPath();x.arc(0,0,48,0,7);x.stroke();x.lineWidth=2;x.beginPath();x.arc(0,0,40,0,7);x.stroke();
+ x.fillStyle='#ff5a5f';x.font=`900 26px ${MIN}`;x.textAlign='center';x.textBaseline='middle';x.fillText('聖地',0,-4);x.font=`900 11px ${SANS}`;x.fillText('認定',0,20);x.restore();
+ x.drawImage(still(true,false),0,hd,W,fh);pill(x,24,hd+22,'劇中カット',24,'rgba(28,34,51,.85)','#fff');
+ const iy=hd+fh;x.fillStyle='#1c2233';x.textAlign='left';x.textBaseline='alphabetic';
+ const l1=`『${I.title}』 第${I.episode}話「${I.subtitle}」より`;fit(x,`900 $px ${SANS}`,l1,W-80,32);x.fillText(l1,40,iy+58);
+ x.fillStyle='#4b5163';x.font=`500 25px ${SANS}`;wrapJ(x,I.scene||'',W-80,2).forEach((t,i)=>x.fillText(t,40,iy+102+i*36));
+ if(I.line){x.fillStyle='#2f6fe4';const l3=`「${I.line}」${I.speaker?'— '+I.speaker:''}`;fit(x,`700 $px ${SANS}`,l3,W-80,24);x.fillText(l3,40,iy+inf-20);}
+ const ry=iy+inf;x.drawImage(srcC,0,ry,W,fh);pill(x,24,ry+22,'現地で撮影',24,'rgba(255,90,95,.92)','#fff');
+ if(S.place)pill(x,24,ry+fh-70,'📍 '+S.place,22,'rgba(255,255,255,.9)','#1c2233');
+ const fy=ry+fh;x.strokeStyle='#cfc7b6';x.setLineDash([10,8]);x.lineWidth=2;x.beginPath();x.moveTo(30,fy+16);x.lineTo(W-30,fy+16);x.stroke();x.setLineDash([]);
+ x.fillStyle='#1c2233';x.font=`400 28px ${LOGO}`;x.textAlign='left';x.textBaseline='middle';x.fillText('どこでも聖地カメラ',40,fy+56);
+ const d=new Date();x.font=`700 20px ${SANS}`;x.textAlign='right';x.fillStyle='#6c7282';x.fillText(`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} 現地撮影`,W-40,fy+56);
+ return c;
+}
+function vText(x,text,cx,top,fs){
+ const rot='ー－—―〜～…‥「」『』（）()【】〈〉《》-=',small='ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ';let y=top;
+ x.textAlign='center';x.textBaseline='middle';
+ for(const ch of text){const cy=y+fs/2;
+  if(rot.includes(ch)){x.save();x.translate(cx,cy);x.rotate(Math.PI/2);x.fillText(ch,0,0);x.restore();}
+  else if('、。，．'.includes(ch))x.fillText(ch,cx+fs*.6,cy-fs*.6);
+  else if(small.includes(ch))x.fillText(ch,cx+fs*.1,cy-fs*.1);
+  else x.fillText(ch,cx,cy);
+  y+=fs*1.05;}
+}
+function layTitle(){
+ const c=mk(FW,FH),x=c.getContext('2d'),I=S.info;x.drawImage(act(),0,0);
+ const g=x.createLinearGradient(FW*.5,0,FW,0);g.addColorStop(0,'rgba(10,15,40,0)');g.addColorStop(1,'rgba(10,15,40,.45)');x.fillStyle=g;x.fillRect(0,0,FW,FH);
+ x.save();x.fillStyle='#fff';x.shadowColor='rgba(0,0,0,.55)';x.shadowBlur=18;
+ x.font=`900 46px ${MIN}`;vText(x,`第${kan(I.episode)}話`,FW-110,90,46);
+ const t=I.subtitle||'';const avail=FH-180;let cols=[t];if(t.length*96*1.05>avail&&t.length>8){const h=Math.ceil(t.length/2);cols=[t.slice(0,h),t.slice(h)];}
+ const longest=Math.max(...cols.map(s=>s.length));const fs=Math.min(96,Math.floor(avail/(longest*1.05)));
+ x.font=`900 ${fs}px ${MIN}`;cols.forEach((s,i)=>vText(x,s,FW-110-fs*1.2*(i+1)-20,110+i*fs*.8,fs));
+ x.textAlign='left';x.textBaseline='alphabetic';x.globalAlpha=.92;fit(x,`400 $px ${LOGO}`,I.title,FW*.5,30);x.fillText(I.title,44,FH-44);
+ x.restore();return c;
+}
+async function renderLayout(){
+ if(!frameC)return;const I=S.info;
+ await fonts(`${I.title}${I.subtitle}${I.line}${I.scene}${I.speaker}${S.place}聖地巡礼レポート劇中カット現地で撮影第話より認定どこでも聖地カメラ撮影0123456789#.『』「」—${kan(I.episode)}`);
+ const c=S.layout==='hand'?layHand():S.layout==='still'?still(true,true):S.layout==='compare'?layCompare():layTitle();
+ lastCanvas=c;$('#out').src=c.toDataURL('image/jpeg',.92);updateCaption();
+}
+
+/* ---------- 設定ネタ ---------- */
+const pick=(a,R=Math.random)=>a[(R()*a.length)|0];
+function randomInfo(){
+ const A=['放課後','夏色','坂の上','ぼくら','改札前','屋上','黄昏','透明','約束の','ひだまり','終電','風待ち','あの日の','青い'];
+ const B=['シグナル','リフレイン','ノート','メモリーズ','ステップ','グラフィティ','ディスタンス','ラプソディ','アフタースクール','ポラリス'];
+ const C=[()=>`${pick(A)}${pick(B)}`,()=>`きみと${pick(['終電','夕焼け','坂道','路地裏','商店街'])}の${pick(B)}`,()=>`${pick(A)}${pick(B)}は${pick(['終わらない','とまらない','まだ遠い','ここにある'])}`];
+ const SUB=['はじめての寄り道','この街で、もう一度','雨上がりの約束','言えなかったこと','ふたりの帰り道','夏がはじまる音','さよならは言わない','知らない街のきみ','やっぱり、ここだった','坂道の途中で'];
+ const LINE=['……ここ、来たことある気がする。','ねえ、明日もこの道で待ってて。','この景色、ずっと覚えていたいな。','遅いよ。……ずっと待ってたんだから。','たぶん、ここから全部はじまったんだ。','振り向いたら、負けだからね。'];
+ const SP=['ひより','湊','ちなつ','蒼','つむぎ','颯太','紬','律'];
+ const sp=pick(SP);
+ return {cast:'',title:pick(C)(),episode:1+((Math.random()*12)|0),subtitle:pick(SUB),speaker:sp,line:pick(LINE),
+  scene:pick([`${sp}が初めて本音を打ち明ける、物語の転機になる場面。`,`放課後、${sp}がひとりでこの場所に立ち寄るシーン。`,`最終話直前、${sp}が約束の場所に駆けつけるカット。`,`OP映像のラストカットにも使われた、作品を代表する風景。`])};
+}
+function jpegB64(c,w,h,q){const t=mk(w,h);t.getContext('2d').drawImage(c,0,0,w,h);return t.toDataURL('image/jpeg',q).split(',')[1];}
+async function api(path,body){
+ const res=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+ let v={};try{v=await res.json();}catch(e){}
+ if(!v.ok)throw new Error(v.error||'うまくいきませんでした。もう一度試してください。');return v;
+}
+async function aiInfo(){
+ const btn=$('#ai'),msg=$('#aiMsg');btn.disabled=true;msg.textContent='AIが写真を見て設定を捏造しています…';
+ try{
+  const v=await api('/api/seichi/info',{image:jpegB64(srcC,768,432,.85),genre:S.genre,place:S.place});
+  S.info={...S.info,...v.info};fillFields();await renderLayout();msg.textContent='できました。この設定で「劇中カットを描く」と、その場面が描かれます。';
+  return true;
+ }catch(e){msg.textContent=e.message;return false;}
+ finally{btn.disabled=false;}
+}
+// 1日に描ける枚数（このスマホでの目安）
+const DAY_LIMIT=20;
+function dayCount(add){try{const k='seichi_draw_'+new Date().toISOString().slice(0,10);let n=+(localStorage.getItem(k)||0);if(add){n++;localStorage.setItem(k,n);}return n;}catch(e){return 0;}}
+async function gptDraw(){
+ if(drawing||!srcC)return;const msg=$('#drawMsg'),btn=$('#draw');
+ if(dayCount()>=DAY_LIMIT){msg.textContent=`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`;return;}
+ drawing=true;btn.disabled=true;msg.textContent='';
+ busy(true,'GPTが劇中カットを描いています…<small>1〜2分かかります。画面はこのままで</small>');
+ try{
+  const v=await api('/api/seichi/draw',{image:jpegB64(srcC,1280,720,.9),style:S.style,chars:S.chars,scene:S.info.scene,cast:S.info.cast});
+  const img=new Image();img.src=v.image;await img.decode();
+  gptFrame=mk(FW,FH);const x=gptFrame.getContext('2d'),k=Math.max(FW/img.naturalWidth,FH/img.naturalHeight);
+  const w=img.naturalWidth*k,h=img.naturalHeight*k;x.imageSmoothingQuality='high';x.drawImage(img,(FW-w)/2,(FH-h)/2,w,h);
+  useGpt=true;gptKey=cardKey();dayCount(true);
+  srcChips();msg.textContent='描けました。気に入らなければもう一度押すと描き直します。';
+ }catch(e){msg.textContent=e.message;}
+ drawing=false;btn.disabled=false;busy(false);await renderLayout();
+}
+function srcChips(){const el=$('#srcSel');el.classList.toggle('hide',!gptFrame);
+ if(gptFrame)chips(el,[['gpt','GPTの絵'],['filter','簡易フィルター']],useGpt?'gpt':'filter',v=>{useGpt=v==='gpt';renderLayout();});}
+async function saveImage(){
+ if(!lastCanvas)return;const blob=await new Promise(r=>lastCanvas.toBlob(r,'image/jpeg',.94));
+ const file=new File([blob],`seichi_${Date.now()}.jpg`,{type:'image/jpeg'});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:caption()});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
+/* ---------- UI ---------- */
+function busy(on,t){$('#busyTxt').innerHTML=t||'現像中…';$('#busy').classList.toggle('on',on);}
+function fillFields(){const I=S.info;$('#fTitle').value=I.title;$('#fEp').value=I.episode;$('#fSub').value=I.subtitle;$('#fLine').value=I.line;$('#fSpeaker').value=I.speaker;$('#fScene').value=I.scene;$('#fCast').value=I.cast||'';}
+function caption(){const I=S.info;return `『${I.title}』第${I.episode}話「${I.subtitle}」の聖地に来ました。${S.place?S.place+'。':''}${I.speaker?I.speaker+'が':''}「${I.line}」って言ったあの場所、本当にあった……！ #どこでも聖地 #聖地巡礼`;}
+function updateCaption(){$('#capTxt').textContent=caption();}
+function chips(el,items,cur,on){el.innerHTML='';items.forEach(([v,l])=>{const b=document.createElement('button');b.className='chip'+(v===cur?' on':'');b.textContent=l;b.onclick=()=>{[...el.children].forEach(c=>c.classList.remove('on'));b.classList.add('on');on(v);};el.appendChild(b);});}
+
+chips($('#styles'),Object.entries(STYLES).map(([k,v])=>[k,v.name]),S.style,v=>{S.style=v;processFrame();});
+chips($('#genres'),GENRES.map(g=>[g,g]),S.genre,v=>{S.genre=v;});
+chips($('#skins'),SKINS.map((s,i)=>[i,s.n]),S.skin,v=>{S.skin=v;renderLayout();});
+$('#layouts').onclick=e=>{const b=e.target.closest('button');if(!b)return;[...$('#layouts').children].forEach(c=>c.classList.remove('on'));b.classList.add('on');S.layout=b.dataset.v;$('#cardPanel').classList.toggle('hide',S.layout!=='hand');renderLayout();};
+
+const bindRange=(id,fn,reprocess=true)=>$(id).addEventListener('change',e=>{fn(+e.target.value);reprocess?processFrame():renderLayout();});
+bindRange('#cSize',v=>S.card.size=v);bindRange('#cX',v=>S.card.x=v);bindRange('#cY',v=>S.card.y=v);bindRange('#cRot',v=>S.card.rot=v,false);
+bindRange('#line',v=>S.line=v);bindRange('#brush',v=>S.brush=v);
+$('#sky').onchange=e=>{S.sky=e.target.checked;processFrame();};
+$('#hand').onchange=e=>{S.hand=e.target.checked;$('#skins').classList.toggle('hide',!S.hand);renderLayout();};
+$('#cardSub').onchange=e=>{S.cardSub=e.target.checked;renderLayout();};
+$('#bgBlur').onchange=e=>{S.bgBlur=e.target.checked;renderLayout();};
+$('#reseed').onclick=()=>{S.seed=(Math.random()*1e6)|0;processFrame();};
+$('#rand').onclick=()=>{S.info=randomInfo();fillFields();renderLayout();};
+$('#ai').onclick=aiInfo;
+let tmr;const later=()=>{clearTimeout(tmr);tmr=setTimeout(renderLayout,350);};
+[['#fCast','cast'],['#fTitle','title'],['#fSub','subtitle'],['#fLine','line'],['#fSpeaker','speaker'],['#fScene','scene']].forEach(([id,k])=>$(id).addEventListener('input',e=>{S.info[k]=e.target.value;later();}));
+$('#fEp').addEventListener('input',e=>{S.info.episode=Math.max(1,Math.min(99,parseInt(e.target.value)||1));later();});
+$('#place').addEventListener('input',e=>{S.place=e.target.value.trim();later();});
+$('#copyCap').onclick=async()=>{try{await navigator.clipboard.writeText(caption());$('#copyMsg').textContent='コピーしました';}catch(e){$('#copyMsg').textContent='コピーできませんでした。上の文章を長押しで選んでください。';}};
+$('#another').onclick=()=>$('#file').click();
+$('#dl').onclick=saveImage;
+$('#draw').onclick=gptDraw;
+chips($('#chars'),[[0,'人物なし'],[1,'1人'],[2,'2人']],S.chars,v=>{S.chars=v;});
+$('#file').addEventListener('change',async e=>{
+ const f=e.target.files&&e.target.files[0];if(!f)return;
+ const url=URL.createObjectURL(f),img=new Image();img.src=url;
+ try{await img.decode();}catch(err){alertMsg('画像を読み込めませんでした');return;}
+ const k=1600/Math.max(img.naturalWidth,img.naturalHeight),w=Math.round(img.naturalWidth*Math.min(1,k)),h=Math.round(img.naturalHeight*Math.min(1,k));
+ baseC=mk(w,h);const x=baseC.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(img,0,0,w,h);URL.revokeObjectURL(url);
+ const portrait=h>w;S.card.size=portrait?84:62;S.card.y=portrait?44:46;$('#cSize').value=S.card.size;$('#cY').value=S.card.y;
+ gptFrame=null;useGpt=false;srcChips();$('#drawMsg').textContent='';
+ if(!S.info.title){S.info=randomInfo();fillFields();}
+ $('#studio').classList.remove('hide');$('#introNote').classList.add('hide');$('#pickBtn').classList.add('hide');
+ e.target.value='';
+ await processFrame();
+ $('#studio').scrollIntoView({behavior:'smooth'});
+});
+function alertMsg(t){$('#introNote').textContent=t;}
+
+})();
+</script>
+</body>
+</html>
