@@ -130,7 +130,7 @@ const POSES = [
 ];
 const SHOTS = [
   ["画面の左寄り", "on the left side of the frame"], ["画面の右寄り", "on the right side of the frame"], ["画面の中央", "in the center of the frame"],
-  ["手前に大きく", "large in the foreground"], ["少し奥に、全身で", "a little further back, full body"],
+  ["手前に大きく", "large in the foreground"], ["全身が入る距離で", "at a distance where his full body fits, still clearly the main figure"],
 ];
 const BANNED_WORDS = ["路地裏", "裏路地", "路地", "裏通り", "街角", "放課後"];
 
