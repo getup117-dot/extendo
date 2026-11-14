@@ -91,27 +91,13 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
 
     <div class="actions">
       <button id="save" class="btn dark wide" disabled>📥 保存・シェア</button>
-      <button id="redraw" class="btn">🎬 もう一度描く</button>
-      <button id="remake" class="btn primary">✨ 別のアニメにする</button>
+      <button id="remake" class="btn primary wide">✨ 別のアニメにする</button>
       <button id="another" class="btn wide">📷 別の写真にする</button>
     </div>
 
     <section class="panel" id="infoPanel">
       <h2>登場シーン</h2>
       <div class="info" id="infoView"></div>
-      <details>
-        <summary>設定を自分で書き換える</summary>
-        <label class="fld">作品タイトル<input id="fTitle"></label>
-        <div class="two">
-          <label class="fld">話数<input id="fEp" type="number" min="1" max="99"></label>
-          <label class="fld">サブタイトル<input id="fSub"></label>
-        </div>
-        <label class="fld">セリフ<input id="fLine"></label>
-        <label class="fld">話したキャラ<input id="fSpeaker"></label>
-        <label class="fld">どんな場面？<textarea id="fScene"></textarea></label>
-        <label class="fld">劇中カットに描く人物の見た目<input id="fCast"></label>
-        <p class="note">書き換えたら「もう一度描く」で反映されます。</p>
-      </details>
     </section>
 
     <section class="panel">
@@ -146,16 +132,13 @@ function wait(on,t,lines){$('#wait').classList.toggle('on',on);clearInterval(wai
  const w=$('#waitTitle');w.classList.toggle('hide',!lines||!lines.length);if(!lines||!lines.length)return;let i=0;w.textContent=lines[0];
  waitTimer=setInterval(()=>{i=(i+1)%lines.length;w.textContent=lines[i];},3200);}
 function showErr(t){const e=$('#err');e.classList.toggle('hide',!t);e.textContent=t||'';}
-function setBusy(b){busy=b;['#redraw','#remake','#another'].forEach(id=>$(id).disabled=b);['#save','#postX'].forEach(id=>$(id).disabled=b||!resultBlob);}
+function setBusy(b){busy=b;['#remake','#another'].forEach(id=>$(id).disabled=b);['#save','#postX'].forEach(id=>$(id).disabled=b||!resultBlob);}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function caption(){const I=S.info;if(!I)return'';return `『${I.title}』第${I.episode}話「${I.subtitle}」の聖地に来ました。${S.place?S.place+'。':''}${I.speaker?I.speaker+'が':''}「${I.line}」って言ったあの場所、本当にあった……！ #どこでも聖地 #聖地巡礼`;}
 function showInfo(){const I=S.info;if(!I)return;
  $('#infoView').innerHTML=`<div class="t">『${esc(I.title)}』</div>第${esc(I.episode)}話「${esc(I.subtitle)}」<br>${esc(I.scene)}<br><span class="q">「${esc(I.line)}」${I.speaker?'— '+esc(I.speaker):''}</span>`;
- $('#fTitle').value=I.title;$('#fEp').value=I.episode;$('#fSub').value=I.subtitle;$('#fLine').value=I.line;$('#fSpeaker').value=I.speaker;$('#fScene').value=I.scene;$('#fCast').value=I.cast||'';
  $('#capTxt').textContent=caption();}
-[['#fTitle','title'],['#fSub','subtitle'],['#fLine','line'],['#fSpeaker','speaker'],['#fScene','scene'],['#fCast','cast']].forEach(([id,k])=>$(id).addEventListener('input',e=>{if(S.info){S.info[k]=e.target.value;showInfo();}}));
-$('#fEp').addEventListener('input',e=>{if(S.info){S.info.episode=Math.max(1,Math.min(99,parseInt(e.target.value)||1));showInfo();}});
 
 /* ---------- 写真と構図 ---------- */
 const mk=(w,h)=>{const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(h);return c;};
@@ -234,7 +217,6 @@ $('#file').addEventListener('change',async e=>{
  window.scrollTo({top:$('#studio').offsetTop-10,behavior:'smooth'});
  run(true);
 });
-$('#redraw').onclick=()=>run(false);
 $('#remake').onclick=()=>run(true);
 $('#another').onclick=()=>$('#file').click();
 $('#save').onclick=async()=>{if(!resultBlob)return;
