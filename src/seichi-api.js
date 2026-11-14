@@ -117,25 +117,32 @@ async function handleInfo(request, env) {
 // 段階1 frame：カードの部分だけ切り抜いた写真を、構図そのままアニメのワンシーンに描き直す
 //   （位置はアプリ側でぴったり戻すので、輪郭が背景とそろう）
 // 段階2 hand ：アニメのカードを貼った写真に、カードを持つ本物の手とカードの厚み・影を足す（マスクの中だけ）
+// しょうたの絵柄のお手本（public/seichi/style/）。劇中カットを描くたびに写真と一緒にGPTへ渡す
+const STYLE_REFS = ["/seichi/style/ref1.jpg", "/seichi/style/ref2.jpg", "/seichi/style/ref3.jpg", "/seichi/style/ref4.jpg"];
+const MY_STYLE = [
+  "Drawing style: copy the artist's style from the reference drawings exactly.",
+  "It is a quick hand-drawn sketch with a blue ballpoint pen on plain white paper: thin single-weight blue lines, drawn fast, slightly wobbly, with overlapping strokes, doubled lines and unfinished line ends. No color fill, no gray shading, no gradients; only a few loose hatching strokes at most. The white paper shows everywhere.",
+  "People are drawn exactly like the references: a round head, bangs drawn as several straight vertical strokes, small dot eyes with short eyebrow lines, simple C-shaped ears, a simple line nose, and a big expressive mouth. Simple bodies with loose outlines.",
+  "Buildings, walls, poles, wires, roads and every other part of the scene are also drawn only as loose blue ballpoint outlines in the same casual sketch manner. It must look like the same person drew the whole picture on one sheet of paper.",
+].join(" ");
 function framePrompt(b) {
-  const style = STYLE_EN[b.style] || STYLE_EN.seishun;
   const chars = Math.min(2, Math.max(0, parseInt(b.chars) || 0));
   const scene = clip(b.scene, 60), cast = clip(b.cast, 80), line = clip(b.line, 40);
   const people = chars === 0
     ? "No people in the frame."
-    : `Add ${chars === 1 ? "one original anime character" : "two original anime characters"} naturally in the scene, standing on the ground at a believable scale` +
+    : `Add ${chars === 1 ? "one original character" : "two original characters"} naturally in the scene, standing on the ground at a believable scale` +
       (cast ? ` (${cast})` : "") + (scene ? `, in this scene: ${scene}` : "") +
-      ". Completely original designs that do not resemble any existing anime character or real person, fully clothed and wholesome. Characters may overlap the background but must not change it.";
+      ". Original characters only, fully clothed and wholesome. Characters may overlap the background but must not change it.";
   const sub = b.sub && line
-    ? `Add a TV-style Japanese subtitle at the bottom center in white text with a thin dark outline that reads exactly: 「${line}」`
+    ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean black text with a thin white outline that reads exactly: 「${line}」`
     : "No text anywhere.";
   return [
-    "Completely repaint this photo as a single frame (a screenshot) of a high-quality Japanese TV anime. The entire image, edge to edge, must become hand-drawn anime art: flat cel shading, clean ink outlines, simplified painted textures. No photographic texture, noise or realism may remain anywhere (walls, bricks, asphalt, poles, pipes, metal all become anime-painted).",
-    "At the same time, keep exactly the same framing, camera angle, perspective and scale. Every building outline, roof line, wall edge, window, pole, pipe, wire, road edge and curb must stay at exactly the same position and size in the image, so the drawing can be laid precisely over the photo. Do not crop, zoom, shift, add or remove any structure.",
-    "Small details may change freely: textures, signs, text on objects and clutter can be simplified or reinterpreted. Only the big outlines must stay in place.",
-    `Style: detailed hand-painted anime background art, clean line art, cel-shaded, ${style}. The sky may be replaced with an anime sky.`,
+    "The first image is a photo. The other images are reference drawings by the artist.",
+    "Redraw the photo as a single frame (a still) of an anime drawn by this artist.",
+    MY_STYLE,
+    "Keep exactly the same framing, camera angle, perspective and scale as the photo. Every building outline, roof line, wall edge, window, pole, pipe, wire, road edge and curb must stay at the same position and size, so the drawing lines up with the photo. Do not crop, zoom, shift, add or remove any structure. Small details, textures and text on objects may be simplified or left out.",
     people, sub,
-    "No logos, watermarks or user interface.",
+    "No logos, watermarks or user interface. Do not copy the people or objects from the reference drawings; only their drawing style.",
   ].join("\n");
 }
 function handPrompt() {
@@ -171,6 +178,16 @@ async function handleDraw(request, env) {
 
   const mode = body.mode === "hand" ? "hand" : "frame";
   const prompt = mode === "hand" ? handPrompt() : framePrompt(body);
+  // 段階1（劇中カット）では、絵柄のお手本を一緒に渡す
+  const refs = [];
+  if (mode === "frame" && env.ASSETS) {
+    for (const path of STYLE_REFS) {
+      try {
+        const r = await env.ASSETS.fetch(new Request(new URL(path, request.url)));
+        if (r.ok) refs.push(new Blob([await r.arrayBuffer()], { type: "image/jpeg" }));
+      } catch (e) { console.error("style ref", path, e); }
+    }
+  }
   const maskB64 = String(body.mask ?? "").replace(/^data:image\/\w+;base64,/, "");
   const mask = maskB64 && maskB64.length < MAX_B64 ? b64ToBlob(maskB64, "image/png") : null;
   const models = env.OPENAI_IMAGE_MODEL ? [env.OPENAI_IMAGE_MODEL] : IMAGE_MODELS;
@@ -178,7 +195,8 @@ async function handleDraw(request, env) {
   for (const model of models) {
     const fd = new FormData();
     fd.append("model", model);
-    fd.append("image", b64ToBlob(body.image, "image/jpeg"), "photo.jpg");
+    fd.append(refs.length ? "image[]" : "image", b64ToBlob(body.image, "image/jpeg"), "photo.jpg");
+    refs.forEach((r, i) => fd.append("image[]", r, `ref${i + 1}.jpg`));
     if (mask) fd.append("mask", mask, "mask.png");
     fd.append("prompt", prompt);
     fd.append("size", sizeFor(model, body.w, body.h));
