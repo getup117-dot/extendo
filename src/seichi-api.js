@@ -120,10 +120,11 @@ async function handleInfo(request, env) {
 // しょうたの絵柄のお手本（public/seichi/style/）。劇中カットを描くたびに写真と一緒にGPTへ渡す
 const STYLE_REFS = ["/seichi/style/ref1.jpg", "/seichi/style/ref2.jpg", "/seichi/style/ref3.jpg", "/seichi/style/ref4.jpg"];
 const MY_STYLE = [
-  "Drawing style: copy the artist's style from the reference drawings exactly.",
-  "It is a quick hand-drawn sketch with a blue ballpoint pen on plain white paper: thin single-weight blue lines, drawn fast, slightly wobbly, with overlapping strokes, doubled lines and unfinished line ends. No color fill, no gray shading, no gradients; only a few loose hatching strokes at most. The white paper shows everywhere.",
-  "People are drawn exactly like the references: a round head, bangs drawn as several straight vertical strokes, small dot eyes with short eyebrow lines, simple C-shaped ears, a simple line nose, and a big expressive mouth. Simple bodies with loose outlines.",
-  "Buildings, walls, poles, wires, roads and every other part of the scene are also drawn only as loose blue ballpoint outlines in the same casual sketch manner. It must look like the same person drew the whole picture on one sheet of paper.",
+  "Drawing style: the LINE WORK copies the artist's reference drawings, and the COLORING is a full TV anime.",
+  "Line work: rough hand-drawn ballpoint-pen-like lines exactly like the references: thin, drawn fast, slightly wobbly, with overlapping strokes, doubled lines, small gaps and unfinished line ends. Keep this rough, casual line quality everywhere; do not clean it up. Line color is dark (near black or dark brown, or tinted to match the color of each area), not blue.",
+  "Coloring: fully colored like a modern Japanese TV anime: flat cel shading with clear shadow shapes, vivid painted anime background colors, an anime sky with clouds, soft light. The color fills sit under the rough lines and may slightly miss them, like a hand-made anime. No white paper is visible; the whole frame is colored.",
+  "People are drawn like the references: a round head, bangs drawn as several straight vertical strokes, small dot eyes with short eyebrow lines, simple C-shaped ears, a simple line nose and a big expressive mouth, colored with anime cel shading.",
+  "Buildings, walls, poles, wires and roads are drawn with the same rough lines and anime coloring, so the whole picture looks made by the same artist.",
 ].join(" ");
 function framePrompt(b) {
   const chars = Math.min(2, Math.max(0, parseInt(b.chars) || 0));
