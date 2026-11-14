@@ -131,7 +131,7 @@ async function handleInfo(request, env) {
       method: "POST",
       headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
-        model: CLAUDE_MODEL, max_tokens: 800, system: INFO_SYSTEM,
+        model: CLAUDE_MODEL, max_tokens: 2000, system: INFO_SYSTEM,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.image } },
           { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${pick(TITLE_PATTERNS)}\n撮影場所のメモ：${place || "なし"}` },
@@ -144,7 +144,7 @@ async function handleInfo(request, env) {
     const s = text.indexOf("{"), e = text.lastIndexOf("}");
     let v;
     try { v = JSON.parse(text.slice(s, e + 1)); }
-    catch (pe) { throw new Error("JSON parse: " + text.slice(0, 250)); }
+    catch (pe) { throw new Error(`JSON parse (${data.stop_reason}): ` + text.slice(-200)); }
     return json({ ok: true, info: {
       title: clip(v.title, 30), episode: 1 + Math.floor(Math.random() * 24),
       subtitle: clip(v.subtitle, 24), hero: "しょうたエクステンド" + (clip(v.role, 16) ? `（${clip(v.role, 16)}）` : ""), speaker: clip(v.speaker, 12) || "しょうたエクステンド", line: clip(v.line, 40),
