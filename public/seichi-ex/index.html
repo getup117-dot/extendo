@@ -199,7 +199,7 @@ async function makeFrame(){
  G=plan();
  const I=S.info;wait(true,`あ！ここ『${I.title}』の聖地じゃん！`,[`ほら、第${I.episode}話の…`,`「${I.subtitle}」の回！`,...(I.line?[`${I.speaker?I.speaker+'が':''}「${I.line}」って言うとこ！`]:[]),'てか、またしょうたエクステンドが主人公…？','劇中カット、いま探してくるね…']);
  const f=await api('/api/seichi-ex/draw',{image:toB64(G.real,'image/jpeg',.9),w:1536,h:1024,
-  style:S.info.style||S.style,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast,hero:S.info.hero,others:S.info.others||0});
+  style:S.info.style||S.style,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast,hero:S.info.hero,others:S.info.others||0,pose:S.info.pose,shot:S.info.shot});
  frameImg=await loadImg(f.image);dayCount(true);
 }
 async function run(newInfo){

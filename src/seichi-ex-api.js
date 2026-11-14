@@ -111,6 +111,27 @@ function pickCompanions() {
   for (let i = 0; i < n; i++) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   return out;
 }
+// 主人公のポーズとカメラの距離・位置は毎回くじ引き（ポケットに手を入れて立つ、ばかりにならないように）
+// どれも画像AIが失敗しにくいもの。[日本語, 英語]
+const POSES = [
+  ["ポケットに両手を入れて立つ", "standing with both hands in his jacket pockets"],
+  ["後ろ姿で遠くを見ている（背中と帽子が見える）", "seen from behind, looking into the distance; his back, hat and hair are visible, no hands shown"],
+  ["ベンチ・段差・縁石などに腰かけ、両手をひざの上に軽く置く", "sitting on a bench, step or curb with his hands resting loosely on his knees"],
+  ["壁・電柱・手すりに背中をあずけ、腕は自然に下ろす", "leaning his back against a wall, pole or railing with arms hanging relaxed"],
+  ["横向きで歩いている途中（腕は体のわきで自然に）", "walking in profile, mid-stride, arms relaxed at his sides"],
+  ["歩きながら肩ごしに振り返る", "walking away and glancing back over his shoulder"],
+  ["片手を軽く上げて手を振る（手のひらを開く）", "raising one open hand in a casual wave"],
+  ["腕を自然に下ろし、正面を向いて仁王立ち", "standing firmly facing forward, legs apart, arms hanging at his sides"],
+  ["手を後ろで組んで立ち、遠くを見る", "standing with hands clasped behind his back, looking into the distance"],
+  ["空を見上げる（軽いあおり）", "looking up at the sky, seen from a slightly low angle"],
+  ["しゃがんで地面の何かを見つめる（手はひざの上）", "crouching and staring at something on the ground, forearms resting on his knees, hands relaxed"],
+  ["横顔のバストアップ（手は画面に入れない）", "a bust-up shot in profile, no hands in the frame"],
+  ["正面のバストアップで不敵に笑う（手は画面に入れない）", "a bust-up shot facing the viewer with a bold smirk, no hands in the frame"],
+];
+const SHOTS = [
+  ["画面の左寄り", "on the left side of the frame"], ["画面の右寄り", "on the right side of the frame"], ["画面の中央", "in the center of the frame"],
+  ["手前に大きく", "large in the foreground"], ["少し奥に、全身で", "a little further back, full body"],
+];
 const BANNED_WORDS = ["路地裏", "裏路地", "路地", "裏通り", "街角", "放課後"];
 
 const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。ユーザーが撮った実在の何気ない風景写真を見て、
@@ -138,7 +159,7 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。speaker はセリフを言うキャラの名前（基本は主人公の「しょうたエクステンド」）。
 - cast は、このカットの登場人物全員のポーズ・表情・位置を120字以内で。指定された「主人公以外の登場人物」がいれば、その見た目（髪型・服装）と主人公との位置関係（となりに立つ・少し離れて向かい合う・後ろに立つ など）も書く。人物どうしは触れ合わない。主人公が一番目立つようにする。健全な内容にする。
 - 画像AIが失敗しやすいポーズ・構図は絶対に選ばない：帽子・サングラス・顔・髪・ひげに手を当てる、指を組む・手を前で組む、物を持つ・握る（独楽・マイク・スマホ・傘・カップ・武器・カバンの持ち手など）、ピース・指さし・数を数える手・拳を突き出す、手や足をカメラに向かって突き出す、腕組み、手をつなぐ・握手・ハイタッチ、他の人と触れ合う、走る・跳ぶ・戦うなど激しい動き、寝転ぶ、極端なあおり・俯瞰・魚眼、顔のどアップ。
-- 成功しやすいポーズだけ使う：ポケットに手を入れて立つ、腕を自然に下ろして立つ、手を後ろで組む、片手を軽く上げて手を振る（開いた手のひら）、ベンチや段差に座る、壁にもたれる、歩いている途中で振り返る、後ろ姿、少し離れた位置に全身で立つ。目線・表情・立ち姿でかっこよさを出す。scene と line もそれに合わせる。
+- 主人公のポーズと画面での位置は、指定された「主人公のポーズ」「主人公の位置」をそのまま使う（変えない）。scene・line・cast もそのポーズに合わせる。脇役のポーズは、主人公と違う安全なもの（立つ・座る・もたれる・歩く・手を振る・後ろ姿など）にする。
 - card は、写真の中で「ここがあの場所だ」と一番わかる目印の中心。写真の幅・高さに対する0〜1の割合で。空や地面だけの場所は避ける。
 - 性的・暴力的・差別的な内容は入れない。
 
@@ -156,6 +177,7 @@ async function handleInfo(request, env) {
   const recent = (Array.isArray(body.recent) ? body.recent : []).slice(0, 8).map((t) => clip(t, 60)).filter(Boolean);
   const genre = clip(body.genre || g[0], 20), role = body.genre ? "" : g[1], place = clip(body.place || "", 40);
   const comp = pickCompanions();
+  const pose = Math.floor(Math.random() * POSES.length), shot = Math.floor(Math.random() * SHOTS.length);
   const tTitle = pick(TITLE_PATTERNS), tScene = pick(SCENE_POOL), tRole = pick(PLACE_ROLE);
   for (let attempt = 0; attempt < 2; attempt++) try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -165,7 +187,7 @@ async function handleInfo(request, env) {
         model: CLAUDE_MODEL, max_tokens: 2000, system: INFO_SYSTEM,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.image } },
-          { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${tTitle}\n場面の種類：${tScene}\nこの場所の見立て：${tRole}\n主人公以外の登場人物：${comp.length ? comp.join("、") : "なし（主人公ひとり）"}\n撮影場所のメモ：${place || "なし"}${recent.length ? `\n最近作った設定（かぶらないように）：\n- ${recent.join("\n- ")}` : ""}` },
+          { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${tTitle}\n場面の種類：${tScene}\nこの場所の見立て：${tRole}\n主人公のポーズ：${POSES[pose][0]}\n主人公の位置：${SHOTS[shot][0]}\n主人公以外の登場人物：${comp.length ? comp.join("、") : "なし（主人公ひとり）"}\n撮影場所のメモ：${place || "なし"}${recent.length ? `\n最近作った設定（かぶらないように）：\n- ${recent.join("\n- ")}` : ""}` },
         ] }],
       }),
     });
@@ -179,7 +201,7 @@ async function handleInfo(request, env) {
     return json({ ok: true, info: {
       title: clip(v.title, 30), episode: 1 + Math.floor(Math.random() * 24),
       subtitle: clip(v.subtitle, 24), hero: "しょうたエクステンド" + (clip(v.role, 16) ? `（${clip(v.role, 16)}）` : ""), speaker: clip(v.speaker, 12) || "しょうたエクステンド", line: clip(v.line, 40),
-      scene: clip(v.scene, 60), cast: clip(v.cast, 140), others: comp.length,
+      scene: clip(v.scene, 60), cast: clip(v.cast, 140), others: comp.length, pose, shot,
       card: { x: Math.min(.95, Math.max(.05, Number(v.card?.x) || .5)), y: Math.min(.95, Math.max(.05, Number(v.card?.y) || .45)) },
     } });
   } catch (e) {
@@ -193,6 +215,7 @@ async function handleInfo(request, env) {
 function framePrompt(b) {
   const scene = clip(b.scene, 60), cast = clip(b.cast, 140), line = clip(b.line, 40);
   const others = Math.min(2, Math.max(0, parseInt(b.others) || 0));
+  const pose = POSES[parseInt(b.pose)] || POSES[0], shot = SHOTS[parseInt(b.shot)] || SHOTS[2];
   const sub = b.sub && line
     ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean white text with a thin dark outline that reads exactly: 「${line}」. Use a modest font size so the whole subtitle fits inside the frame with margins on both sides (two lines if needed); never cut it off at the edge.`
     : "No text anywhere.";
@@ -202,8 +225,8 @@ function framePrompt(b) {
     "Keep the same framing, camera angle, perspective and scale as the photo. Buildings, roof lines, walls, windows, poles, wires, road edges and curbs stay at the same position and size, so the drawing lines up with the photo. Do not crop, zoom or shift. Small details and text on objects may be simplified.",
     `THE PROTAGONIST (named Shota Extend) MUST APPEAR in this frame, clearly visible and recognizable (not tiny, not hidden): draw the man from the reference sheet as an anime character in the art style above. He is ${HERO_EN}.`,
     "Keep his signature look exactly every time: the straw boater hat with black band, the small round dark sunglasses with gold frames, the mustache and goatee, the shoulder-length black hair and the red track jacket with white stripes over a black T-shirt. Do not draw any brand logo on the jacket.",
-    `He stands on the ground at a believable scale${cast ? `. Pose and action: ${cast}` : ""}${scene ? `. Scene: ${scene}` : ""}. ${others ? `Besides him, draw exactly ${others === 1 ? "one other original character" : "two other original characters"} as described in the pose and action (for example a heroine, a rival or a sidekick), in the same gekiga style, at a believable scale. The protagonist stays the most prominent figure. Nobody touches anyone else.` : "He is the only person in the frame."}`,
-    "Pose and composition: use only poses that image models draw reliably: standing with hands in pockets, arms hanging naturally, hands behind the back, an open-palm wave, sitting on a bench or step, leaning on a wall, glancing back over the shoulder, seen from behind, full body at a little distance. Never draw: hands touching the hat, sunglasses, face, hair or beard; interlocked or clasped fingers; holding or gripping any object; peace signs, pointing, counting fingers or fists toward the camera; hands or feet reaching toward the camera; crossed arms; touching other people; running, jumping or fighting; extreme low/high angles or fisheye; extreme face close-ups. If the requested action conflicts with this, change the action to a safe pose. Any visible hand is simple, relaxed and anatomically correct with five fingers.",
+    `HIS POSE (follow exactly): ${pose[1]}, ${shot[1]}, at a believable scale on the ground${cast ? `. Pose and action: ${cast}` : ""}${scene ? `. Scene: ${scene}` : ""}. ${others ? `Besides him, draw exactly ${others === 1 ? "one other original character" : "two other original characters"} as described in the pose and action (for example a heroine, a rival or a sidekick), in the same gekiga style, at a believable scale. The protagonist stays the most prominent figure. Nobody touches anyone else.` : "He is the only person in the frame."}`,
+    "Pose and composition: keep every pose simple and reliable. Never draw: hands touching the hat, sunglasses, face, hair or beard; interlocked or clasped fingers; holding or gripping any object; peace signs, pointing, counting fingers or fists toward the camera; hands or feet reaching toward the camera; crossed arms; touching other people; running, jumping or fighting; extreme high angles or fisheye; extreme face close-ups. If the action text conflicts with HIS POSE or these rules, follow HIS POSE. Any visible hand is simple, relaxed and anatomically correct with five fingers.",
     "Characters may overlap the background but must not change its structure. Everyone fully clothed and wholesome.",
     sub,
     "No logos, watermarks or user interface. Do not copy the backgrounds of the reference sheet.",
