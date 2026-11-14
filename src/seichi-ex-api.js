@@ -1,5 +1,5 @@
 // どこでも聖地レンズEXTEND：AI API（Cloudflare Workers 用）
-// 元の聖地カメラとの違い：
+// 元の聖地レンズとの違い：
 //   - 絵柄の縛りなし（作品ごとに絵柄をくじ引き）
 //   - 主人公は毎回「麦わらカンカン帽・丸サングラス・ひげ・赤ジャージの男」で固定。必ず画面に出る
 //
@@ -8,7 +8,7 @@
 // POST /api/seichi-ex/draw  { image:"<jpeg base64>", w, h, sub, line, scene, cast, hero, style }
 //   → { ok:true, image:"data:image/jpeg;base64,..." }
 //
-// シークレットは元の聖地カメラと共用（ANTHROPIC_API_KEY / OPENAI_API_KEY）
+// シークレットは元の聖地レンズと共用（ANTHROPIC_API_KEY / OPENAI_API_KEY）
 
 const CLAUDE_MODEL = "claude-sonnet-5-5";
 const IMAGE_MODELS = ["gpt-image-2.6-sunburst", "gpt-image-2.6-flare", "gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "gpt-image-2", "gpt-image-1"];
