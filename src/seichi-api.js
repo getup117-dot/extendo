@@ -139,6 +139,7 @@ function handPrompt() {
     "This photo shows a borderless glossy printed anime still card held up in front of a real street; the picture on the card lines up with the real scene behind it.",
     "Only edit inside the transparent area of the mask, which starts right at the bottom edge of the card.",
     "Add one real human hand (natural, photorealistic skin, nails and fingers, as if the person taking the photo with a phone is holding it) gripping the bottom edge of the card from below: the tip of the thumb just touches the very bottom edge of the card from the front, the other fingers are behind the card. The palm, wrist and forearm extend down to the bottom of the frame.",
+    "Scale: the hand is close to the camera, so it looks big. The width of the hand across the knuckles is about 60% of the card's width, and the hand fills most of the transparent area.",
     "Do not draw any frame, border, device or second card. Do not move or redraw the card.",
     "Behind the hand, continue the real background naturally so it matches the photo. No text, logos or watermarks.",
   ].join("\n");
