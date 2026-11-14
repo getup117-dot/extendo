@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>どこでも聖地カメラEXTEND</title>
+<meta name="description" content="どの街にも、あの男がいる。写真を選ぶだけで、麦わら帽の男が主人公の架空アニメの劇中カットをAIが描き、現地写真と並べた比較画像をつくります。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="エクステン堂">
+<meta property="og:title" content="どこでも聖地カメラEXTEND｜エクステン堂">
+<meta property="og:description" content="どの街にも、あの男がいる。麦わら帽の男が主人公の架空アニメの劇中カットをAIが描き、現地写真と並べます。">
+<meta property="og:url" content="https://extendo.getup117.workers.dev/seichi-ex/">
+<meta property="og:image" content="https://extendo.getup117.workers.dev/img/ogp_seichi.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Zen+Old+Mincho:wght@900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4ead2;--ink:#1a1a1a;--sub:#6f6556;--accent:#d7262e;--blue:#d7262e;--straw:#d9b46a;--card:#fffaf0;--line:#e6d9bb}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px 70px}
+.hero{position:relative;padding:22px 4px 10px}
+.kicker{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.08em}
+h1{margin:0;font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:40px;line-height:1.1}
+h1 small{display:block;font-size:18px;color:var(--blue);margin-bottom:2px}
+h1 .ex{display:inline-block;margin-top:6px;background:var(--accent);color:#fff;font-size:20px;letter-spacing:.12em;padding:4px 12px 5px;border-radius:6px;transform:rotate(-2deg);box-shadow:3px 3px 0 var(--ink)}
+.stamp{position:absolute;right:6px;top:14px;width:76px;height:76px;border:3px solid var(--accent);border-radius:50%;display:grid;place-items:center;color:var(--accent);font-family:"Zen Old Mincho",serif;font-weight:900;font-size:22px;transform:rotate(-14deg);box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 6px var(--accent);line-height:1;text-align:center}
+.stamp span{font-size:10px;display:block;letter-spacing:.1em;margin-top:2px}
+.pick{display:block;margin-top:14px;background:var(--ink);color:#fff;text-align:center;border-radius:18px;padding:24px 16px;cursor:pointer;font-weight:900;font-size:18px;box-shadow:0 6px 0 #0b0f1c}
+.pick:active{transform:translateY(3px);box-shadow:0 3px 0 #0b0f1c}
+.pick em{display:block;font-style:normal;font-weight:500;font-size:12px;opacity:.7;margin-top:6px}
+.note{font-size:12.5px;color:var(--sub);line-height:1.7;margin:10px 2px}
+.preview{position:relative;border-radius:14px;overflow:hidden;background:#d9d3c6;box-shadow:0 10px 30px rgba(28,34,51,.18)}
+.preview img{display:block;width:100%;height:auto}
+.wait{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(20,24,36,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;text-align:center;padding:20px}
+.wait.on{display:flex}
+.wait b{font-size:19px;font-weight:900;line-height:1.5;max-width:92%}
+.wait p{margin:0;font-size:12.5px;opacity:.85;line-height:1.7}
+.wait .ttl{font-size:15px;font-weight:700;opacity:1;background:rgba(255,255,255,.14);padding:8px 14px;border-radius:999px;max-width:92%}
+.spin{width:38px;height:38px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{background:#fff0f0;border:1.5px solid #ffc9cb;color:#b4232a;border-radius:12px;padding:12px;font-size:13.5px;line-height:1.6;margin-top:12px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.btn{border:0;border-radius:12px;padding:13px 12px;font:900 14px "Zen Kaku Gothic New",sans-serif;cursor:pointer;background:#e9e3d6;color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.wide{grid-column:1/-1}
+#postX{background:#000}
+.btn:disabled{opacity:.5}
+section.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
+h2{margin:0 0 12px;font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
+h2::before{content:"";width:6px;height:16px;background:var(--accent);border-radius:3px}
+.lbl{font-size:12px;font-weight:700;color:var(--sub);margin:14px 0 6px}
+.lbl:first-of-type{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:8px 12px;font:700 13px "Zen Kaku Gothic New",sans-serif;cursor:pointer}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.tg{display:flex;align-items:center;justify-content:space-between;font-size:13.5px;font-weight:700;padding:12px 0 2px}
+.tg input{width:20px;height:20px;accent-color:var(--accent)}
+.fld{display:block;margin-top:10px;font-size:12px;font-weight:700;color:var(--sub)}
+.fld input,.fld textarea{display:block;width:100%;margin-top:4px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:500 15px "Zen Kaku Gothic New",sans-serif;color:var(--ink);background:#fff}
+.fld textarea{resize:vertical;min-height:60px}
+.two{display:grid;grid-template-columns:80px 1fr;gap:8px}
+.info{font-size:14px;line-height:1.75}
+.info .t{font-weight:900;font-size:16px}
+.info .q{color:var(--blue);font-weight:700}
+details summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--sub);margin-top:10px}
+.hide{display:none!important}
+footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="stamp"><div>主演<span>固定</span></div></div>
+    <p class="kicker">どの街にも、あの男がいる。</p>
+    <h1><small>どこでも</small>聖地カメラ<br><span class="ex">EXTEND</span></h1>
+  </div>
+
+  <label class="pick" id="pickBtn"><input type="file" id="file" accept="image/*" hidden>📷 写真をえらぶ・撮る<em>選ぶだけで、劇中と現地の比較画像ができあがります</em></label>
+  <p class="note" id="intro">撮った風景が登場する架空アニメの「劇中カット」をAIが描き、実際の写真と並べた比較画像を作ります。ジャンルも絵柄も毎回バラバラ。でも主人公は必ず、麦わらカンカン帽に丸サングラス、ひげに赤ジャージの<b>あの男</b>。作品名もセリフも捏造です。できあがりまで30秒ほど。</p>
+
+  <div id="studio" class="hide">
+    <div class="preview">
+      <img id="out" alt="聖地巡礼写真">
+      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">（30秒ほどかかります。画面はこのままで）</p></div>
+    </div>
+    <div class="err hide" id="err"></div>
+
+    <div class="actions">
+      <button id="save" class="btn dark wide" disabled>📥 保存・シェア</button>
+      <button id="remake" class="btn primary wide">✨ 別のアニメにする</button>
+      <button id="another" class="btn wide">📷 別の写真にする</button>
+    </div>
+
+    <section class="panel" id="infoPanel">
+      <h2>登場シーン</h2>
+      <div class="info" id="infoView"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Xに投稿する</h2>
+      <div class="info" id="capTxt"></div>
+      <div class="actions">
+        <button id="postX" class="btn dark wide">𝕏 画像つきでXに投稿</button>
+        <button id="copyCap" class="btn">文章をコピー</button>
+        <button id="textX" class="btn">文章だけでXを開く</button>
+      </div>
+      <p class="note" id="copyMsg">「画像つきでXに投稿」を押すと共有メニューが開きます。そこでXを選んでください。</p>
+    </section>
+  </div>
+
+
+  <footer>どこでも聖地カメラEXTEND — 作品・キャラクターはすべて架空です<br><a href="/" style="color:inherit">← エクステン堂にもどる</a></footer>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const GENRES=['おまかせ','青春','日常','恋愛','SF','ファンタジー','ミステリー','ホラー','スポーツ'];
+const S={style:'tv',genre:'',sub:true,place:'',info:null};
+let photo=null, photoURL='', resultBlob=null, busy=false;
+
+/* ---------- UI部品 ---------- */
+function chips(el,items,cur,on){el.innerHTML='';items.forEach(([v,l])=>{const b=document.createElement('button');b.className='chip'+(v===cur?' on':'');b.textContent=l;b.onclick=()=>{[...el.children].forEach(c=>c.classList.remove('on'));b.classList.add('on');on(v);};el.appendChild(b);});}
+
+let waitTimer=null;
+function wait(on,t,lines){$('#wait').classList.toggle('on',on);clearInterval(waitTimer);if(!on)return;if(t)$('#waitT').textContent=t;
+ const w=$('#waitTitle');w.classList.toggle('hide',!lines||!lines.length);if(!lines||!lines.length)return;let i=0;w.textContent=lines[0];
+ waitTimer=setInterval(()=>{i=(i+1)%lines.length;w.textContent=lines[i];},3200);}
+function showErr(t){const e=$('#err');e.classList.toggle('hide',!t);e.textContent=t||'';}
+function setBusy(b){busy=b;['#remake','#another'].forEach(id=>$(id).disabled=b);['#save','#postX'].forEach(id=>$(id).disabled=b||!resultBlob);}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function caption(){const I=S.info;if(!I)return'';return `『${I.title}』第${I.episode}話「${I.subtitle}」の聖地に来ました。${S.place?S.place+'。':''}${I.speaker?I.speaker+'が':''}「${I.line}」って言ったあの場所、本当にあった……！ #どこでも聖地EXTEND #聖地巡礼`;}
+function showInfo(){const I=S.info;if(!I)return;
+ $('#infoView').innerHTML=`<div class="t">『${esc(I.title)}』</div>第${esc(I.episode)}話「${esc(I.subtitle)}」<br>${I.hero?'主人公：'+esc(I.hero)+'<br>':''}${esc(I.scene)}<br><span class="q">「${esc(I.line)}」${I.speaker?'— '+esc(I.speaker):''}</span>`;
+ $('#capTxt').textContent=caption();}
+
+/* ---------- 写真と構図 ---------- */
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(h);return c;};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const toB64=(c,type,q)=>c.toDataURL(type,q).split(',')[1];
+async function loadImg(url){const i=new Image();i.src=url;await i.decode();return i;}
+const toBlob=c=>new Promise(r=>c.toBlob(r,'image/jpeg',.93));
+function scaled(maxEdge,q){const k=Math.min(1,maxEdge/Math.max(photo.naturalWidth,photo.naturalHeight));
+ const c=mk(photo.naturalWidth*k,photo.naturalHeight*k);const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,0,0,c.width,c.height);return toB64(c,'image/jpeg',q);}
+// 構図を決める：AIが選んだ目印を中心に、元写真から横長3:2をできるだけ広く切り出す
+function plan(){
+ const W0=photo.naturalWidth,H0=photo.naturalHeight,p=(S.info&&S.info.card)||{x:.5,y:.45};
+ let w=Math.min(W0,H0*1.5)*.96,h=w/1.5;
+ const sx=clamp(p.x*W0-w/2,0,W0-w),sy=clamp(p.y*H0-h/2,0,H0-h);
+ const real=mk(1536,1024),x=real.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,sx,sy,w,h,0,0,1536,1024);
+ return {real};
+}
+// 比較画像：上にアニメのカット、下に同じ範囲の実際の写真
+async function compareCanvas(g,frame){
+ const I=S.info,Wc=1080,ih=720,cap=86,gap=14,out=mk(Wc,ih*2+cap*2+gap),x=out.getContext('2d');
+ const t1=`『${I.title}』 第${I.episode}話より`,t2='現地';
+ try{await document.fonts.load('900 32px "Zen Kaku Gothic New"',t1+t2+'劇中');}catch(e){}
+ x.fillStyle='#faf8f3';x.fillRect(0,0,out.width,out.height);x.imageSmoothingQuality='high';
+ x.drawImage(frame,0,0,Wc,ih);x.drawImage(g.real,0,ih+cap+gap,Wc,ih);
+ x.fillStyle='#1c2233';x.textBaseline='middle';
+ let fs=32;x.font=`900 ${fs}px "Zen Kaku Gothic New",sans-serif`;while(fs>18&&x.measureText(t1).width>Wc-56){fs-=2;x.font=`900 ${fs}px "Zen Kaku Gothic New",sans-serif`;}
+ x.fillText(t1,28,ih+cap/2);x.font='900 32px "Zen Kaku Gothic New",sans-serif';x.fillText(t2,28,ih*2+cap+gap+cap/2);
+ const tag=(y,t,bg)=>{x.font='900 26px "Zen Kaku Gothic New",sans-serif';const w=x.measureText(t).width+30;x.fillStyle=bg;x.beginPath();x.roundRect(20,y,w,46,23);x.fill();x.fillStyle='#fff';x.fillText(t,35,y+24);};
+ tag(20,'劇中','rgba(28,34,51,.9)');tag(ih+cap+gap+20,'現地','rgba(255,90,95,.95)');
+ return out;}
+
+/* ---------- AI ---------- */
+async function api(path,body){
+ const res=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+ let v={};try{v=await res.json();}catch(e){}
+ if(!v.ok)throw new Error(v.error||'うまくいきませんでした。もう一度試してください。');return v;
+}
+function fallbackInfo(){const p=a=>a[(Math.random()*a.length)|0];const sp=p(['麦野ジン','カンカン','赤羽の旦那','ムギさん','グラサン先生']);
+ return {title:p(['麦わらの流れ者','カンカン帽は二度死ぬ','赤ジャージ探偵事件簿','グラサン越しの365日','ムギさんは今日も寄り道']),episode:1+((Math.random()*12)|0),
+  subtitle:p(['はじめての寄り道','この街で、もう一度','雨上がりの約束','ふたりの帰り道','やっぱり、ここだった']),speaker:sp,
+  line:p(['……ここ、来たことある気がする。','ねえ、明日もこの道で待ってて。','遅いよ。……ずっと待ってたんだから。','たぶん、ここから全部はじまったんだ。']),
+  hero:sp,style:p(['tv','movie','cel90','gekiga','chibi','showa']),scene:`${sp}がこの場所で立ち止まる、物語の転機になる場面。`,cast:'腕を下ろして、街を見渡している'};}
+const DAY_LIMIT=20;
+function dayCount(add){try{const k='seichi_ex_'+new Date().toISOString().slice(0,10);let n=+(localStorage.getItem(k)||0);if(add){n++;localStorage.setItem(k,n);}return n;}catch(e){return 0;}}
+
+async function makeInfo(){
+ wait(true,'……あれ？この景色、どこかで…',['見たことある気がする…','たしか、あのアニメの…','ちょっと待って、思い出すから']);
+ try{const v=await api('/api/seichi-ex/info',{image:scaled(768,.85),genre:S.genre==='おまかせ'?'':S.genre,place:S.place});S.info=v.info;}
+ catch(e){S.info=fallbackInfo();}
+ showInfo();
+}
+let G=null, frameImg=null;
+async function show(blob){resultBlob=blob;$('#out').src=URL.createObjectURL(blob);$('#capTxt').textContent=caption();}
+async function makeFrame(){
+ if(dayCount()>=DAY_LIMIT)throw new Error(`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`);
+ G=plan();
+ const I=S.info;wait(true,`あ！ここ『${I.title}』の聖地じゃん！`,[`ほら、第${I.episode}話の…`,`「${I.subtitle}」の回！`,...(I.line?[`${I.speaker?I.speaker+'が':''}「${I.line}」って言うとこ！`]:[]),'てか、また麦わら帽のあの人が主人公…？','劇中カット、いま探してくるね…']);
+ const f=await api('/api/seichi-ex/draw',{image:toB64(G.real,'image/jpeg',.9),w:1536,h:1024,
+  style:S.info.style||S.style,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast,hero:S.info.hero});
+ frameImg=await loadImg(f.image);dayCount(true);
+}
+async function run(newInfo){
+ if(busy||!photo)return;setBusy(true);showErr('');
+ try{if(newInfo||!S.info)await makeInfo();await makeFrame();await show(await toBlob(await compareCanvas(G,frameImg)));}
+ catch(e){showErr(e.message);}
+ wait(false);setBusy(false);
+}
+
+$('#file').addEventListener('change',async e=>{
+ const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+ if(photoURL)URL.revokeObjectURL(photoURL);photoURL=URL.createObjectURL(f);
+ const img=new Image();img.src=photoURL;try{await img.decode();}catch(err){$('#intro').textContent='画像を読み込めませんでした。別の写真で試してください。';return;}
+ photo=img;resultBlob=null;S.info=null;G=null;frameImg=null;
+ $('#out').src=photoURL;$('#studio').classList.remove('hide');$('#pickBtn').classList.add('hide');$('#intro').classList.add('hide');
+ $('#infoView').textContent='';$('#capTxt').textContent='';
+ window.scrollTo({top:$('#studio').offsetTop-10,behavior:'smooth'});
+ run(true);
+});
+$('#remake').onclick=()=>run(true);
+$('#another').onclick=()=>$('#file').click();
+$('#save').onclick=async()=>{if(!resultBlob)return;
+ const file=new File([resultBlob],`seichi_ex_${Date.now()}.jpg`,{type:'image/jpeg'});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:caption()});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ const a=document.createElement('a');a.href=URL.createObjectURL(resultBlob);a.download=file.name;document.body.appendChild(a);a.click();a.remove();};
+function openX(){window.open('https://x.com/intent/post?text='+encodeURIComponent(caption()),'_blank','noopener');}
+$('#textX').onclick=openX;
+$('#postX').onclick=async()=>{if(!resultBlob)return;
+ const file=new File([resultBlob],`seichi_ex_${Date.now()}.jpg`,{type:'image/jpeg'});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:caption()});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ openX();$('#copyMsg').textContent='この端末では画像を直接渡せないので、文章だけでXを開きました。画像は「保存・シェア」で保存して添付してください。';};
+$('#copyCap').onclick=async()=>{try{await navigator.clipboard.writeText(caption());$('#copyMsg').textContent='コピーしました';}catch(e){$('#copyMsg').textContent='コピーできませんでした。上の文章を長押しで選んでください。';}};
+})();
+</script>
+</body>
+</html>
