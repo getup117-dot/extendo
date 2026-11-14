@@ -127,6 +127,7 @@ const MY_STYLE = [
   "Characters: completely flat color fills only, one solid color per area (hair, skin, uniform, socks, shoes), with NO shading, no shadow tones, no highlights and no gradients at all, like flat paper cut-outs under the rough lines.",
   "Background: more richly colored than the characters, like a hand-painted anime background: varied but natural colors, base colors plus a couple of hard-edged shadow and light tones, gentle color variation across walls and the road, a colored sky with simple clouds and believable daylight. Materials like bricks and asphalt are suggested with a few rough lines and color patches, not photo-real detail. The contrast between flat characters and a more painted background is intentional.",
   "The fills may slightly miss the rough lines, like hand-made animation. The whole frame is colored; no white paper shows.",
+  "The reference drawings are rough sketches. Take from them only the character design and the loose line feel. Do NOT copy sketch artifacts: no head-outline or construction lines showing through the hair or crossing the forehead, no guide lines, no scribbled-over corrections, no double outlines of the head. Hair covers the forehead cleanly; the face reads like a finished anime frame drawn in a loose hand.",
   "People must look like the references, not like typical polished anime: a round head, bangs drawn as several straight vertical strokes, small dot eyes with short eyebrow lines, simple C-shaped ears, a simple line nose and a big expressive mouth, colored with anime cel shading.",
   "Buildings, walls, poles, wires and roads are drawn with the same rough lines and anime coloring, so the whole picture looks made by the same artist.",
 ].join(" ");
@@ -140,7 +141,7 @@ function framePrompt(b) {
       ". Original characters only, fully clothed and wholesome. Characters may overlap the background but must not change it." +
       " Hands: use only poses that image models draw reliably: an open-palm wave, hands in pockets, arms hanging naturally, hands behind the back, seen from behind, or a small figure in the distance. Avoid poses that often fail: interlocked or clasped fingers (including hands clasped in front), holding objects (phones, umbrellas, cups, bag handles), peace signs, pointing or counting fingers, holding hands, handshakes, high-fives, hands touching the face or hair, hands reaching toward the camera, crossed arms, and characters touching each other. Keep any visible hand simple and slightly deformed like the reference drawings: a rounded mitten shape with few or no separated fingers.";
   const sub = b.sub && line
-    ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean black text with a thin white outline that reads exactly: 「${line}」`
+    ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean white text with a thin dark outline that reads exactly: 「${line}」. Use a modest font size so the whole subtitle fits inside the frame with margins on both sides (two lines if needed); never cut it off at the edge.`
     : "No text anywhere.";
   return [
     "The first image is a photo. The other images are reference drawings by the artist.",
