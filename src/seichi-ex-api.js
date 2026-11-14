@@ -142,7 +142,9 @@ async function handleInfo(request, env) {
     const data = await res.json();
     const text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text).join("");
     const s = text.indexOf("{"), e = text.lastIndexOf("}");
-    const v = JSON.parse(text.slice(s, e + 1));
+    let v;
+    try { v = JSON.parse(text.slice(s, e + 1)); }
+    catch (pe) { throw new Error("JSON parse: " + text.slice(0, 250)); }
     return json({ ok: true, info: {
       title: clip(v.title, 30), episode: 1 + Math.floor(Math.random() * 24),
       subtitle: clip(v.subtitle, 24), hero: "しょうたエクステンド" + (clip(v.role, 16) ? `（${clip(v.role, 16)}）` : ""), speaker: clip(v.speaker, 12) || "しょうたエクステンド", line: clip(v.line, 40),
@@ -151,7 +153,7 @@ async function handleInfo(request, env) {
     } });
   } catch (e) {
     console.error("seichi-ex info error", e);
-    return json({ ok: false, error: "うまく捏造できませんでした。もう一度押してみてください。" }, 502);
+    return json({ ok: false, error: "うまく捏造できませんでした。もう一度押してみてください。", detail: String(e?.message || e).slice(0, 300) }, 502);
   }
 }
 
