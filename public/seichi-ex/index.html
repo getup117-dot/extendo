@@ -80,7 +80,7 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
   </div>
 
   <label class="pick" id="pickBtn"><input type="file" id="file" accept="image/*" hidden>📷 写真をえらぶ・撮る<em>選ぶだけで、劇中と現地の比較画像ができあがります</em></label>
-  <p class="note" id="intro">撮った風景が登場する架空アニメの「劇中カット」をAIが描き、実際の写真と並べた比較画像を作ります。ジャンルも絵柄も毎回バラバラ。でも主人公は必ず、麦わらカンカン帽に丸サングラス、ひげに赤ジャージの<b>あの男</b>。作品名もセリフも捏造です。できあがりまで30秒ほど。</p>
+  <p class="note" id="intro">撮った風景が登場する架空アニメの「劇中カット」をAIが描き、実際の写真と並べた比較画像を作ります。ジャンルも絵柄も毎回バラバラ。でも主人公は必ず、麦わらカンカン帽に丸サングラス、ひげに赤ジャージの男<b>「しょうたエクステンド」</b>。作品名もセリフも捏造です。できあがりまで30秒ほど。</p>
 
   <div id="studio" class="hide">
     <div class="preview">
@@ -175,8 +175,8 @@ async function api(path,body){
  let v={};try{v=await res.json();}catch(e){}
  if(!v.ok)throw new Error(v.error||'うまくいきませんでした。もう一度試してください。');return v;
 }
-function fallbackInfo(){const p=a=>a[(Math.random()*a.length)|0];const sp=p(['麦野ジン','カンカン','赤羽の旦那','ムギさん','グラサン先生']);
- return {title:p(['麦わらの流れ者','カンカン帽は二度死ぬ','赤ジャージ探偵事件簿','グラサン越しの365日','ムギさんは今日も寄り道']),episode:1+((Math.random()*12)|0),
+function fallbackInfo(){const p=a=>a[(Math.random()*a.length)|0];const sp='しょうたエクステンド';
+ return {title:p(['麦わらの流れ者','カンカン帽は二度死ぬ','赤ジャージ探偵事件簿','グラサン越しの365日','しょうたエクステンドは今日も寄り道']),episode:1+((Math.random()*12)|0),
   subtitle:p(['はじめての寄り道','この街で、もう一度','雨上がりの約束','ふたりの帰り道','やっぱり、ここだった']),speaker:sp,
   line:p(['……ここ、来たことある気がする。','ねえ、明日もこの道で待ってて。','遅いよ。……ずっと待ってたんだから。','たぶん、ここから全部はじまったんだ。']),
   hero:sp,style:p(['tv','movie','cel90','gekiga','chibi','showa']),scene:`${sp}がこの場所で立ち止まる、物語の転機になる場面。`,cast:'腕を下ろして、街を見渡している'};}
@@ -194,7 +194,7 @@ async function show(blob){resultBlob=blob;$('#out').src=URL.createObjectURL(blob
 async function makeFrame(){
  if(dayCount()>=DAY_LIMIT)throw new Error(`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`);
  G=plan();
- const I=S.info;wait(true,`あ！ここ『${I.title}』の聖地じゃん！`,[`ほら、第${I.episode}話の…`,`「${I.subtitle}」の回！`,...(I.line?[`${I.speaker?I.speaker+'が':''}「${I.line}」って言うとこ！`]:[]),'てか、また麦わら帽のあの人が主人公…？','劇中カット、いま探してくるね…']);
+ const I=S.info;wait(true,`あ！ここ『${I.title}』の聖地じゃん！`,[`ほら、第${I.episode}話の…`,`「${I.subtitle}」の回！`,...(I.line?[`${I.speaker?I.speaker+'が':''}「${I.line}」って言うとこ！`]:[]),'てか、またしょうたエクステンドが主人公…？','劇中カット、いま探してくるね…']);
  const f=await api('/api/seichi-ex/draw',{image:toB64(G.real,'image/jpeg',.9),w:1536,h:1024,
   style:S.info.style||S.style,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast,hero:S.info.hero});
  frameImg=await loadImg(f.image);dayCount(true);

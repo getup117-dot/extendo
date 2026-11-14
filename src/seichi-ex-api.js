@@ -101,7 +101,7 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 この場所が「聖地」として登場する架空のTVアニメを1本でっちあげます。
 
 このシリーズの主人公は毎回同じ見た目の男です：${HERO_JA}。
-名前・職業・性格・役どころは、指定されたジャンルに合わせて毎回自由に考えてよい（見た目だけは固定）。
+彼の名前は毎回「しょうたエクステンド」で固定（呼ばれ方は「しょうた」「エクステンド」などでもよい）。職業・性格・役どころは、指定されたジャンルに合わせて毎回自由に考えてよい（見た目と名前は固定）。
 
 ルール：
 - 主人公の男は、このカットに必ず登場する。cast と scene は彼を中心に書く。
@@ -110,15 +110,15 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - 指定されたジャンルと役どころのヒントを守る。
 - タイトルは実在しそうなTVアニメっぽく、指定された「タイトルの型」で（4〜24字）。写真に写っている物の名前はタイトルに入れない。物語のテーマや主人公で名付ける。
 - サブタイトルは話数タイトルらしく（5〜16字）。
-- hero は、この作品での主人公の名前（またはあだ名）と役どころを20字以内で（例の形：「麦野ジン（流しの探偵）」）。
-- セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。speaker はセリフを言うキャラの名前（基本は主人公）。
+- role は、この作品での主人公しょうたエクステンドの役どころを16字以内で（例の形：「流しの探偵」）。主人公に別の名前は付けない。
+- セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。speaker はセリフを言うキャラの名前（基本は主人公の「しょうたエクステンド」）。
 - cast は、このカットでの主人公のポーズ・表情・行動を60字以内で。必要なら脇役を1人だけ足してよい（その見た目もここに）。健全な内容にする。
 - style は、作品の雰囲気に一番合うアニメの絵柄を次から1つ：tv（今どきのTVアニメ）／movie（劇場アニメ）／cel90（90年代セル）／gekiga（劇画）／chibi（ギャグ・デフォルメ）／showa（昭和アニメ）／shoujo（少女漫画風）／noir（ノワール・夜）／mecha（80〜90年代ロボアニメ）／watercolor（水彩の日常系）。毎回同じにならないように。
 - card は、写真の中で「ここがあの場所だ」と一番わかる目印の中心。写真の幅・高さに対する0〜1の割合で。空や地面だけの場所は避ける。
 - 性的・暴力的・差別的な内容は入れない。
 
 出力はJSONだけ（説明やコードブロックは付けない）：
-{"title":"","episode":1,"subtitle":"","hero":"","speaker":"","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","style":"tv","card":{"x":0.5,"y":0.45}}`;
+{"title":"","episode":1,"subtitle":"","role":"","speaker":"","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","style":"tv","card":{"x":0.5,"y":0.45}}`;
 
 async function handleInfo(request, env) {
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "AIの捏造はまだ準備中です。" }, 503);
@@ -148,7 +148,7 @@ async function handleInfo(request, env) {
     const v = JSON.parse(text.slice(s, e + 1));
     return json({ ok: true, info: {
       title: clip(v.title, 30), episode: 1 + Math.floor(Math.random() * 24),
-      subtitle: clip(v.subtitle, 24), hero: clip(v.hero, 24), speaker: clip(v.speaker, 12), line: clip(v.line, 40),
+      subtitle: clip(v.subtitle, 24), hero: "しょうたエクステンド" + (clip(v.role, 16) ? `（${clip(v.role, 16)}）` : ""), speaker: clip(v.speaker, 12) || "しょうたエクステンド", line: clip(v.line, 40),
       scene: clip(v.scene, 60), cast: clip(v.cast, 80),
       style: STYLE_EN[v.style] ? v.style : "tv",
       card: { x: Math.min(.95, Math.max(.05, Number(v.card?.x) || .5)), y: Math.min(.95, Math.max(.05, Number(v.card?.y) || .45)) },
@@ -170,7 +170,7 @@ function framePrompt(b) {
     "The first image is a photo of a real place. The second image is a reference sheet of the protagonist of this anime (three photos of the same man).",
     `Redraw the photo as a single frame (a still) of a Japanese anime. Art style: ${style}.`,
     "Keep the same framing, camera angle, perspective and scale as the photo. Buildings, roof lines, walls, windows, poles, wires, road edges and curbs stay at the same position and size, so the drawing lines up with the photo. Do not crop, zoom or shift. Small details and text on objects may be simplified.",
-    `THE PROTAGONIST MUST APPEAR in this frame, clearly visible and recognizable (not tiny, not hidden): draw the man from the reference sheet as an anime character in the art style above. He is ${HERO_EN}.`,
+    `THE PROTAGONIST (named Shota Extend) MUST APPEAR in this frame, clearly visible and recognizable (not tiny, not hidden): draw the man from the reference sheet as an anime character in the art style above. He is ${HERO_EN}.`,
     "Keep his signature look exactly every time: the straw boater hat with black band, the small round dark sunglasses with gold frames, the mustache and goatee, the shoulder-length black hair and the red track jacket with white stripes over a black T-shirt. Do not draw any brand logo on the jacket.",
     `He stands on the ground at a believable scale${cast ? `. Pose and action: ${cast}` : ""}${scene ? `. Scene: ${scene}` : ""}. If the action mentions one extra character, add only that one original character; otherwise he is the only person.`,
     "Characters may overlap the background but must not change its structure. Everyone fully clothed and wholesome.",
