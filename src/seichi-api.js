@@ -4,8 +4,9 @@
 //   → Claude が写真を見て、架空アニメの設定（タイトル・話数・サブタイトル・セリフ・場面・登場人物）を捏造する
 //   → { ok:true, info:{ title, episode, subtitle, speaker, line, scene, cast } }
 //
-// POST /api/seichi/draw  { image:"<写真のjpeg base64>", mask:"<カードと手を置く場所を透明にしたpng>", w, h, style:"seishun", chars:1, sub:true, line, scene, cast }
-//   → GPT（OpenAI の画像API）が、写真の前に「同じ場所のアニメのカード」を手で掲げた聖地巡礼写真に編集する
+// POST /api/seichi/draw  { mode:"frame"|"hand", image:"<jpeg base64>", mask?:"<png base64>", w, h, style, chars, sub, line, scene, cast }
+//   frame → カード部分の写真を、構図そのままアニメのワンシーンに描き直す
+//   hand  → アニメのカードを貼った写真に、本物の手とカードの厚み・影を描き足す（マスクの中だけ）
 //   → { ok:true, image:"data:image/jpeg;base64,..." }
 //
 // 必要な設定（Cloudflare のシークレット）：
@@ -108,29 +109,38 @@ async function handleInfo(request, env) {
   }
 }
 
-/* ---------- 聖地巡礼写真（GPT） ---------- */
-// 写真をまるごとGPTに渡し、「本物の手が、同じ場所が描かれたアニメのカードを掲げている写真」に編集してもらう
-function drawPrompt(b) {
+/* ---------- 聖地巡礼写真（GPT・2段階） ---------- */
+// 段階1 frame：カードの部分だけ切り抜いた写真を、構図そのままアニメのワンシーンに描き直す
+//   （位置はアプリ側でぴったり戻すので、輪郭が背景とそろう）
+// 段階2 hand ：アニメのカードを貼った写真に、カードを持つ本物の手とカードの厚み・影を足す（マスクの中だけ）
+function framePrompt(b) {
   const style = STYLE_EN[b.style] || STYLE_EN.seishun;
   const chars = Math.min(2, Math.max(0, parseInt(b.chars) || 0));
   const scene = clip(b.scene, 60), cast = clip(b.cast, 80), line = clip(b.line, 40);
   const people = chars === 0
-    ? "The anime frame shows no people, just the place (an establishing shot)."
-    : `The anime frame shows ${chars === 1 ? "one original anime character" : "two original anime characters"} in that place` +
+    ? "No people in the frame."
+    : `Add ${chars === 1 ? "one original anime character" : "two original anime characters"} naturally in the scene, standing on the ground at a believable scale` +
       (cast ? ` (${cast})` : "") + (scene ? `, in this scene: ${scene}` : "") +
-      ". The characters are completely original designs that do not resemble any existing anime character or real person, fully clothed and wholesome.";
+      ". Completely original designs that do not resemble any existing anime character or real person, fully clothed and wholesome. Characters may overlap the background but must not change it.";
   const sub = b.sub && line
-    ? `At the bottom of the anime frame there is a TV-style Japanese subtitle in white text with a thin dark outline that reads exactly: 「${line}」`
-    : "There is no text at all on the card.";
+    ? `Add a TV-style Japanese subtitle at the bottom center in white text with a thin dark outline that reads exactly: 「${line}」`
+    : "No text anywhere.";
   return [
-    "Edit this photo into a realistic anime pilgrimage photo (聖地巡礼写真), the kind fans take when they visit a real location that appears in an anime.",
-    "Only edit inside the transparent area of the mask. Everything outside it must stay exactly as in the original photo.",
-    "Inside the masked area, add one real human hand (natural, photorealistic skin and fingers, as if the person taking the photo with a phone is holding it) coming from the bottom of the frame, holding up a glossy printed photo card in landscape orientation. The card fills the large rectangular part of the masked area; the hand fills the lower part that reaches the bottom edge.",
-    "The card shows a still frame from a high-quality Japanese TV anime depicting exactly the part of the real scene that the card covers, at the same position and scale, so that buildings, poles, pipes, wires, roads, walls and every other line continue seamlessly from the real background into the card across all four card edges. The whole card area is anime art, edge to edge, including walls and pipes.",
-    `Anime frame style: detailed hand-painted anime background art, clean line art, cel-shaded, ${style}. ${people}`,
-    sub,
-    "Make it look like a real photograph of a real card: slight thickness, soft shadow on the hand and a subtle glossy reflection.",
-    "No other text, logos, watermarks or user interface anywhere.",
+    "Redraw this photo as a single frame (a screenshot) of a high-quality Japanese TV anime.",
+    "CRITICAL: keep exactly the same framing, camera angle, perspective and scale. Every building outline, roof line, wall edge, window, pole, pipe, wire, road edge and curb must stay at exactly the same position and size in the image, so the drawing can be laid precisely over the photo. Do not crop, zoom, shift, add or remove any structure.",
+    "Small details may change freely: textures, signs, text on objects, clutter can be simplified or reinterpreted in anime style.",
+    `Style: detailed hand-painted anime background art, clean line art, cel-shaded, ${style}. The sky may be replaced with an anime sky.`,
+    people, sub,
+    "No logos, watermarks or user interface.",
+  ].join("\n");
+}
+function handPrompt() {
+  return [
+    "This photo shows a printed anime still card held up in front of a real street, so the picture on the card lines up with the real scene behind it.",
+    "Only edit inside the transparent area of the mask.",
+    "Add one real human hand (natural, photorealistic skin, nails and fingers, as if the person taking the photo with a phone is holding it) gripping the bottom edge of the card from below, with the thumb on the front of the card and the other fingers behind it. The hand and wrist extend to the bottom of the frame.",
+    "Make the card look like a real glossy photo print: subtle paper thickness along its edges and a soft shadow where the fingers touch. Do not change the picture printed on the card, and keep the card's position and outline exactly where it is.",
+    "Keep the real background photographic and unchanged. No text, logos or watermarks.",
   ].join("\n");
 }
 
@@ -152,9 +162,10 @@ async function handleDraw(request, env) {
   const [body, err] = await readBody(request);
   if (err) return err;
   const ip = request.headers.get("CF-Connecting-IP") || "?";
-  if (tooMany(ip, "draw", 6, 10 * 60 * 1000)) return json({ ok: false, error: "10分に6枚までです。少し休憩してから。" }, 429);
+  if (tooMany(ip, "draw", 14, 10 * 60 * 1000)) return json({ ok: false, error: "10分に7枚までです。少し休憩してから。" }, 429);
 
-  const prompt = drawPrompt(body);
+  const mode = body.mode === "hand" ? "hand" : "frame";
+  const prompt = mode === "hand" ? handPrompt() : framePrompt(body);
   const maskB64 = String(body.mask ?? "").replace(/^data:image\/\w+;base64,/, "");
   const mask = maskB64 && maskB64.length < MAX_B64 ? b64ToBlob(maskB64, "image/png") : null;
   const models = env.OPENAI_IMAGE_MODEL ? [env.OPENAI_IMAGE_MODEL] : IMAGE_MODELS;
