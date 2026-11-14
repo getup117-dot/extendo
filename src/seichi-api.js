@@ -1,4 +1,4 @@
-// どこでも聖地レンズ：AI API（Cloudflare Workers 用）
+// どこでも聖地巡礼スナップ：AI API（Cloudflare Workers 用）
 //
 // POST /api/seichi/info  { image:"<jpegのbase64>", genre:"青春", place:"東北沢駅前" }
 //   → Claude が写真を見て、架空アニメの設定（タイトル・話数・サブタイトル・セリフ・場面・登場人物）を捏造する
