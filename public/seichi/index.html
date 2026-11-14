@@ -66,9 +66,6 @@ h2::before{content:"";width:6px;height:16px;background:var(--accent);border-radi
 .info .t{font-weight:900;font-size:16px}
 .info .q{color:var(--blue);font-weight:700}
 details summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--sub);margin-top:10px}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;background:#e9e3d6;padding:4px;border-radius:14px}
-.modes button{border:0;background:transparent;border-radius:10px;padding:10px;font:900 14px "Zen Kaku Gothic New",sans-serif;color:var(--sub);cursor:pointer}
-.modes button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .hide{display:none!important}
 footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
 </style>
@@ -81,16 +78,15 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
     <h1><small>どこでも</small>聖地カメラ</h1>
   </div>
 
-  <label class="pick" id="pickBtn"><input type="file" id="file" accept="image/*" hidden>📷 写真をえらぶ・撮る<em>選ぶだけで、聖地巡礼写真ができあがります</em></label>
-  <p class="note" id="intro">撮った風景の前に、その場所が登場する架空アニメのカードを掲げた「聖地巡礼写真」をAIが作ります。作品名もセリフも捏造です。できあがりまで1〜2分。</p>
+  <label class="pick" id="pickBtn"><input type="file" id="file" accept="image/*" hidden>📷 写真をえらぶ・撮る<em>選ぶだけで、劇中と現地の比較画像ができあがります</em></label>
+  <p class="note" id="intro">撮った風景が登場する架空アニメの「劇中カット」をAIが描き、実際の写真と並べた聖地巡礼の比較画像を作ります。作品名もセリフも捏造です。できあがりまで30秒ほど。</p>
 
   <div id="studio" class="hide">
     <div class="preview">
       <img id="out" alt="聖地巡礼写真">
-      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">30秒〜1分ほど。画面はこのままで</p></div>
+      <div class="wait" id="wait"><div class="spin"></div><b id="waitT">準備中…</b><p class="ttl hide" id="waitTitle"></p><p id="waitS">30秒ほど。画面はこのままで</p></div>
     </div>
     <div class="err hide" id="err"></div>
-    <div class="modes" id="modes"><button data-v="hand" class="on">✋ 手持ち</button><button data-v="compare">🎞 比較</button></div>
 
     <div class="actions">
       <button id="save" class="btn dark wide" disabled>📥 保存・シェア</button>
@@ -112,7 +108,7 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
         <label class="fld">セリフ<input id="fLine"></label>
         <label class="fld">話したキャラ<input id="fSpeaker"></label>
         <label class="fld">どんな場面？<textarea id="fScene"></textarea></label>
-        <label class="fld">カードに描く人物の見た目<input id="fCast"></label>
+        <label class="fld">劇中カットに描く人物の見た目<input id="fCast"></label>
         <p class="note">書き換えたら「もう一度描く」で反映されます。</p>
       </details>
     </section>
@@ -125,14 +121,6 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
     </section>
   </div>
 
-  <section class="panel">
-    <h2>好みの設定</h2>
-    <p class="lbl">アニメの雰囲気</p><div class="chips" id="styles"></div>
-    <p class="lbl">ジャンル</p><div class="chips" id="genres"></div>
-    <p class="lbl">カードの中の人物</p><div class="chips" id="chars"></div>
-    <label class="tg">カードに字幕（セリフ）を入れる<input type="checkbox" id="sub" checked></label>
-    <label class="fld">撮影場所のメモ（任意）<input id="place" placeholder="例：東北沢駅前の坂"></label>
-  </section>
 
   <footer>どこでも聖地カメラ — 作品・キャラクターはすべて架空です</footer>
 </div>
@@ -142,16 +130,11 @@ footer{text-align:center;font-size:11px;color:var(--sub);margin-top:28px}
 const $=s=>document.querySelector(s);
 const STYLES=[['seishun','青春・快晴'],['yugure','放課後の夕暮れ'],['natsu','夏の日'],['yoru','夜とネオン'],['retro','90年代セル']];
 const GENRES=['おまかせ','青春','日常','恋愛','SF','ファンタジー','ミステリー','ホラー','スポーツ'];
-const S={style:'seishun',genre:'おまかせ',chars:1,sub:true,place:'',info:null,mode:'hand'};
+const S={style:'seishun',genre:'',chars:1,sub:true,place:'',info:null};
 let photo=null, photoURL='', resultBlob=null, busy=false;
 
 /* ---------- UI部品 ---------- */
 function chips(el,items,cur,on){el.innerHTML='';items.forEach(([v,l])=>{const b=document.createElement('button');b.className='chip'+(v===cur?' on':'');b.textContent=l;b.onclick=()=>{[...el.children].forEach(c=>c.classList.remove('on'));b.classList.add('on');on(v);};el.appendChild(b);});}
-chips($('#styles'),STYLES,S.style,v=>S.style=v);
-chips($('#genres'),GENRES.map(g=>[g,g]),S.genre,v=>S.genre=v);
-chips($('#chars'),[[0,'なし（風景だけ）'],[1,'1人'],[2,'2人']],S.chars,v=>S.chars=v);
-$('#sub').onchange=e=>S.sub=e.target.checked;
-$('#place').oninput=e=>S.place=e.target.value.trim();
 
 function wait(on,t,title){$('#wait').classList.toggle('on',on);if(t)$('#waitT').textContent=t;const w=$('#waitTitle');w.classList.toggle('hide',!title);if(title)w.textContent=title;}
 function showErr(t){const e=$('#err');e.classList.toggle('hide',!t);e.textContent=t||'';}
@@ -174,52 +157,23 @@ async function loadImg(url){const i=new Image();i.src=url;await i.decode();retur
 const toBlob=c=>new Promise(r=>c.toBlob(r,'image/jpeg',.93));
 function scaled(maxEdge,q){const k=Math.min(1,maxEdge/Math.max(photo.naturalWidth,photo.naturalHeight));
  const c=mk(photo.naturalWidth*k,photo.naturalHeight*k);const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,0,0,c.width,c.height);return toB64(c,'image/jpeg',q);}
-// 構図を決める：元写真を縦4:5に切り出し、AIが選んだ目印にカード（画面幅の6割・3:2）を重ねる
-const TILT=-3*Math.PI/180;
+// 構図を決める：AIが選んだ目印を中心に、元写真から横長3:2をできるだけ広く切り出す
 function plan(){
  const W0=photo.naturalWidth,H0=photo.naturalHeight,p=(S.info&&S.info.card)||{x:.5,y:.45};
- const cw=Math.min(W0,H0*.8),chh=cw*1.25,cardW=cw*.6,cardH=cardW/1.5;
- const px=p.x*W0,py=p.y*H0;
- const sx=clamp(px-cw*.5,0,W0-cw),sy=clamp(py-chh*.42,0,H0-chh);
- const OW=Math.min(1600,cw),k=OW/cw,OH=OW*1.25;
- const base=mk(OW,OH),bx=base.getContext('2d');bx.imageSmoothingQuality='high';bx.drawImage(photo,sx,sy,cw,chh,0,0,OW,OH);
- const w=cardW*k,h=cardH*k;
- const cx=clamp((px-sx)*k,w/2+OW*.05,OW-w/2-OW*.05),cy=clamp((py-sy)*k,h/2+OH*.06,OH*.6-h/2);
- return {base,W:OW,H:OH,c:{cx,cy,w,h}};
+ let w=Math.min(W0,H0*1.5)*.96,h=w/1.5;
+ const sx=clamp(p.x*W0-w/2,0,W0-w),sy=clamp(p.y*H0-h/2,0,H0-h);
+ const real=mk(1536,1024),x=real.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,sx,sy,w,h,0,0,1536,1024);
+ return {real};
 }
-// カードの部分（傾ける前の長方形）を切り抜く
-function cardCrop(g){const {c}=g,t=mk(1536,1024),x=t.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(g.base,c.cx-c.w/2,c.cy-c.h/2,c.w,c.h,0,0,1536,1024);return t;}
-// 傾けたカードの角
-function corner(c,ux,uy){const x=ux*c.w/2,y=uy*c.h/2;return [c.cx+x*Math.cos(TILT)-y*Math.sin(TILT),c.cy+x*Math.sin(TILT)+y*Math.cos(TILT)];}
-// アニメの絵を「印刷したカード」として写真に重ねる（少し傾け、影と光の反射）
-function pasteCard(g,frame){const {c}=g,out=mk(g.W,g.H),x=out.getContext('2d');x.drawImage(g.base,0,0);
- x.save();x.translate(c.cx,c.cy);x.rotate(TILT);
- x.save();x.shadowColor='rgba(0,0,0,.38)';x.shadowBlur=c.w*.035;x.shadowOffsetX=c.w*.008;x.shadowOffsetY=c.h*.03;x.fillStyle='#ddd';x.fillRect(-c.w/2,-c.h/2,c.w,c.h);x.restore();
- x.imageSmoothingQuality='high';x.drawImage(frame,-c.w/2,-c.h/2,c.w,c.h);
- const gl=x.createLinearGradient(-c.w/2,-c.h/2,c.w*.1,c.h/2);gl.addColorStop(0,'rgba(255,255,255,0)');gl.addColorStop(.25,'rgba(255,255,255,.13)');gl.addColorStop(.42,'rgba(255,255,255,0)');
- x.fillStyle=gl;x.fillRect(-c.w/2,-c.h/2,c.w,c.h);
- const lw=Math.max(1.5,c.w*.003);x.strokeStyle='rgba(240,240,236,.95)';x.lineWidth=lw;x.strokeRect(-c.w/2+lw/2,-c.h/2+lw/2,c.w-lw,c.h-lw);
- x.restore();return out;}
-// 手を描いていい場所（カードの下辺から画面の下まで）
-function handPoly(g){const {c,H}=g,BL=corner(c,-1,1),BR=corner(c,1,1),l=t=>[BL[0]+(BR[0]-BL[0])*t,BL[1]+(BR[1]-BL[1])*t];
- const p1=l(.08),p2=l(.72);return [[p1[0],p1[1]-c.h*.03],[p2[0],p2[1]-c.h*.03],[BL[0]+c.w*1.0,H],[BL[0]-c.w*.08,H]];}
-function polyPath(x,pts,k){x.beginPath();pts.forEach(([px,py],i)=>i?x.lineTo(px*k,py*k):x.moveTo(px*k,py*k));x.closePath();}
-function handMask(g,k){const m=mk(g.W*k,g.H*k),x=m.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,m.width,m.height);
- x.globalCompositeOperation='destination-out';polyPath(x,handPoly(g),k);x.fill();return m;}
-function putHand(g,comp,handImg){const {W,H}=g,sm=mk(Math.ceil(W/12),Math.ceil(H/12)),sx=sm.getContext('2d');
- sx.fillStyle='#fff';polyPath(sx,handPoly(g),1/12);sx.fill();
- const t=mk(W,H),tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(handImg,0,0,W,H);
- tx.globalCompositeOperation='destination-in';tx.imageSmoothingEnabled=true;tx.drawImage(sm,0,0,W,H);
- const out=mk(W,H),ox=out.getContext('2d');ox.drawImage(comp,0,0);ox.drawImage(t,0,0);return out;}
 // 比較画像：上にアニメのカット、下に同じ範囲の実際の写真
 async function compareCanvas(g,frame){
  const I=S.info,Wc=1080,ih=720,cap=86,gap=14,out=mk(Wc,ih*2+cap*2+gap),x=out.getContext('2d');
- const t1=`『${I.title}』 第${I.episode}話より`,t2=`現地${S.place?'　'+S.place:''}`;
- try{await document.fonts.load('900 32px "Zen Kaku Gothic New"',t1+t2+'劇中現地');}catch(e){}
+ const t1=`『${I.title}』 第${I.episode}話より`,t2='現地';
+ try{await document.fonts.load('900 32px "Zen Kaku Gothic New"',t1+t2+'劇中');}catch(e){}
  x.fillStyle='#faf8f3';x.fillRect(0,0,out.width,out.height);x.imageSmoothingQuality='high';
- x.drawImage(frame,0,0,Wc,ih);const c=g.c;x.drawImage(g.base,c.cx-c.w/2,c.cy-c.h/2,c.w,c.h,0,ih+cap+gap,Wc,ih);
- x.fillStyle='#1c2233';x.font='900 32px "Zen Kaku Gothic New",sans-serif';x.textBaseline='middle';
- let fs=32;while(fs>18&&x.measureText(t1).width>Wc-56){fs-=2;x.font=`900 ${fs}px "Zen Kaku Gothic New",sans-serif`;}
+ x.drawImage(frame,0,0,Wc,ih);x.drawImage(g.real,0,ih+cap+gap,Wc,ih);
+ x.fillStyle='#1c2233';x.textBaseline='middle';
+ let fs=32;x.font=`900 ${fs}px "Zen Kaku Gothic New",sans-serif`;while(fs>18&&x.measureText(t1).width>Wc-56){fs-=2;x.font=`900 ${fs}px "Zen Kaku Gothic New",sans-serif`;}
  x.fillText(t1,28,ih+cap/2);x.font='900 32px "Zen Kaku Gothic New",sans-serif';x.fillText(t2,28,ih*2+cap+gap+cap/2);
  const tag=(y,t,bg)=>{x.font='900 26px "Zen Kaku Gothic New",sans-serif';const w=x.measureText(t).width+30;x.fillStyle=bg;x.beginPath();x.roundRect(20,y,w,46,23);x.fill();x.fillStyle='#fff';x.fillText(t,35,y+24);};
  tag(20,'劇中','rgba(28,34,51,.9)');tag(ih+cap+gap+20,'現地','rgba(255,90,95,.95)');
@@ -245,42 +199,28 @@ async function makeInfo(){
  catch(e){S.info=fallbackInfo();}
  showInfo();
 }
-// いまの写真での生成結果（モードの切り替えに使う）
-let G=null, frameImg=null, compCanvas=null, handBlob=null;
+let G=null, frameImg=null;
 async function show(blob){resultBlob=blob;$('#out').src=URL.createObjectURL(blob);$('#capTxt').textContent=caption();}
 async function makeFrame(){
  if(dayCount()>=DAY_LIMIT)throw new Error(`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`);
- G=plan();handBlob=null;
- wait(true,'カードの絵を描いています…','『'+S.info.title+'』');
- const f=await api('/api/seichi/draw',{mode:'frame',image:toB64(cardCrop(G),'image/jpeg',.9),w:1536,h:1024,
-  style:S.style,chars:S.chars,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast});
- frameImg=await loadImg(f.image);compCanvas=pasteCard(G,frameImg);dayCount(true);
+ G=plan();
+ wait(true,'劇中カットを描いています…','『'+S.info.title+'』');
+ const f=await api('/api/seichi/draw',{mode:'frame',image:toB64(G.real,'image/jpeg',.9),w:1536,h:1024,
+  style:S.info.style||S.style,chars:S.chars,sub:S.sub,line:S.info.line,scene:S.info.scene,cast:S.info.cast});
+ frameImg=await loadImg(f.image);dayCount(true);
 }
-async function makeHand(){
- await show(await toBlob(compCanvas));
- wait(true,'カードを掲げて撮影しています…','『'+S.info.title+'』');
- const k=1536/Math.max(G.W,G.H),small=mk(G.W*k,G.H*k);small.getContext('2d').drawImage(compCanvas,0,0,small.width,small.height);
- const h=await api('/api/seichi/draw',{mode:'hand',image:toB64(small,'image/jpeg',.9),mask:toB64(handMask(G,k),'image/png'),w:small.width,h:small.height});
- handBlob=await toBlob(putHand(G,compCanvas,await loadImg(h.image)));
-}
-async function render(){
- if(S.mode==='compare'){await show(await toBlob(await compareCanvas(G,frameImg)));return;}
- if(!handBlob)await makeHand();
- await show(handBlob);
-}
-async function run(newInfo,newFrame=true){
+async function run(newInfo){
  if(busy||!photo)return;setBusy(true);showErr('');
- try{if(newInfo||!S.info)await makeInfo();if(newFrame||!frameImg)await makeFrame();await render();}
+ try{if(newInfo||!S.info)await makeInfo();await makeFrame();await show(await toBlob(await compareCanvas(G,frameImg)));}
  catch(e){showErr(e.message);}
  wait(false);setBusy(false);
 }
-$('#modes').onclick=e=>{const b=e.target.closest('button');if(!b||busy)return;[...$('#modes').children].forEach(x=>x.classList.toggle('on',x===b));S.mode=b.dataset.v;if(frameImg)run(false,false);};
 
 $('#file').addEventListener('change',async e=>{
  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
  if(photoURL)URL.revokeObjectURL(photoURL);photoURL=URL.createObjectURL(f);
  const img=new Image();img.src=photoURL;try{await img.decode();}catch(err){$('#intro').textContent='画像を読み込めませんでした。別の写真で試してください。';return;}
- photo=img;resultBlob=null;S.info=null;G=null;frameImg=null;compCanvas=null;handBlob=null;
+ photo=img;resultBlob=null;S.info=null;G=null;frameImg=null;
  $('#out').src=photoURL;$('#studio').classList.remove('hide');$('#pickBtn').classList.add('hide');$('#intro').classList.add('hide');
  $('#infoView').textContent='';$('#capTxt').textContent='';
  window.scrollTo({top:$('#studio').offsetTop-10,behavior:'smooth'});

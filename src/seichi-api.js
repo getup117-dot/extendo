@@ -68,11 +68,12 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - サブタイトルは話数タイトルらしく（5〜16字）。
 - セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。
 - cast は、このカットに映る登場人物の見た目（1〜2人、髪型・服装・ポーズ）を60字以内で。健全な内容にする。
+- style は、写真の時間帯・天気・雰囲気に一番合うアニメの絵柄を次から1つ：seishun（快晴の青春）／yugure（夕暮れ）／natsu（真夏）／yoru（夜・ネオン）／retro（90年代セル風）。
 - card は、写真の中で「ここがあの場所だ」と一番わかる目印（特徴的な建物・看板・橋・電柱と建物の組み合わせなど）の中心。写真の幅・高さに対する0〜1の割合で。空や地面だけの場所は避ける。
 - 性的・暴力的・差別的な内容は入れない。
 
 出力はJSONだけ（説明やコードブロックは付けない）：
-{"title":"","episode":1から12の数字,"subtitle":"","speaker":"キャラの下の名前","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","card":{"x":0.5,"y":0.45}}`;
+{"title":"","episode":1から12の数字,"subtitle":"","speaker":"キャラの下の名前","line":"","scene":"このカットが劇中のどんな場面か（45字以内）","cast":"","style":"seishun","card":{"x":0.5,"y":0.45}}`;
 
 async function handleInfo(request, env) {
   if (!env.ANTHROPIC_API_KEY) return json({ ok: false, error: "AIの捏造はまだ準備中です。" }, 503);
@@ -103,6 +104,7 @@ async function handleInfo(request, env) {
       title: clip(v.title, 30), episode: Math.min(99, Math.max(1, parseInt(v.episode) || 1)),
       subtitle: clip(v.subtitle, 24), speaker: clip(v.speaker, 10), line: clip(v.line, 40),
       scene: clip(v.scene, 60), cast: clip(v.cast, 80),
+      style: STYLE_EN[v.style] ? v.style : "seishun",
       card: { x: Math.min(.95, Math.max(.05, Number(v.card?.x) || .5)), y: Math.min(.95, Math.max(.05, Number(v.card?.y) || .45)) },
     } });
   } catch (e) {
