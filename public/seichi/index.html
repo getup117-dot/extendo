@@ -164,9 +164,28 @@ $('#fEp').addEventListener('input',e=>{if(S.info){S.info.episode=Math.max(1,Math
 
 /* ---------- 写真 ---------- */
 const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
-function scaled(maxEdge,q){const k=Math.min(1,maxEdge/Math.max(photo.naturalWidth,photo.naturalHeight));
- const c=mk(Math.round(photo.naturalWidth*k),Math.round(photo.naturalHeight*k));const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,0,0,c.width,c.height);
- return c.toDataURL('image/jpeg',q).split(',')[1];}
+function scaledCanvas(maxEdge){const k=Math.min(1,maxEdge/Math.max(photo.naturalWidth,photo.naturalHeight));
+ const c=mk(Math.round(photo.naturalWidth*k),Math.round(photo.naturalHeight*k));const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(photo,0,0,c.width,c.height);return c;}
+function scaled(maxEdge,q){return scaledCanvas(maxEdge).toDataURL('image/jpeg',q).split(',')[1];}
+// カードと手を置く場所（写真の大きさに対する割合で決める）
+function regions(W,H){
+ const r=W/H,cw=W*(r>=1?.62:.82),ch=cw/1.5,cx=W*.5,cy=H*(r>=1?.42:.40);
+ const L=cx-cw/2,T=cy-ch/2,R=cx+cw/2,B=cy+ch/2,p=W*.02;
+ return {card:[L-p,T-p,R+p,B+p], below:[Math.max(0,L-W*.12),B-ch*.1,Math.min(W,R+W*.12),H]};
+}
+// GPTに渡すマスク：描いていい場所だけ透明
+function maskB64(W,H){const c=mk(W,H),x=c.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,W,H);
+ const g=regions(W,H);[g.card,g.below].forEach(([l,t,r,b])=>x.clearRect(l,t,r-l,b-t));return c.toDataURL('image/png').split(',')[1];}
+// 合成：カードと下の帯だけGPTの絵、それ以外は元写真
+async function compose(gptURL){
+ const base=scaledCanvas(2048),W=base.width,H=base.height,img=new Image();img.src=gptURL;await img.decode();
+ const sm=mk(Math.ceil(W/16),Math.ceil(H/16)),sx=sm.getContext('2d'),g=regions(W,H),k=1/16,f=W*.012;
+ sx.fillStyle='#fff';[g.card,g.below].forEach(([l,t,r,b])=>sx.fillRect((l-f)*k,(t-f)*k,(r-l+2*f)*k,(b-t+2*f)*k));
+ const t=mk(W,H),tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(img,0,0,W,H);
+ tx.globalCompositeOperation='destination-in';tx.imageSmoothingEnabled=true;tx.drawImage(sm,0,0,W,H);
+ base.getContext('2d').drawImage(t,0,0);
+ return new Promise(r=>base.toBlob(r,'image/jpeg',.93));
+}
 
 /* ---------- AI ---------- */
 async function api(path,body){
@@ -191,10 +210,11 @@ async function makeInfo(){
 async function draw(){
  if(dayCount()>=DAY_LIMIT)throw new Error(`今日はここまで（1日${DAY_LIMIT}枚まで）。また明日どうぞ。`);
  wait(true,'聖地巡礼写真を撮影しています…','『'+S.info.title+'』');
- const v=await api('/api/seichi/draw',{image:scaled(1536,.9),w:photo.naturalWidth,h:photo.naturalHeight,
+ const src=scaledCanvas(1536);
+ const v=await api('/api/seichi/draw',{image:src.toDataURL('image/jpeg',.9).split(',')[1],mask:maskB64(src.width,src.height),w:photo.naturalWidth,h:photo.naturalHeight,
   style:S.style,chars:S.chars,sub:S.sub,title:S.info.title,line:S.info.line,scene:S.info.scene,cast:S.info.cast});
  dayCount(true);
- resultBlob=await (await fetch(v.image)).blob();
+ resultBlob=await compose(v.image);
  $('#out').src=URL.createObjectURL(resultBlob);
 }
 async function run(newInfo){
