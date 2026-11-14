@@ -126,7 +126,8 @@ async function handleInfo(request, env) {
 
   const g = pick(GENRE_POOL);
   const genre = clip(body.genre || g[0], 20), role = body.genre ? "" : g[1], place = clip(body.place || "", 40);
-  try {
+  const tTitle = pick(TITLE_PATTERNS);
+  for (let attempt = 0; attempt < 2; attempt++) try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
@@ -134,7 +135,7 @@ async function handleInfo(request, env) {
         model: CLAUDE_MODEL, max_tokens: 2000, system: INFO_SYSTEM,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.image } },
-          { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${pick(TITLE_PATTERNS)}\n撮影場所のメモ：${place || "なし"}` },
+          { type: "text", text: `ジャンル：${genre}${role ? `\n主人公の役どころのヒント：${role}` : ""}\nタイトルの型：${tTitle}\n撮影場所のメモ：${place || "なし"}` },
         ] }],
       }),
     });
@@ -152,7 +153,8 @@ async function handleInfo(request, env) {
       card: { x: Math.min(.95, Math.max(.05, Number(v.card?.x) || .5)), y: Math.min(.95, Math.max(.05, Number(v.card?.y) || .45)) },
     } });
   } catch (e) {
-    console.error("seichi-ex info error", e);
+    console.error("seichi-ex info error", attempt, e);
+    if (attempt === 0) continue;
     return json({ ok: false, error: "うまく捏造できませんでした。もう一度押してみてください。", detail: String(e?.message || e).slice(0, 300) }, 502);
   }
 }
