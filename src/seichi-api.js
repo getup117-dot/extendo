@@ -68,6 +68,7 @@ const INFO_SYSTEM = `あなたは深夜アニメの企画・脚本家です。�
 - サブタイトルは話数タイトルらしく（5〜16字）。
 - セリフは、この場所で発せられる一言。字幕として自然な話し言葉で30字以内。
 - cast は、このカットに映る登場人物の見た目（1〜2人、髪型・服装・ポーズ）を60字以内で。健全な内容にする。
+- 手や指が目立つ動作（手を振る・指さす・ピース・何かを持つ・握手など）は選ばない。後ろ姿、振り返り、手を後ろで組む、ポケットに手を入れる、腕を下ろして立つ、ベンチに座る、遠くに小さく立つ、など手が見えない／目立たないポーズと構図にする。scene と line もそれに合わせる。
 - style は、写真の時間帯・天気・雰囲気に一番合うアニメの絵柄を次から1つ：seishun（快晴の青春）／yugure（夕暮れ）／natsu（真夏）／yoru（夜・ネオン）／retro（90年代セル風）。
 - card は、写真の中で「ここがあの場所だ」と一番わかる目印（特徴的な建物・看板・橋・電柱と建物の組み合わせなど）の中心。写真の幅・高さに対する0〜1の割合で。空や地面だけの場所は避ける。
 - 性的・暴力的・差別的な内容は入れない。
@@ -133,7 +134,8 @@ function framePrompt(b) {
     ? "No people in the frame."
     : `Add ${chars === 1 ? "one original character" : "two original characters"} naturally in the scene, standing on the ground at a believable scale` +
       (cast ? ` (${cast})` : "") + (scene ? `, in this scene: ${scene}` : "") +
-      ". Original characters only, fully clothed and wholesome. Characters may overlap the background but must not change it.";
+      ". Original characters only, fully clothed and wholesome. Characters may overlap the background but must not change it." +
+      " Hands: choose a pose and framing where hands and fingers are not visible or not noticeable (seen from behind, hands behind the back, hands in pockets, arms hanging down partly hidden by the body or a bag, figure small in the distance, or cut off by the frame). Never draw waving, pointing, peace signs or detailed fingers. If a hand must appear, draw it heavily simplified like the reference drawings: a small rounded mitten or oval shape with no separate fingers.";
   const sub = b.sub && line
     ? `Add a TV-anime-style Japanese subtitle at the bottom center in clean black text with a thin white outline that reads exactly: 「${line}」`
     : "No text anywhere.";
