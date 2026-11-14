@@ -16,7 +16,7 @@
 
 どこでも聖地カメラ（`/seichi/`）は2つのAIを使います。
 - 架空アニメの設定の捏造：`ANTHROPIC_API_KEY`（神経ド衰弱と共用）
-- 劇中カットの絵：`OPENAI_API_KEY`（OpenAI の API キー。画像モデルは組織の本人確認が必要）
+- 聖地巡礼写真の生成：`OPENAI_API_KEY`（OpenAI の API キー。画像モデルは組織の本人確認が必要）
   画像モデルを固定したいときは、変数 `OPENAI_IMAGE_MODEL` にモデル名を入れる。
 
 サイキョウ・ロワイヤルは鑑定サーバーがあるので、別のリポジトリ（saikyo-royale）で管理しています。

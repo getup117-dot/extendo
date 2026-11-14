@@ -4,8 +4,8 @@
 //   → Claude が写真を見て、架空アニメの設定（タイトル・話数・サブタイトル・セリフ・場面・登場人物）を捏造する
 //   → { ok:true, info:{ title, episode, subtitle, speaker, line, scene, cast } }
 //
-// POST /api/seichi/draw  { image:"<jpegのbase64>", style:"seishun", chars:1, scene:"...", cast:"..." }
-//   → GPT（OpenAI の画像API）が、写真と同じ構図のアニメのワンシーンを描く
+// POST /api/seichi/draw  { image:"<写真のjpeg base64>", w, h, style:"seishun", chars:1, sub:true, line, scene, cast }
+//   → GPT（OpenAI の画像API）が、写真の前に「同じ場所のアニメのカード」を手で掲げた聖地巡礼写真に編集する
 //   → { ok:true, image:"data:image/jpeg;base64,..." }
 //
 // 必要な設定（Cloudflare のシークレット）：
@@ -14,7 +14,7 @@
 //   OPENAI_IMAGE_MODEL（任意）… 画像モデルを固定したいときだけ。未設定なら新しい順に試す
 
 const CLAUDE_MODEL = "claude-sonnet-5-5";
-const IMAGE_MODELS = ["gpt-image-2.6-flare", "gpt-image-2.5-flare", "gpt-image-2", "gpt-image-1"];
+const IMAGE_MODELS = ["gpt-image-2.6-sunburst", "gpt-image-2.6-flare", "gpt-image-2.5-sunburst", "gpt-image-2.5-flare", "gpt-image-2", "gpt-image-1"];
 const MAX_B64 = 3_000_000; // 送られてくる写真の上限（だいたい2MB）
 
 const STYLE_EN = {
@@ -108,23 +108,37 @@ async function handleInfo(request, env) {
   }
 }
 
-/* ---------- 劇中カットの絵（GPT） ---------- */
+/* ---------- 聖地巡礼写真（GPT） ---------- */
+// 写真をまるごとGPTに渡し、「本物の手が、同じ場所が描かれたアニメのカードを掲げている写真」に編集してもらう
 function drawPrompt(b) {
   const style = STYLE_EN[b.style] || STYLE_EN.seishun;
   const chars = Math.min(2, Math.max(0, parseInt(b.chars) || 0));
-  const scene = clip(b.scene, 60), cast = clip(b.cast, 80);
+  const scene = clip(b.scene, 60), cast = clip(b.cast, 80), line = clip(b.line, 40);
   const people = chars === 0
-    ? "No people in the frame. A quiet establishing shot of the place."
-    : `Add ${chars === 1 ? "one original anime character" : "two original anime characters"} placed naturally in the scene at a believable scale.` +
-      (cast ? ` Characters: ${cast}.` : "") + (scene ? ` What is happening: ${scene}.` : "") +
-      " The characters must be completely original designs that do not resemble any existing anime character or real person. Fully clothed, wholesome.";
+    ? "The anime frame shows no people, just the place (an establishing shot)."
+    : `The anime frame shows ${chars === 1 ? "one original anime character" : "two original anime characters"} in that place` +
+      (cast ? ` (${cast})` : "") + (scene ? `, in this scene: ${scene}` : "") +
+      ". The characters are completely original designs that do not resemble any existing anime character or real person, fully clothed and wholesome.";
+  const sub = b.sub && line
+    ? `At the bottom of the anime frame there is a TV-style Japanese subtitle in white text with a thin dark outline that reads exactly: 「${line}」`
+    : "There is no text at all on the card.";
   return [
-    "Redraw this photo as a single frame (a screenshot) from a high-quality Japanese TV anime.",
-    "Keep the same composition, camera angle and perspective, and keep the layout of buildings, roads, stairs, railings, poles, wires, signs and trees, so the anime frame clearly matches the real place.",
-    `Background art: detailed hand-painted anime background, clean line art, cel-shaded, ${style}.`,
-    people,
-    "Do not add any text, subtitles, logos, watermarks or user interface. Landscape 16:9 frame.",
+    "Edit this photo into a realistic anime pilgrimage photo (聖地巡礼写真), the kind fans take when they visit a real location that appears in an anime.",
+    "Keep the real photo as the background: the same place, composition, camera angle, lighting and photographic look. Do not stylize the background.",
+    "In the foreground, add one real human hand (natural, photorealistic skin and fingers, holding it like a person taking the photo with a phone) holding up a glossy printed photo card in landscape orientation, roughly the size of a postcard, held at arm's length so it covers about half the width of the photo.",
+    "The card shows a still frame from a high-quality Japanese TV anime that depicts exactly the same place from the same angle, so the buildings, poles, wires, roads, walls and other lines in the card line up and continue with the real background behind the card.",
+    `Anime frame style: detailed hand-painted anime background art, clean line art, cel-shaded, ${style}. ${people}`,
+    sub,
+    "Make it look like a real photograph: the card has a slight perspective, soft shadow and subtle reflection; the hand and card are in focus and the background is very slightly softer.",
+    "No other text, logos, watermarks or user interface anywhere.",
   ].join("\n");
+}
+
+function sizeFor(model, w, h) {
+  const r = Math.min(3, Math.max(1 / 3, (Number(w) || 3) / (Number(h) || 4)));
+  if (model === "gpt-image-1") return r > 1.15 ? "1536x1024" : r < 0.87 ? "1024x1536" : "1024x1024";
+  const r16 = (v) => Math.max(256, Math.round(v / 16) * 16);
+  return r >= 1 ? `1536x${r16(1536 / r)}` : `${r16(1536 * r)}x1536`;
 }
 
 function b64ToBlob(b64, type) {
@@ -134,11 +148,11 @@ function b64ToBlob(b64, type) {
 }
 
 async function handleDraw(request, env) {
-  if (!env.OPENAI_API_KEY) return json({ ok: false, error: "GPTの絵はまだ準備中です（OPENAI_API_KEY 未登録）。" }, 503);
+  if (!env.OPENAI_API_KEY) return json({ ok: false, error: "写真を作るAIはまだ準備中です（OPENAI_API_KEY 未登録）。" }, 503);
   const [body, err] = await readBody(request);
   if (err) return err;
   const ip = request.headers.get("CF-Connecting-IP") || "?";
-  if (tooMany(ip, "draw", 6, 10 * 60 * 1000)) return json({ ok: false, error: "描くのは10分に6枚までです。少し休憩してから。" }, 429);
+  if (tooMany(ip, "draw", 6, 10 * 60 * 1000)) return json({ ok: false, error: "10分に6枚までです。少し休憩してから。" }, 429);
 
   const prompt = drawPrompt(body);
   const models = env.OPENAI_IMAGE_MODEL ? [env.OPENAI_IMAGE_MODEL] : IMAGE_MODELS;
@@ -148,7 +162,7 @@ async function handleDraw(request, env) {
     fd.append("model", model);
     fd.append("image", b64ToBlob(body.image, "image/jpeg"), "photo.jpg");
     fd.append("prompt", prompt);
-    fd.append("size", model === "gpt-image-1" ? "1536x1024" : "1536x864");
+    fd.append("size", sizeFor(model, body.w, body.h));
     fd.append("quality", "medium");
     fd.append("output_format", "jpeg");
     fd.append("output_compression", "88");
@@ -176,7 +190,7 @@ async function handleDraw(request, env) {
     if (res.status === 401) return json({ ok: false, error: "OpenAIのAPIキーが正しくないようです。" }, 502);
     if (res.status === 429 || /quota|billing|credit/i.test(msg)) return json({ ok: false, error: "OpenAIのクレジット残高か利用上限に達しています。" }, 502);
     if (code.includes("moderation") || /safety|moderation/i.test(msg)) return json({ ok: false, error: "この写真・設定では描けませんでした。設定を変えて試してください。" }, 400);
-    return json({ ok: false, error: "絵を描けませんでした。もう一度試してください。" }, 502);
+    return json({ ok: false, error: "うまく作れませんでした。もう一度試してください。" }, 502);
   }
   console.error("seichi draw: no usable model", lastErr.slice(0, 300));
   return json({ ok: false, error: "使える画像モデルが見つかりませんでした。" }, 502);
