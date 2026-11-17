@@ -7,7 +7,7 @@
 | `public/index.html` | サイトのトップ（ゲームの棚） |
 | `public/img/` | カバー画像とシェア用画像 |
 | `src/` | ワーカー（`/api/` だけ担当。神経ド衰弱のAIお題生成、聖地巡礼スナップのAI） |
-| `public/<ゲーム名>/` | 各ゲーム（seichi / shinkei / miyanashi / pizza / tekishoku / osouji / matcha / dopagaki / koukai / tenten / ehon） |
+| `public/<ゲーム名>/` | 各ゲーム（ningen / seichi / shinkei / miyanashi / pizza / tekishoku / osouji / matcha / dopagaki / koukai / tenten / ehon） |
 
 新しいゲームは `public/` にフォルダを1つ足して、トップにカードを1枚足す。
 このリポジトリに変更が入ると、Cloudflare が自動でデプロイします。
