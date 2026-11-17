@@ -1154,7 +1154,7 @@ function showEnding(k, title, body, retry){
   <button class="start ghost" id="restartBtn">最初から</button>
   <div class="sent">私は人間です。　おわり</div><a class="home-link" href="/">← エクステン堂にもどる</a>`;
   if(retry) $('#retryBtn').onclick=()=>{ r.className='ov hide'; loadCk(retry.ck); retry.fn(); };
-  $('#restartBtn').onclick=()=>{ r.className='ov hide'; preCase1(); };
+  $('#restartBtn').onclick=()=>{ r.className='ov hide'; withPrelude() ? preCase1() : begin(); };
 }
 async function endA(kind){
   app.className='dark';
@@ -1297,6 +1297,10 @@ async function celebrate(word, sub){
 }
 
 /* ========= PRELUDE (CASE 01-02) ========= */
+// 前半の2件（田中・アイ）を入れるかどうか。true で入る／false で律から始まる。
+// URLの末尾に #cases を付けると、false のままでも2件つきで遊べる（確認用）。
+const USE_PRELUDE = false;
+const withPrelude = () => USE_PRELUDE || /cases/.test(location.hash);
 let PRE = false;
 const SAME_DEF = 'それ、さっきも言われましたけど。';
 let SAME = SAME_DEF;
@@ -1450,9 +1454,9 @@ $('#startBtn').onclick=()=>{
   try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
   AMB.start();
   $('#title').classList.add('hide');
-  if(/skippre/.test(location.hash)) begin(); else preCase1();
+  if(/skippre/.test(location.hash) || !withPrelude()) begin(); else preCase1();
 };
-try{ if(localStorage.getItem('ningen_pre')){ const sp=$('#skipPre'); sp.classList.remove('hide'); sp.onclick=e=>{ e.preventDefault(); audioInit(); $('#title').classList.add('hide'); begin(); }; } }catch(e){}
+try{ if(withPrelude() && localStorage.getItem('ningen_pre')){ const sp=$('#skipPre'); sp.classList.remove('hide'); sp.onclick=e=>{ e.preventDefault(); audioInit(); $('#title').classList.add('hide'); begin(); }; } }catch(e){}
 $('#mute').onclick=()=>{ MUTED=!MUTED; $('#mute').textContent = MUTED?'♪ OFF':'♪ ON'; AMB.mute(MUTED); };
 function audioInit(){ FAST = $('#fastChk').checked || /fast/.test(location.hash); if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } AMB.start(); }
 try{ const sv = JSON.parse(localStorage.getItem('ningen_save')||'null');
