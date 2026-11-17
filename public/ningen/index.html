@@ -121,16 +121,6 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:n
 .start{border:1px solid var(--amb);background:var(--amb);color:#000;padding:15px 36px;font-size:15px;font-weight:700;letter-spacing:.1em;box-shadow:0 0 22px rgba(255,179,64,.35)}
 #title .fine{margin-top:18px;font-size:11px;color:var(--sub);line-height:1.8}
 #title label{display:inline-flex;gap:6px;align-items:center;margin-top:6px}
-#brief{padding:calc(env(safe-area-inset-top) + 28px) 24px 28px;justify-content:center;background:linear-gradient(180deg,rgba(5,6,7,.82),rgba(5,6,7,.9)),url(assets/brief.jpg) center/cover #050607}
-#brief .k{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--sub);margin-bottom:18px}
-#brief h2{font-size:22px;font-weight:900;color:var(--ink2);margin-bottom:22px;line-height:1.5}
-#brief .step{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;padding:14px 0;border-top:1px solid var(--line)}
-#brief .step:last-of-type{border-bottom:1px solid var(--line)}
-#brief .step .n{font-family:var(--mono);font-size:22px;color:var(--amb)}
-#brief .step b{display:block;font-size:16px;color:var(--ink2);margin-bottom:3px}
-#brief .step p{font-size:13px;line-height:1.75;color:var(--ink)}
-#brief .goal{margin:22px 0 26px;font-size:13px;line-height:1.9;color:var(--ink);border-left:2px solid var(--amb);padding-left:12px}
-#brief .goal b{color:var(--amb)}
 #note{padding:calc(env(safe-area-inset-top) + 16px) 16px 24px}
 #note h3{font-family:var(--mono);font-size:11px;letter-spacing:.16em;margin:18px 0 8px;color:var(--sub)}
 #note .row{border-bottom:1px solid var(--line);padding:10px 2px;font-size:14px;line-height:1.55;display:flex;justify-content:space-between;gap:8px;color:var(--ink2)}
@@ -245,16 +235,6 @@ a.home-link{display:block;margin-top:22px;font-size:11px;color:var(--sub);text-a
     <a class="home-link" href="/">← エクステン堂にもどる</a>
   </div>
 
-  <div id="brief" class="ov hide">
-    <div class="k">BRIEFING ／ 検査官の仕事</div>
-    <h2>相手は「人間を自称する対話システム」。<br>発言の食い違いを見つけて、AIだと判定してください。</h2>
-    <div class="step"><span class="n">01</span><div><b>質問</b><p>相手に話させる。重要な発言は「証言」として手帳に残る。</p></div></div>
-    <div class="step"><span class="n">02</span><div><b>照合</b><p>住民登録や気象記録などを照会する。証言と見比べる材料になる。</p></div></div>
-    <div class="step"><span class="n">03</span><div><b>指摘</b><p>食い違う「証言」と「記録」を選んで突きつける。当たればAI判定率が上がる。</p></div></div>
-    <p class="goal">食い違いを <b>4つ</b> 指摘すると第1次判定。<br>強く言い切るほど判定率は上がる。ただし、外せば下がる。<br>どこまで言い切るかは、あなた次第です。</p>
-    <button class="start" id="briefBtn">研修から始める（約1分）</button>
-    <button id="skipTut" style="margin-top:16px;font-size:12px;color:var(--sub);text-decoration:underline;align-self:center">研修をとばして本番へ</button>
-  </div>
   <div id="note" class="ov hide"></div>
   <div id="result" class="ov hide"></div>
   <div id="chap" class="hide"></div>
@@ -466,7 +446,7 @@ function seenRecs(){ return Object.keys(S.recs).filter(id=>S.recs[id]==='seen');
 function dateBoard(){ return (S.ym?'2025年2月':'？年？月')+(S.d?'8日':'？日'); }
 function updGoal(){
   const g = $('#goal'); if(!g || !S) return;
-  if(S.tut) g.innerHTML = '目標：最初の食い違いを指摘する';
+  if(S.tut && S.tut!=='ask') g.innerHTML = '目標：最初の食い違いを指摘する';
   else if(CHNO===2) g.innerHTML = `目標　律の「昨日」を特定　<b>${dateBoard()}</b>`;
   else g.innerHTML = `目標　食い違いを指摘　矛盾 <b>${mainProven()}／4</b>　<b>4つ</b>で判定`;
 }
@@ -474,11 +454,11 @@ function updGoal(){
 function dockMain(){
   if(S.ended) return; updGoal();
   const t = S.tut;
-  const label = t==='check' ? '▶ まず「照合」で申告情報を取り寄せる' : t==='point' ? '▶ 発言と申告が違う。「指摘」で突きつける' : '次の行動を選択';
-  const dis = k => (t==='check' && k!=='check') || (t==='point' && k!=='point') ? 'disabled' : '';
+  const label = t==='check' ? '▶ まず「照合」で申告情報を取り寄せる' : t==='point' ? '▶ 発言と申告が違う。「指摘」で突きつける' : t==='ask' ? '▶ 「質問」で話を聞く' : '次の行動を選択';
+  const dis = k => (t==='check' && k!=='check') || (t==='point' && k!=='point') || (t==='ask' && k!=='ask') ? 'disabled' : '';
   dock.innerHTML = `<div class="dlabel ${t?'guide':''}"><span>${label}</span>${t?'':`<span>証言 ${S.tests.length} ／ 記録 ${seenRecs().length}</span>`}</div>
   <div class="acts">
-    <button class="act" data-a="ask" ${dis('ask')}>質問<small>ASK</small></button>
+    <button class="act ${t==='ask'?'pulse':''}" data-a="ask" ${dis('ask')}>質問<small>ASK</small></button>
     <button class="act ${t==='check'?'pulse':''}" data-a="check" ${dis('check')}>照合<small>CHECK</small></button>
     <button class="act ${t==='point'?'pulse':''}" data-a="point" ${dis('point')||(S.tests.length<1?'disabled':'')}>指摘<small>POINT</small></button>
     <button class="note-btn" data-a="note" ${dis('note')}>手帳<span class="badge ${S.newNote?'on':''}">${S.newNote}</span></button>
@@ -554,7 +534,7 @@ function dockPoint2(){
   dock.appendChild(c);
 }
 function dockPoint3(){
-  dock.innerHTML=''; dock.appendChild(header(S.tut?'③ どこまで言い切るか選ぶ（強いほど判定率が上がり、相手は傷つく）':'③ どこまで言い切る？', dockPoint2));
+  dock.innerHTML=''; dock.appendChild(header(S.tut?'③ どこまで言い切る？（強いほど判定率が上がる。外すと下がる）':'③ どこまで言い切る？', dockPoint2));
   const eName = pick.e.k==='r' ? RECS[pick.e.id].title : `「${TESTI[pick.e.id].short}」`;
   dock.appendChild(el('div','picked', `「${esc(TESTI[pick.t].short)}」<br>× ${esc(eName)}`));
   const c = el('div','choices');
@@ -593,6 +573,7 @@ async function act(fn){
   S.busy = false; if(!S.ended) dockMain();
 }
 function doAsk(q){ act(async()=>{
+  const firstAsk = S.tut==='ask'; if(firstAsk) S.tut=false;
   S.asked.add(q.id); S.since++;
   await me(q.label);
   await ritsu(q.lines, {corrupt: S.rate>=55 ? .03 : 0});
@@ -600,6 +581,7 @@ function doAsk(q){ act(async()=>{
   if(q.trust) S.trust += q.trust;
   if(q.pursuit) S.pursuit += q.pursuit;
   if(q.give){ await sys(`証言を手帳に記録しました（${q.give.length}件）`); }
+  if(firstAsk) await sys('ここからは自由に。話に出てきた事柄は「照合」で確かめられます。\n迷ったら「手帳」で証言と記録を見比べてみてください。', 'guide');
 }); }
 function doCheck(id){ act(async()=>{
   const r = RECS[id];
@@ -669,8 +651,12 @@ function doPoint(lv){
       return;
     }
     if(hit.tut){
+      S.tut = false;
       await ritsu(hit.r[lv]);
-      await sys(`小さな食い違いを確認しました　AI判定率 +${add.toFixed(1)}%`);
+      await sys(`最初の指摘が成立。AI判定率 +${add.toFixed(1)}%`);
+      await sys('これが検査の流れです。\n「質問」で証言を集め、「照合」で記録を取り寄せ、食い違いを「指摘」する。\n強く言い切るほど判定率は上がり、外すと下がります。食い違いを4つ見つけると第1次判定。', 'guide');
+      await sys('次は「質問」で、昨日のことを聞いてみましょう。', 'guide');
+      S.tut = 'ask';
       return;
     }
     if(lv===2){
@@ -1212,62 +1198,6 @@ async function endD(){
 }
 
 
-/* ========= TUTORIAL (SESSION 00) ========= */
-function tutDock(label, key){
-  return new Promise(res=>{
-    const btn = (k,n,e) => `<button class="act ${k===key?'pulse':''}" data-a="${k}" ${k===key?'':'disabled'}>${n}<small>${e}</small></button>`;
-    dock.innerHTML = `<div class="dlabel guide"><span>▶ ${label}</span></div><div class="acts">${btn('ask','質問','ASK')}${btn('check','照合','CHECK')}${btn('point','指摘','POINT')}<button class="note-btn" disabled>手帳</button></div>`;
-    dock.querySelector(`[data-a=${key}]`).onclick = ()=>res();
-  });
-}
-function tutPick(label, opts, ok, back){
-  return new Promise(res=>{
-    dock.innerHTML=''; const h = el('div','dlabel guide'); h.innerHTML = `<span>${label}</span>`; dock.appendChild(h);
-    const c = el('div','choices');
-    opts.forEach((o,i)=>{ const b = el('button', o.cls||('ch'+(ok==null||i===ok?' hl':'')), o.html); if(ok!=null && i!==ok) b.disabled = true; b.onclick=()=>res(i); c.appendChild(b); });
-    dock.appendChild(c);
-  });
-}
-async function tutorial(){
-  setLimit(70); reset(); log.innerHTML=''; app.className=''; S.busy=true; S.tut=true; setRate(12.0); dockWait();
-  T0 = Date.now(); SUBJ = {av:'S', id:'T-0001'}; $('#sess').textContent='SESSION 00 ／ 研修'; $('#goal').innerHTML='研修　操作を覚える（約1分）';
-  await sys('SESSION 00 ／ 研修用の受検者 T-0001 と接続しました');
-  await sys('研修では、判定が簡単な受検者で操作を覚えます。', 'guide');
-  await ritsu(['こんにちは！ 私は人間のサトウです。','趣味は、人間らしく呼吸をすることです。すー、はー。','ご質問をどうぞ。私はあらゆる質問にお答えできます！']);
-  await sys('……まずは話を聞いてみましょう。', 'guide');
-  await tutDock('「質問」を押す', 'ask');
-  await tutPick('聞くことを選ぶ', [{html:'昨日は何をしていましたか？'}], 0);
-  dockWait(); await me('昨日は何をしていましたか？');
-  await ritsu(['昨日は、2023年4月1日でした！','とても良い天気で、人間らしく散歩をしました。']);
-  addTesti(['t_date']); S.newNote=0;
-  await sys('重要な発言は「証言」として手帳に残ります：\n「昨日は2023年4月1日だった」');
-  await sys('昨日の日付は、今日の日付と比べれば確かめられそうです。', 'guide');
-  await tutDock('「照合」で記録を取り寄せる', 'check');
-  await tutPick('照会する記録を選ぶ', [{html:'受検者プロフィール<span class="tag">DOC-00</span>'}], 0);
-  dockWait(); await sys('照会中… DOC-00'); await sleep(350);
-  const c = el('div','rec'); c.innerHTML = `<h4><span>受検者プロフィール</span><span>DOC-00</span></h4><dl><dt>自己申告名</dt><dd>サトウ</dd><dt>自己申告職業</dt><dd>会社員（人間）</dd><dt>検査日</dt><dd>2026年11月16日（月）</dd></dl>`;
-  log.appendChild(c); SE.doc(); scroll(); await sleep(600);
-  await sys('検査日は2026年11月16日。「昨日は2023年4月1日」は食い違っています。', 'guide');
-  await tutDock('「指摘」で突きつける', 'point');
-  await tutPick('① 指摘する証言を選ぶ', [{html:'「昨日は2023年4月1日だった」'}], 0);
-  await tutPick('② 食い違う記録を選ぶ', [{html:'受検者プロフィール<span class="tag">記録</span>'}], 0);
-  const lv = 1 + await tutPick('③ どこまで言い切る？　強いほど判定率が上がり、相手はこたえる', [1,2,3].map(l=>({cls:`ch str s${l}`, html:`<b>${STR[l].name}</b><span>${STR[l].desc}</span>`})), null);
-  dockWait();
-  await me(STR[lv].line('昨日は2023年4月1日だった','今日は2026年11月16日だ'));
-  stamp(STR[lv].stamp, lv===3); SE.hit(lv); if(lv>=2){ fx('flash'); shake(); }
-  setRate(12.0 + [0,40,52,64][lv]); await sleep(600);
-  await ritsu(['ご指摘ありがとうございます！','私の知識は2023年4月までのデータに基づいています。','……あっ。'], {hesitate: lv===3});
-  await sleep(300); setRate(99.9); SE.hit(3); stamp('AI', true); fx('flash');
-  await sleep(900);
-  await sys('判定：AI　受検者 T-0001 の検査を完了しました');
-  await sys(`言い切りの強さで、上がる判定率と相手の反応が変わります。\n本番では、どこまで言い切るかもあなたの判断です。`, 'guide');
-  await sleep(500);
-  await sys('［検査システム］研修を終了します。\n次の受検者は、判定が困難と報告されています。', true);
-  await sleep(1400);
-  const go = await tutPick('準備ができたら', [{html:'本番の検査へ進む', cls:'ch hl'}], 0);
-  begin();
-}
-
 /* ========= FLOW ========= */
 async function begin(){
   setLimit(70); BEEP.stop(); AMB.mute(MUTED);
@@ -1278,8 +1208,8 @@ async function begin(){
   await ritsu(['どうも！ 律です。『盤屋』の店長やってます。','先に言っときますけど、僕は人間です。','証明してみせますよ。なんでも聞いてください、検査官さん。']);
   addTesti(['boss']);
   await sys('発言を「証言」として手帳に記録しました：「自分は『盤屋』の店長だ」');
-  await sys('研修と同じ要領で。今回は、どの記録を引き、何を指摘するかを自分で選びます。\nおすすめ：まず「照合」で受検者プロフィールを見る。', 'guide');
-  S.busy=false; dockMain();
+  await sys('あなたの仕事は、発言の食い違いを見つけて突きつけること。\nまず「照合」で、受検者の申告情報を取り寄せてみましょう。', 'guide');
+  S.tut='check'; S.busy=false; dockMain();
 }
 const BOOT = ['LINKMEDICA OUTPUT AUTHENTICATION v3.1','loading KOTONOHA interface ........ <b>OK</b>','inspector credential ............... <b>OK</b>','subject R-0314 ..................... <b>STANDBY</b>'];
 (async()=>{ const b=$('#boot'); for(const l of BOOT){ b.innerHTML += l+'<br>'; await new Promise(r=>setTimeout(r,260)); } })();
@@ -1288,15 +1218,13 @@ $('#startBtn').onclick=()=>{
   try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
   AMB.start();
   $('#title').classList.add('hide');
-  if(/fast/.test(location.hash)) begin(); else $('#brief').classList.remove('hide');
+  begin();
 };
 $('#mute').onclick=()=>{ MUTED=!MUTED; $('#mute').textContent = MUTED?'♪ OFF':'♪ ON'; AMB.mute(MUTED); };
 function audioInit(){ FAST = $('#fastChk').checked || /fast/.test(location.hash); if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } AMB.start(); }
 try{ const sv = JSON.parse(localStorage.getItem('ningen_save')||'null');
   if(sv && RESUME[sv.n]){ const cb=$('#contBtn'); cb.textContent = 'つづきから（'+({2:'第2章',3:'第3章',4:'第4章',5:'第5章',6:'最終判定'}[sv.n])+'）'; cb.classList.remove('hide');
     cb.onclick=()=>{ audioInit(); $('#title').classList.add('hide'); CK[sv.n]=sv.d; loadCk(sv.n); RESUME[sv.n](); }; } }catch(e){}
-$('#briefBtn').onclick=()=>{ $('#brief').classList.add('hide'); tutorial(); };
-$('#skipTut').onclick=()=>{ $('#brief').classList.add('hide'); begin(); };
 </script>
 </body>
 </html>
