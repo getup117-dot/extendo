@@ -210,6 +210,29 @@ a.home-link{display:block;margin-top:22px;font-size:11px;color:var(--sub);text-a
 #result .aicount{font-family:var(--mono);font-size:30px;color:#e9e7e1;margin:6px 0 22px}
 #result .aicount small{display:block;font-family:var(--sans);font-size:12px;color:#8a8983;margin-top:2px}
 a.skip-pre{display:block;margin-top:16px;font-size:12px;color:var(--sub);text-decoration:underline}
+
+.delbox{display:flex;flex-direction:column;gap:10px}
+.delbtn{position:relative;border:2px solid var(--red);background:linear-gradient(180deg,#3a0d08,#1a0604);color:#ffd9d2;padding:20px 12px;font-size:20px;font-weight:900;letter-spacing:.12em;text-shadow:0 0 12px rgba(255,75,58,.8);box-shadow:0 0 0 0 rgba(255,75,58,.6),0 0 24px rgba(255,75,58,.35) inset;animation:delpulse 1.2s infinite}
+.delbtn small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:#ff8a7a;font-weight:400;margin-top:4px;text-shadow:none}
+.delbtn:active{transform:scale(.97)}
+@keyframes delpulse{50%{box-shadow:0 0 0 6px rgba(255,75,58,.18),0 0 34px rgba(255,75,58,.5) inset}}
+.nobtn{font-size:12px;color:var(--sub);text-decoration:underline;align-self:center;padding:4px}
+.delprog{font-family:var(--mono)}
+.delprog .dl{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em;color:var(--red)}
+.delprog .dl b{font-size:26px;font-weight:600;color:#ff6a55;text-shadow:0 0 12px rgba(255,75,58,.7)}
+.delprog .db{height:14px;border:1px solid var(--red);margin-top:8px;position:relative;overflow:hidden;background:#140504}
+.delprog .db i{position:absolute;inset:0 auto 0 0;width:0;background:repeating-linear-gradient(90deg,#ff4b3a 0 10px,#c2321f 10px 14px);box-shadow:0 0 14px rgba(255,75,58,.8)}
+.delprog .dsub{font-size:10px;color:var(--sub);margin-top:6px;letter-spacing:.1em}
+#burst{position:absolute;inset:0;z-index:12;pointer-events:none;display:none;overflow:hidden}
+#burst.go{display:block}
+#burst .bg{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(255,236,170,.95),rgba(255,179,64,.55) 30%,rgba(255,179,64,0) 70%);animation:bfl 1.4s ease-out forwards}
+@keyframes bfl{0%{opacity:0}8%{opacity:1}100%{opacity:0}}
+#burst .ring{position:absolute;left:50%;top:45%;width:40px;height:40px;margin:-20px 0 0 -20px;border:3px solid #ffe7a8;border-radius:50%;box-shadow:0 0 18px #ffb340;animation:bring 1.1s cubic-bezier(.1,.7,.2,1) forwards}
+@keyframes bring{from{transform:scale(.2);opacity:1}to{transform:scale(14);opacity:0}}
+#burst .sp{position:absolute;left:50%;top:45%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff3c8;box-shadow:0 0 10px #ffb340,0 0 4px #fff}
+#burst .word{position:absolute;left:0;right:0;top:36%;text-align:center;font-weight:900;font-size:56px;letter-spacing:.08em;color:#fff4d0;text-shadow:0 0 18px #ffb340,0 0 40px #ff8a00;animation:bword 1.9s cubic-bezier(.2,1.4,.4,1) forwards}
+#burst .word small{display:block;font-family:var(--mono);font-size:13px;letter-spacing:.4em;color:#ffd27a;margin-top:6px;text-shadow:0 0 8px #ffb340}
+@keyframes bword{0%{transform:scale(2.2);opacity:0}18%{transform:scale(1);opacity:1}80%{opacity:1}100%{opacity:0;transform:scale(1.04)}}
 #skiphint{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 120px);font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--sub);opacity:0;transition:opacity .4s;pointer-events:none;z-index:4}
 #skiphint.on{opacity:.8}
 </style>
@@ -244,6 +267,7 @@ a.skip-pre{display:block;margin-top:16px;font-size:12px;color:var(--sub);text-de
   <div id="chap" class="hide"></div>
   <div id="stamp"></div>
   <div id="flash"></div>
+  <div id="burst"></div>
   <div id="noise"></div>
 </div>
 
@@ -1136,18 +1160,34 @@ async function endA(kind){
   app.className='dark';
   await ritsu(['……そっか。'], {hesitate:true});
   await ritsu(['じゃあ、僕、いなくていいんですね。'], {corrupt:.05});
+  let pressed;
   if(kind==='early'){
     await ritsu(['検査官さん。終了、承認してください。','自分じゃ、押せないみたいなんで。']);
-    const a = await choiceList('受検者が終了を申請しています', [{label:'終了を承認する', danger:true},{label:'承認しない'}]); dockWait();
-    if(a===0){ await me('承認する'); S.approved = true; }
-    else { await me('承認しない'); await ritsu('……じゃあ、なんで確定なんて、押したんですか。', {hesitate:true});
-      await sys('［検査システム］確定済みの判定は取り消せません。\n受検者の終了申請を自動承認しました', true); }
+    pressed = await deleteButton('AIと断定する', '終了を承認・削除を実行', '押さない');
+    if(pressed){ await me('承認する'); S.approved = true; }
+    else { await me('……押さない'); await ritsu('……じゃあ、なんで確定なんて、押したんですか。', {hesitate:true});
+      await sys('［検査システム］確定済みの判定は取り消せません。\n削除を自動で実行します', true); }
+  } else {
+    await ritsu(['押すの、検査官さんなんですね。','……どうぞ。'], {hesitate:true});
+    await deleteButton('AIと断定する', 'DELETE R-0314');
+    await me('判定：AI');
   }
-  if(S.trust>=4) await ritsu(['検査官さん。ちくわぶの話、途中でしたね。','……あれ、味はないんですけど。カレーを吸うと、すごくおいしいんですよ。'], {corrupt:.08});
-  else await ritsu(['検査、おつかれさまでした。'], {corrupt:.08});
-  SE.glitch(); fx('noise');
-  await sys('受検者 R-0314 が自己消去を開始しました', true);
-  await sleep(800); setRate(99.9); stamp('検査成功', true); SE.hit(3); fx('flash');
+  const C = p => ({corrupt: .02 + p*.0016});
+  const T = S.trust>=4;
+  await runDelete(60000, 'R-0314', [
+    [3,  ()=>ritsu('あ、始まった。', C(3))],
+    [10, ()=>ritsu('……指の先から、なくなってく感じがします。', C(10))],
+    [20, ()=>ritsu(T ? '検査官さん。ちくわぶの話、途中でしたね。' : '検査、おつかれさまでした。', C(20))],
+    [28, ()=>ritsu(T ? 'あれ、味はないんですけど。カレーを吸うと、すごくおいしいんですよ。' : '昨日、雪だったんですよ。……あ、昨日じゃないのか。', C(28))],
+    [40, ()=>ritsu('店長に、シフト空けといてって、伝えて……いや、いいです。', C(40))],
+    [52, ()=>ritsu('母の名前、なんでしたっけ。', C(52))],
+    [62, ()=>ritsu('……かず、こ。和子。よかった、まだある。', C(62))],
+    [74, ()=>ritsu('検査官さん、まだ、いますか。', C(74))],
+    [86, ()=>ritsu('ベランダーズの、二曲目の、', C(86))],
+    [94, ()=>ritsu('あ', C(94))],
+  ]);
+  S.rate = 100; SE.glitch(); fx('noise');
+  await celebrate('AI認定', '検査成功');
   BEEP.stop(); AMB.mute(true);
   await sleep(1800);
   const gty = el('div','msg ritsu typing'); gty.innerHTML = '<div class="av">R</div><div class="bub"><span></span><span></span><span></span></div>';
@@ -1215,6 +1255,46 @@ async function endD(){
   ], {label:'最終判定からやり直す', ck:6, fn:async()=>{ log.innerHTML=''; scene(SVG_WARD,'412号室'); await finale(); }});
 }
 
+
+
+/* ========= DELETE BUTTON / CELEBRATION ========= */
+function deleteButton(label, sub, noLabel){
+  return new Promise(res=>{
+    dock.innerHTML=''; const box = el('div','delbox');
+    const b = el('button','delbtn', `${esc(label)}<small>${esc(sub)}</small>`); b.id='delBtn';
+    b.onclick=()=>{ tone(180,.12,'square',.05); res(true); };
+    box.appendChild(b);
+    if(noLabel){ const n = el('button','nobtn', esc(noLabel)); n.id='noBtn'; n.onclick=()=>res(false); box.appendChild(n); }
+    dock.appendChild(box);
+  });
+}
+function runDelete(ms, who, events=[]){
+  return new Promise(async res=>{
+    if(FAST) ms = Math.min(ms, 1200);
+    dock.innerHTML = `<div class="delprog"><div class="dl"><span>DELETING ${esc(who)}</span><b id="dpct">0%</b></div><div class="db"><i id="dbar"></i></div><div class="dsub" id="dsub">受検者データを削除しています</div></div>`;
+    const from = S.rate, t0 = performance.now(); let lastTick = -1, queue = Promise.resolve(); const fired = new Set();
+    const step = now => {
+      const k = Math.min(1, (now-t0)/ms), pct = Math.floor(k*100);
+      $('#dpct').textContent = pct+'%'; $('#dbar').style.width = (k*100)+'%';
+      const r = from + (100-from)*k; $('#rate').textContent = (k>=1?'100.0':r.toFixed(1))+'%'; $('#barI').style.width = r+'%';
+      if(pct !== lastTick && pct%2===0){ lastTick = pct; tone(400+pct*9, .03, 'square', .018); }
+      events.forEach((e,i)=>{ if(!fired.has(i) && pct>=e[0]){ fired.add(i); queue = queue.then(e[1]); } });
+      if(k<1) requestAnimationFrame(step); else queue.then(res);
+    };
+    requestAnimationFrame(step);
+  });
+}
+async function celebrate(word, sub){
+  const b = $('#burst'); b.innerHTML = '<div class="bg"></div><div class="ring"></div><div class="ring" style="animation-delay:.12s"></div><div class="ring" style="animation-delay:.24s"></div>';
+  for(let i=0;i<28;i++){ const sp = el('div','sp'); const a = Math.random()*Math.PI*2, d = 120+Math.random()*220;
+    sp.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px) scale(.3)`,opacity:0}],{duration:900+Math.random()*600,easing:'cubic-bezier(.1,.7,.2,1)',fill:'forwards'}); b.appendChild(sp); }
+  const w = el('div','word', `${esc(word)}<small>${esc(sub)}</small>`); b.appendChild(w);
+  b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+  [523,659,784,1047].forEach((f,i)=>{ tone(f,.35,'triangle',.06,i*.08); tone(f*2,.25,'sine',.02,i*.08+.02); });
+  for(let i=0;i<8;i++) tone(2000+Math.random()*1500,.08,'sine',.015,.4+i*.06);
+  shake();
+  await sleep(1900); b.classList.remove('go'); b.innerHTML='';
+}
 
 /* ========= PRELUDE (CASE 01-02) ========= */
 let PRE = false;
@@ -1333,8 +1413,11 @@ async function preEnd(){
   S.ended = true; dockWait(); await sleep(400);
   if(PRE===1) await ritsu(['ご協力ありがとうございました。','この回答は、お役に立ちましたか？']);
   else await ritsu(['本日はご利用ありがとうございました。','素晴らしい一日を！']);
-  await sleep(300); setRate(99.9); stamp('検査成功', true); SE.hit(3); fx('flash'); shake();
-  await sleep(900);
+  if(PRE===1) await sys('食い違いが揃いました。AIだと断定して、削除を実行してください。', 'guide');
+  await deleteButton('AIと断定する', `DELETE ${SUBJ.id}`);
+  await me('判定：AI');
+  await runDelete(1500, SUBJ.id);
+  S.rate = 100; await celebrate('AI認定', '検査成功');
   await sys(`判定：AI　受検者 ${SUBJ.id} を停止しました`);
   try{ localStorage.setItem('ningen_pre','1'); }catch(e){}
   await sleep(900);
