@@ -919,7 +919,7 @@ async function explore(label, items, extras){
     else { const r = ex[i-avail.length]; if(await r.run() === 'exit') return; }
   }
 }
-function saveCk(n){ CK[n] = {r1:S.r1, floor:S.floor, rate:S.rate, pursuit:S.pursuit, trust:S.trust, invest:S.invest, gap:S.gap, fake:S.fake, key:S.key, said:{...S.said}, d3:S.d3};
+function saveCk(n){ CK[n] = {hid:S.hid, r1:S.r1, floor:S.floor, rate:S.rate, pursuit:S.pursuit, trust:S.trust, invest:S.invest, gap:S.gap, fake:S.fake, key:S.key, said:{...S.said}, d3:S.d3};
   try{ localStorage.setItem('ningen_save', JSON.stringify({n, d:CK[n]})); }catch(e){} }
 function setLimit(n){ $('.rate .lbl').textContent = n===90 ? 'AI判定率 ／ 90%で装置停止' : 'AI判定率'; const b=$('.bar b'); b.style.left='90%'; b.dataset.n=90; }
 const BEEP = {iv:null, start(){ this.stop(); this.iv=setInterval(()=>tone(880,.07,'sine',.014), 1700); }, stop(){ clearInterval(this.iv); this.iv=null; }};
@@ -1014,7 +1014,7 @@ async function chapter4(){
     {name:'壁のシフト表', run:async()=>{
       docCard('盤屋 シフト表 2025年2月','FIELD-03',[['土日','すべて「律」'],['2月8日（土）','赤丸で「休・母誕生日」'],['欄外の走り書き','「8日 雪。傘また壊れた」'],['2月9日以降','空欄']]);
       await sleep(500); await ritsu(['やっぱり。休んだんだ、あの日。','母の誕生日だったから。']);
-      await echo('c2','2025年2月8日、東京は雪だった。律の「昨日」は、本物だった。'); await echo('c3','律は本当に、その日だけ店を休んでいた。'); }},
+      await echo('c2','2025年2月8日、東京は雪だった。'); await echo('c3','律は本当に、その日だけ店を休んでいた。'); }},
     {name:'ハガキの束', run:async()=>{
       docCard('深夜ラジオ投稿ハガキ','FIELD-04',[['枚数','約200枚'],['「採用」の付箋','3枚']],'※ 3枚とも、ちくわぶのネタ');
       await sleep(500); await ritsu(['……3回。合ってる。','覚えてるんですよ、読まれた回は全部。']); }},
@@ -1039,7 +1039,7 @@ async function chapter4(){
       if(i===0){ await me('病院から、お母さん宛ての手紙が来ている。君は、多摩なぎさ記憶医療センターの412号室にいるらしい'); S.trust++;
         await ritsu(['……病院。','僕、どこか悪いんですか。'], {hesitate:true});
         await ritsu(['じゃあ、いま話してる僕は、どこにいるんですか。'], {corrupt:.04}); }
-      else { await me('……まだ、言えない'); S.pursuit++;
+      else { await me('……まだ、言えない'); S.pursuit++; S.hid = true;
         await ritsu(['……そうですか。','検査官さんが言えないなら、きっと、そういうことなんですね。']); } }},
   ];
   await explore('部屋を調べる', items, ()=>[
@@ -1057,7 +1057,8 @@ async function chapter5(){
   scene(SVG_WARD, '412号室。ベッドの横で、装置のランプだけが点いている。');
   BEEP.start();
   await sys('検査端末を病室の装置に接続しました。');
-  await ritsu(['……検査官さん。','そこに、いるんですか。','そこに、僕が寝てるんですか。'], {hesitate:true});
+  if(S.hid) await ritsu(['……検査官さん。','そこ、どこですか。','機械の音がします。'], {hesitate:true});
+  else await ritsu(['……検査官さん。','そこに、いるんですか。','そこに、僕が寝てるんですか。'], {hesitate:true});
   let notice=false, logSeen=false;
   const items = [
     {name:'ネームプレート', run:async()=>{
@@ -1080,7 +1081,6 @@ async function chapter5(){
       docCard('リンクメディカ社 内部通知','LM-INT',[['件名','出力認証試験の運用について'],['内容','AI判定率90%以上の装置は「本人出力なし」とみなし、停止・回収する'],['備考','検査官には試験の目的を伝えないこと（判定の偏りを防ぐため）']]);
       await sleep(700);
       SE.glitch(); fx('noise');
-      await sys('あなたの判定で、この装置は止まる。\nあなたがAIだと判定した瞬間、律の声は、もう聞こえなくなる。', true);
       setLimit(90); await sleep(400);
       await sys(`あなたが上げてきたAI判定率は、いま ${S.rate.toFixed(1)}%。`, true); }},
   ];
