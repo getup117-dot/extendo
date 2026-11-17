@@ -37,6 +37,7 @@ html{height:100%;box-sizing:border-box}
 *,*::before,*::after{box-sizing:inherit}
 body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-round);font-weight:500;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;transition:background-color 1s}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:0}
+#smear{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:5}
 .app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:center;gap:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0;pointer-events:none}
 .hud{width:100%;max-width:440px;display:flex;justify-content:space-between;align-items:center;gap:12px;transition:opacity .6s}
 .off{visibility:hidden;opacity:0}
@@ -67,10 +68,14 @@ body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(
 .end-text.show{opacity:1}
 #againBtn{opacity:0;pointer-events:none;transition:opacity 1.4s}
 #againBtn.show{opacity:1;pointer-events:auto}
+.gore{margin-top:6px}
+.home{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);font-size:13px;letter-spacing:.08em;color:var(--ink-soft);text-decoration:none;text-align:center}
+.home:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.card{animation:none}}
 </style>
 
 <canvas id="c" role="img" aria-label="てんてんつなぎの盤面"></canvas>
+<canvas id="smear" aria-hidden="true"></canvas>
 
 <div class="app" id="app">
   <header class="hud off" id="hud">
@@ -97,6 +102,8 @@ body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(
   <p class="lead">おなじ いろの てんを つなげる<br>かんたん パズル</p>
   <button class="btn" id="startBtn" type="button">はじめる</button>
   <p class="note">おとを だして あそんでね</p>
+  <button class="ghost gore" id="goreBtn" type="button" aria-pressed="true">流血表現 ON</button>
+  <a class="home" href="/">← エクステン堂にもどる</a>
 </section>
 
 <section class="screen scrim" id="clear" hidden>
@@ -140,6 +147,9 @@ const HW=.0075*R+.5, MIN_A=150, THIN=4.5, FLOAT_A=320, INK='#070407';
 const STACK=new Int32Array(RW*RH);
 const toPx=(u,v)=>[(u-X0)*R,(v-Y0)*R];
 
+/* 人の影：写真のような輪郭の画像。首がピンクの線（盤面の真ん中）に来る位置に置く */
+const PERSON_IMG=new Image(); PERSON_IMG.src='data:image/png;base64,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';
+const PI_U=.0875, PI_S=334/400;
 const SHAPES={
   /* 吊るしたバナナ。切り落とされた端が落ち、いちばん大きな塊は残る */
   banana:{rule:'largest',density:30,tex:'soft',cut:'crisp',draw(c){
@@ -164,7 +174,12 @@ const SHAPES={
     c.beginPath(); c.ellipse(.5,.89,.16,.03,0,0,Math.PI*2); c.fill();
   }},
   /* 人。重い塊が切り離されると、少し遅れて残りも崩れ落ちる */
-  person:{rule:'anchor',anchors:[[.5,.97]],collapse:true,hair:true,density:32,tex:'flesh',cut:'neck',draw(c){
+  person:{rule:'anchor',anchors:[[.5,.97]],collapse:true,hair:true,blood:true,density:32,tex:'flesh',cut:'neck',draw(c){
+    if(PERSON_IMG.complete&&PERSON_IMG.naturalWidth){
+      c.drawImage(PERSON_IMG,PI_U,PI_U,PI_S,PI_S);
+      c.fillRect(.2107,.9,.5727,.22);  /* 画面の下へ続く胴 */
+      return;
+    }
     c.beginPath(); c.ellipse(.5,.335,.115,.14,0,0,Math.PI*2); c.fill();
     c.beginPath(); c.ellipse(.5,.30,.135,.135,0,0,Math.PI*2); c.fill();
     for(const s of [-1,1]){ c.beginPath(); c.moveTo(.5+s*.135,.30); c.quadraticCurveTo(.5+s*.16,.42,.5+s*.125,.47); c.lineTo(.5+s*.065,.43); c.lineTo(.5+s*.075,.32); c.closePath(); c.fill(); }
@@ -189,13 +204,13 @@ function slit(o,p0,p1){
   const [ax,ay]=toPx(p0[0],p0[1]), [bx,by]=toPx(p1[0],p1[1]), r=HW, m=o.mask;
   const x0=Math.max(0,Math.floor(Math.min(ax,bx)-r-1)), x1=Math.min(RW-1,Math.ceil(Math.max(ax,bx)+r+1));
   const y0=Math.max(0,Math.floor(Math.min(ay,by)-r-1)), y1=Math.min(RH-1,Math.ceil(Math.max(ay,by)+r+1));
-  const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy||1; let n=0;
+  const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy||1; let n=0; o.cx_=0; o.cy_=0;
   for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
     const i=y*RW+x; if(!m[i]) continue;
     const px=x+.5, py=y+.5; let t=((px-ax)*dx+(py-ay)*dy)/L2; t=t<0?0:t>1?1:t;
-    const ex=ax+dx*t-px, ey=ay+dy*t-py; if(ex*ex+ey*ey<=r*r){m[i]=0;n++;}
+    const ex=ax+dx*t-px, ey=ay+dy*t-py; if(ex*ex+ey*ey<=r*r){m[i]=0;n++;o.cx_+=x;o.cy_+=y;}
   }
-  if(n){ const c=o.c; c.save(); c.globalCompositeOperation='destination-out'; c.lineCap='round'; c.lineWidth=2*r; c.beginPath(); c.moveTo(ax,ay); c.lineTo(bx,by); c.stroke(); c.restore(); }
+  if(n){ o.lastCut=[(o.cx_/n+.5)/R+X0,(o.cy_/n+.5)/R+Y0]; const c=o.c; c.save(); c.globalCompositeOperation='destination-out'; c.lineCap='round'; c.lineWidth=2*r; c.beginPath(); c.moveTo(ax,ay); c.lineTo(bx,by); c.stroke(); c.restore(); }
   return n;
 }
 /* つながっている塊ごとに番号を振る */
@@ -244,7 +259,7 @@ function resolve(o,comps,info){
   falls=falls.concat(hairs);
   if(!falls.length&&!specks.length) return;
   const made=extract(o,falls,specks,info);
-  if(made.length) onCut(o,made);
+  if(made.length) onCut(o,made,info);
 }
 /* 切り離された塊を影絵から抜き取り、落ちる物にする */
 function extract(o,falls,specks,info){
@@ -287,9 +302,10 @@ function extract(o,falls,specks,info){
   dirty=true;
   return made;
 }
-function onCut(o,made){
+function onCut(o,made,info){
   const wMax=Math.max(...made.map(b=>b.weight));
   if(made.every(b=>b.float)){ sfx.snip(); sfx.whisper(); return; }
+  if(o.sh.blood&&!o.bled&&wMax>=1&&info){ o.bled=true; bleed(o.lastCut||info.contact,info.dir); }
   CUT[o.sh.cut]();
   shake=Math.max(shake,1.5+2*wMax); buzz(wMax>2?[30,20,60]:15);
   const path=(dragging&&paths[dragging])||[];
@@ -304,6 +320,213 @@ function onCut(o,made){
     },800);
   }
 }
+/* ---------- 血（人のときだけ） ----------
+   盤面には黒い飛沫の影が焼きつき、盤面の下の縁から赤いしずくが落ちて床にたまる */
+const splatC=document.createElement('canvas'); splatC.width=splatC.height=R;
+const sctx=splatC.getContext('2d');
+const spray=[], drips=[], pool=[]; let dripT=0, dripAge=-1, dripX=.5;
+const BLOOD=['#3a0306','#4d0509','#610a0f','#46050a','#701016'];
+/* 切った瞬間に、飛び散った血の跡を1枚まるごと作る（毎回ちがう形） */
+function makeSplat(cx,cy,ang){
+  const t=document.createElement('canvas'); t.width=t.height=R; const c=t.getContext('2d'), rnd=Math.random;
+  const tone=()=>{c.fillStyle=BLOOD[(rnd()*BLOOD.length)|0]; c.globalAlpha=.8+rnd()*.18;};
+  const pol=(d,a)=>[cx+Math.cos(a)*d, cy+Math.sin(a)*d];
+  const taper=(x,y,a,L,w,end)=>{ const px=-Math.sin(a)*w/2, py=Math.cos(a)*w/2, bend=(rnd()-.5)*.25;
+    const ex=x+Math.cos(a+bend)*L, ey=y+Math.sin(a+bend)*L, mx=x+Math.cos(a)*L*.5, my=y+Math.sin(a)*L*.5;
+    tone(); c.beginPath(); c.moveTo(x+px,y+py); c.quadraticCurveTo(mx+px*.5,my+py*.5,ex,ey); c.quadraticCurveTo(mx-px*.5,my-py*.5,x-px,y-py); c.closePath(); c.fill();
+    if(end){ c.beginPath(); c.arc(ex,ey,Math.max(.8,w*.45+rnd()*1.5),0,Math.PI*2); c.fill(); } };
+  const dirA=()=>rnd()<.65?ang+(rnd()-.5)*2.0:rnd()*Math.PI*2;
+  /* 中心のべったりした塊。飛ぶ向きに少し長い */
+  const ca=Math.cos(ang), sa=Math.sin(ang);
+  for(let i=0;i<110;i++){ const d=Math.pow(rnd(),.7)*34, a=rnd()*Math.PI*2, x=Math.cos(a)*d*1.25, y=Math.sin(a)*d*.8;
+    tone(); c.beginPath(); c.arc(cx+x*ca-y*sa, cy+x*sa+y*ca, 4+rnd()*14*(1-d/46), 0, Math.PI*2); c.fill(); }
+  /* 塊のふちから出る短い指のような跡 */
+  for(let i=0;i<34;i++){ const a=dirA(), [x,y]=pol(16+rnd()*14,a); taper(x,y,a,10+rnd()*34,4+rnd()*7,rnd()<.7); }
+  /* 遠くまで伸びる細い筋 */
+  for(let i=0;i<11;i++){ const a=ang+(rnd()-.5)*1.3, [x,y]=pol(22+rnd()*10,a); taper(x,y,a,40+rnd()*90,2+rnd()*3.2,rnd()<.8); }
+  /* 大小の粒。遠いほど小さく、大きい粒は外へ向かうしずく形 */
+  for(let i=0;i<190;i++){ const a=dirA(), d=30+(-Math.log(1-rnd()*.985))*38, [x,y]=pol(d,a);
+    const r=Math.max(.8,9*Math.pow(rnd(),2.1)*(1-Math.min(.75,d/220)));
+    tone(); c.beginPath();
+    if(r>2.2&&rnd()<.55){ c.ellipse(x,y,r*1.35,r,a,0,Math.PI*2); c.fill(); taper(x-Math.cos(a)*r*.3,y-Math.sin(a)*r*.3,a+Math.PI,r*(1.5+rnd()*2.5),r*.9,false); }
+    else { c.arc(x,y,r,0,Math.PI*2); c.fill(); } }
+  /* 細かい霧 */
+  for(let i=0;i<320;i++){ const a=dirA(), d=12+rnd()*190, [x,y]=pol(d,a); c.fillStyle=BLOOD[(rnd()*3)|0]; c.globalAlpha=.35+rnd()*.4; c.beginPath(); c.arc(x,y,.4+rnd()*.9,0,Math.PI*2); c.fill(); }
+  /* 色むら：乾きかけの明るいところと、濃く溜まったところ */
+  c.globalCompositeOperation='source-atop';
+  for(let i=0;i<500;i++){ const d=Math.pow(rnd(),.6)*200, a=rnd()*Math.PI*2, [x,y]=pol(d,a);
+    c.globalAlpha=.1+rnd()*.18; c.fillStyle=rnd()<.5?'#93161e':'#170104'; c.beginPath(); c.arc(x,y,1.5+rnd()*8,0,Math.PI*2); c.fill(); }
+  /* 向こう側で起きたことなので、色は見せず影だけにする */
+  c.globalCompositeOperation='source-in'; c.globalAlpha=1; c.fillStyle=INK; c.fillRect(0,0,R,R);
+  c.globalCompositeOperation='source-over';
+  return t;
+}
+let splatAnim=null;
+function bleed(at,dir){
+  if(!gore) return;
+  const [u,v]=at; dripX=u; dripAge=0; dripT=.35;
+  bloodyFinger=true; saveSmear(); if(finger) finger.ink=1;  /* なぞっていた指に、血がつく */
+  { const c=Math.floor((u-PAD)/CELL), r=Math.floor((v-PAD)/CELL); addDarkN(c,r,.7,.45); }
+  /* 首の切り口から、上と、刃の進む向きの間へ噴き出す */
+  const ang=Math.atan2(-.75+dir[1]*.35, dir[0]*.9+(Math.random()-.5)*.3);
+  splatAnim={img:makeSplat(u*R,v*R,ang),u,v,t:0};
+  for(let i=0;i<10;i++){
+    const a=ang+(Math.random()-.5)*1.4, sp=.35+Math.random()*.6;
+    spray.push({u,v,vu:Math.cos(a)*sp,vv:Math.sin(a)*sp,r:.003+Math.random()*.007,life:.25+Math.random()*.35,t:0});
+  }
+  hiss({type:'bandpass',freq:900,q:.8,a:.01,dec:.35,vol:.32}); hiss({t:.05,type:'lowpass',freq:500,a:.02,dec:.6,vol:.2});
+}
+function stepBlood(dt){
+  if(splatAnim||spray.length) dirty=true;
+  if(splatAnim){ splatAnim.t+=dt; if(splatAnim.t>=.28){ sctx.drawImage(splatAnim.img,0,0); splatAnim=null; } }
+  sctx.fillStyle=sctx.strokeStyle=INK; sctx.lineCap='round';
+  for(let i=spray.length-1;i>=0;i--){
+    const p=spray[i], u0=p.u, v0=p.v;
+    p.t+=dt; p.vv+=3*dt; p.vu*=Math.exp(-dt*2); p.u+=p.vu*dt; p.v+=p.vv*dt;
+    /* 飛んだ跡は、だんだん細くなる粒の列 */
+    const k=1-p.t/p.life; sctx.globalAlpha=.9; sctx.lineWidth=Math.max(.6,p.r*R*1.4*k); sctx.beginPath(); sctx.moveTo(u0*R,v0*R); sctx.lineTo(p.u*R,p.v*R); sctx.stroke();
+    if(p.t>=p.life||p.u<-.05||p.u>1.05||p.v<-.05||p.v>1.05){
+      sctx.globalAlpha=.95; sctx.beginPath(); sctx.ellipse(p.u*R,p.v*R,p.r*R*1.5,p.r*R*1.1,Math.atan2(p.vv,p.vu),0,Math.PI*2); sctx.fill();
+      spray.splice(i,1);
+    }
+  }
+  sctx.globalAlpha=1;
+  /* しずく：盤面の下の縁でふくらんでから、ポタッと落ちる */
+  if(dripAge>=0){
+    dripAge+=dt; dripT-=dt;
+    const gap=dripAge<1.6?.07:Math.min(1.3,.2+(dripAge-1.6)*.08);
+    if(dripT<=0&&dripAge<16){ dripT=gap*(.7+Math.random()*.6);
+      drips.push({u:dripX+(Math.random()-.5)*.14,y:0,vy:0,r:0,st:'hang',t:0}); }
+  }
+  const floorY=H-16;
+  for(let i=drips.length-1;i>=0;i--){
+    const d=drips[i], x=board.x+d.u*board.s;
+    if(d.st==='hang'){ d.t+=dt; d.r=Math.min(1,d.t/.3); if(d.t>.3){d.st='fall'; d.y=board.y+board.s;} continue; }
+    d.vy+=1700*dt; d.y+=d.vy*dt;
+    if(d.y>=floorY){
+      drips.splice(i,1); sfx.drip();
+      const near=pool.find(b=>b.target>8&&Math.abs(b.x-x)<Math.max(b.rx,24));
+      if(near){ near.target=Math.min(W*.5,near.target+(near.target<60?6:2.5)); } else addLobe(x,3,16);
+      ripples.push({x,t:0});
+      if(Math.random()<.5) addLobe(x+(Math.random()-.5)*50,1,2+Math.random()*4);  /* はねた粒 */
+    }
+  }
+  for(let i=pool.length-1;i>=0;i--){ const b=pool[i];
+    /* ふちから、血が細く這い出していく */
+    if(b.target>24&&b.target<W*.5&&(b.creep-=dt)<=0){ b.creep=1.2+Math.random()*1.6; const side=Math.random()<.5?-1:1;
+      addLobe(b.x+side*b.rx*(.8+Math.random()*.25),2,b.rx*(.18+Math.random()*.2)); } }
+  for(const b of pool){ if(b.target>10&&b.target<W*.5) b.target+=dt*1.6;  /* 止まらずに、じわじわ広がる */
+    b.rx+=(b.target-b.rx)*(1-Math.exp(-dt*1.4)); }
+  for(let i=ripples.length-1;i>=0;i--){ ripples[i].t+=dt; if(ripples[i].t>.5) ripples.splice(i,1); }
+}
+function drawDrips(){
+  if(!drips.length) return;
+  ctx.save(); ctx.fillStyle='#B0101B';
+  for(const d of drips){
+    const x=board.x+d.u*board.s;
+    if(d.st==='hang'){ const y=board.y+board.s-4, r=2+3*d.r; ctx.beginPath(); ctx.ellipse(x,y+r*.9,r*.8,r*1.2,0,0,Math.PI*2); ctx.fill(); }
+    else { const r=3.6, st=Math.min(22,d.vy*.02); ctx.beginPath(); ctx.ellipse(x,d.y-st*.4,r*.75,r+st*.5,0,0,Math.PI*2); ctx.fill(); }
+  }
+  ctx.restore();
+}
+/* 血だまり：しずくが落ちるたびにふくらみ、そのあともじわじわ広がる。ふちは濃く、表面にてり */
+function addLobe(x,r0,target){
+  const bumps=Array.from({length:9},()=>({a:Math.random()*Math.PI*2,d:.5+Math.random()*.5,k:.2+Math.random()*.4}));
+  pool.push({x,rx:r0,target,bumps,creep:1+Math.random()});
+}
+function poolShape(c,y,grow){
+  for(const b of pool){ const r=Math.max(.5,b.rx+grow);
+    c.beginPath(); c.ellipse(b.x,y,r,Math.max(1.5,r*.2),0,0,Math.PI*2); c.fill();
+    for(const q of b.bumps){ const bx=b.x+Math.cos(q.a)*b.rx*q.d, by=y+Math.sin(q.a)*b.rx*q.d*.2, br=Math.max(.5,b.rx*q.k+grow);
+      c.beginPath(); c.ellipse(bx,by,br,Math.max(1,br*.2),0,0,Math.PI*2); c.fill(); } }
+}
+const ripples=[];
+function drawPool(){
+  if(!pool.length) return;
+  const y=H-14; ctx.save();
+  ctx.fillStyle='#240206'; poolShape(ctx,y+1,1.6);          /* ふちの濃いところ */
+  ctx.fillStyle='#5c070c'; poolShape(ctx,y,0);
+  ctx.fillStyle='rgba(120,14,22,.5)'; poolShape(ctx,y-1,-3);
+  /* 表面のてり */
+  ctx.fillStyle='rgba(150,20,30,.35)'; poolShape(ctx,y-1.5,-8);
+  for(const b of pool){ if(b.rx<14) continue;
+    ctx.fillStyle='rgba(255,190,190,.10)'; ctx.beginPath(); ctx.ellipse(b.x-b.rx*.2,y-b.rx*.07,b.rx*.45,Math.max(1,b.rx*.03),-.02,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,215,215,.18)'; ctx.beginPath(); ctx.ellipse(b.x-b.rx*.3,y-b.rx*.08,b.rx*.16,Math.max(.6,b.rx*.012),-.02,0,Math.PI*2); ctx.fill(); }
+  /* しずくが落ちた波紋 */
+  for(const w of ripples){ const k=w.t/.5; ctx.strokeStyle=`rgba(190,40,50,${.5*(1-k)})`; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.ellipse(w.x,y,4+k*22,(4+k*22)*.2,0,0,Math.PI*2); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---------- 血のついた指 ----------
+   人を切ったあとは、どこをなぞっても画面にうっすら血の跡がつく。
+   触れた所に指紋、動かすとかすれて伸び、指の血が減ると薄くなる */
+const smC=$('smear'), smx=smC.getContext('2d');
+let bloodyFinger=false, finger=null;
+/* 流血表現のオン・オフ（オフでも、切れて落ちるところまでは残る） */
+const goreBtn=$('goreBtn'); let gore=true;
+try{ gore=localStorage.getItem('tt_gore')!=='0'; }catch(_){}
+function applyGore(){ goreBtn.textContent=gore?'流血表現 ON':'流血表現 OFF'; goreBtn.setAttribute('aria-pressed',String(gore)); smC.style.visibility=gore?'visible':'hidden'; }
+goreBtn.addEventListener('click',()=>{ gore=!gore; try{localStorage.setItem('tt_gore',gore?'1':'0');}catch(_){} applyGore(); });
+applyGore();
+const PRINT=(()=>{ const w=34,h=42,c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d');
+  g.strokeStyle='#5e080d'; g.lineWidth=1.25;
+  for(let k=0;k<11;k++){ const rx=2+k*1.55, ry=2.6+k*1.9; g.beginPath(); g.ellipse(w/2+(Math.random()-.5),h*.48,rx,ry,(Math.random()-.5)*.15,Math.PI*(.05+Math.random()*.1),Math.PI*(1.9+Math.random()*.15)); g.stroke(); }
+  g.globalCompositeOperation='destination-in';
+  const m=g.createRadialGradient(w/2,h*.5,4,w/2,h*.5,h*.5); m.addColorStop(0,'rgba(0,0,0,1)'); m.addColorStop(.7,'rgba(0,0,0,.7)'); m.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=m; g.fillRect(0,0,w,h); return c; })();
+function smearSize(){
+  /* 画面の大きさが変わっても、汚れは残す */
+  const keep=document.createElement('canvas'); keep.width=smC.width; keep.height=smC.height; if(keep.width) keep.getContext('2d').drawImage(smC,0,0);
+  const d=Math.min(window.devicePixelRatio||1,2); smC.width=Math.round(innerWidth*d); smC.height=Math.round(innerHeight*d);
+  smx.setTransform(1,0,0,1,0,0); if(keep.width) smx.drawImage(keep,0,0); smx.setTransform(d,0,0,d,0,0);
+}
+/* 一度ついた血は、遊び直しても、開き直しても消えない */
+let saveT=0;
+function saveSmear(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem('tt_bloody','1'); localStorage.setItem('tt_smear',smC.toDataURL('image/png')); }catch(_){} },400); }
+function loadSmear(){
+  try{ if(localStorage.getItem('tt_bloody')==='1') bloodyFinger=true;
+    const u=localStorage.getItem('tt_smear'); if(!u) return;
+    const im=new Image(); im.onload=()=>{ smx.save(); smx.setTransform(1,0,0,1,0,0); smx.drawImage(im,0,0,smC.width,smC.height); smx.restore(); }; im.src=u;
+  }catch(_){}
+}
+function stampPrint(x,y,ang,al,sx){ smx.save(); smx.globalAlpha=al; smx.translate(x,y); smx.rotate(ang); smx.scale(sx||1,1); smx.drawImage(PRINT,-17,-21); smx.restore(); }
+window.addEventListener('pointerdown',e=>{
+  if(!bloodyFinger||!gore) return;
+  /* 指の腹のしわ：なぞると、そのしわが平行なすじになって伸びる */
+  const ridges=Array.from({length:9},(_,k)=>({o:(k-4)*2.2+(Math.random()-.5)*1.2,a:.5+Math.random()*.5,ph:Math.random()*9}));
+  finger={x:e.clientX,y:e.clientY,ink:.6+Math.random()*.25,d:0,ridges};
+  stampPrint(e.clientX,e.clientY,(Math.random()-.5)*.6,.5*finger.ink);
+},true);
+window.addEventListener('pointermove',e=>{
+  if(!bloodyFinger||!finger) return;
+  const dx=e.clientX-finger.x, dy=e.clientY-finger.y, L=Math.hypot(dx,dy); if(L<2) return;
+  const ang=Math.atan2(dy,dx), nx=-Math.sin(ang), ny=Math.cos(ang), n=Math.ceil(L/2);
+  smx.save(); smx.strokeStyle='#5a070c'; smx.lineCap='butt'; smx.lineJoin='round';
+  const d0=finger.d, ink0=finger.ink, x0=finger.x, y0=finger.y;
+  finger.d+=L; finger.ink*=Math.exp(-L/420);
+  const dryAt=d=>.5+.5*Math.sin(d*.045)*Math.sin(d*.017+1.3);
+  /* うすい地のよごれ */
+  smx.globalAlpha=.05*ink0*dryAt(d0); smx.lineWidth=16; smx.beginPath(); smx.moveTo(x0,y0); smx.lineTo(e.clientX,e.clientY); smx.stroke();
+  /* しわのすじ：血がのる所だけ、ひと続きの線で引く */
+  smx.lineWidth=1.1;
+  for(const r of finger.ridges){
+    smx.globalAlpha=.3*ink0*r.a*(.35+.65*dryAt(d0)); smx.beginPath(); let pen=false;
+    for(let i=0;i<=n;i++){ const t=i/n, d=d0+L*t, x=x0+dx*t+nx*r.o, y=y0+dy*t+ny*r.o;
+      const on=Math.sin(d*.021+r.ph)+.6*Math.sin(d*.053+r.ph*2.3)>-.55;
+      if(on){ pen?smx.lineTo(x,y):smx.moveTo(x,y); pen=true; } else pen=false; }
+    smx.stroke();
+  }
+  smx.restore();
+  finger.x=e.clientX; finger.y=e.clientY; finger.ang=ang;
+},true);
+window.addEventListener('pointerup',()=>{
+  if(finger) saveSmear();
+  /* 指を離したところに、少し濃くたまる */
+  if(finger&&finger.d>8) stampPrint(finger.x,finger.y,(finger.ang||0)+Math.PI/2,.28*finger.ink,.9);
+  finger=null; },true);
+window.addEventListener('pointercancel',()=>{ finger=null; },true);
+
 /* マスを1つ進むたびに、その線で下の物を削る */
 function cutAlong(p0,p1){
   if(!objs.length) return 0;
@@ -377,6 +600,7 @@ const sfx={
   snip(){hiss({type:'highpass',freq:6000,dec:.02,vol:.12});},
   thud(w){tone(92,{glide:36,dec:.14+.09*w,vol:Math.min(.85,.25+.17*w)});hiss({type:'lowpass',freq:300+50*w,dec:.05+.03*w,vol:Math.min(.6,.2+.1*w)});},
   tap(w){tone(130,{glide:70,dec:.07,vol:.1+.05*w});hiss({type:'lowpass',freq:520,dec:.03,vol:.08+.03*w});},
+  drip(){tone(1500,{glide:520,dec:.07,vol:.07});hiss({type:'lowpass',freq:700,dec:.03,vol:.06});},
   heart(){tone(58,{glide:40,dec:.13,vol:.2});tone(54,{t:.21,glide:38,dec:.15,vol:.14});}
 };
 /* 刃が物の中を通っているあいだの手応え */
@@ -490,6 +714,10 @@ function recompose(){
   dctx.globalCompositeOperation='source-over'; dctx.clearRect(0,0,S,S);
   dctx.globalAlpha=.68; dctx.fillStyle=LVc().dark; dctx.fillRect(0,0,S,S); dctx.globalAlpha=1;
   for(const o of objs) dctx.drawImage(o.cv,-X0*R,-Y0*R,R,R,0,0,S,S);
+  /* 向こう側に飛んだ血の影。暗がりの中にだけ見える */
+  dctx.drawImage(splatC,0,0,S,S);
+  if(splatAnim){ const p=Math.min(1,splatAnim.t/.28), rad=S*.7*(1-Math.pow(1-p,3))+2;
+    dctx.save(); dctx.beginPath(); dctx.arc(splatAnim.u*S,splatAnim.v*S,rad,0,Math.PI*2); dctx.clip(); dctx.drawImage(splatAnim.img,0,0,S,S); dctx.restore(); }
   dctx.globalCompositeOperation='destination-in'; dctx.drawImage(maskC,0,0); dctx.globalCompositeOperation='source-over';
   dirty=false;
 }
@@ -582,6 +810,7 @@ function startLevel(i){
   paths={}; complete={};
   lv.pairs.forEach(p=>{paths[p.k]=[];complete[p.k]=false;});
   dk.fill(0); objs=lv.objs.map(buildObj); dirty=true;
+  sctx.clearRect(0,0,R,R); splatAnim=null; spray.length=0; drips.length=0; dripAge=-1;
   locked=false; dragging=null; flash=0; pending=0;
   setTargets(cfg,!!cfg.final);
   $('stageLabel').textContent=`ステージ ${i+1} / 5`; hint.textContent=cfg.hint;
@@ -683,7 +912,8 @@ function draw(){
   drawBodies();
   const fg=ctx.createLinearGradient(0,H*.58,0,H); fg.addColorStop(0,'rgba(10,6,10,0)'); fg.addColorStop(1,`rgba(10,6,10,${cur.floor})`);
   ctx.fillStyle=fg; ctx.fillRect(-30,H*.58,W+60,H*.42+30);
-  if(showBoard) drawBoard();
+  drawPool();
+  if(showBoard){ drawBoard(); drawDrips(); }
   if(cur.vig>.005){
     const v=ctx.createRadialGradient(W/2,H*.42,Math.min(W,H)*.25,W/2,H*.42,Math.hypot(W,H)*.62);
     v.addColorStop(0,'rgba(6,3,6,0)'); v.addColorStop(1,`rgba(6,3,6,${Math.min(.97,cur.vig)})`);
@@ -699,6 +929,7 @@ function step(dt){
     if(cfg.creep){creepT+=dt; if(creepT>.3){creepT=0; diffuse(cfg.creep*.3);}}
     if(cfg.final){const p=paths.pink||[]; target.vig=.04+.9*Math.min(1,Math.max(0,(p.length-1)/4));}
   }
+  stepBlood(dt);
   if(hitstop>0) hitstop-=dt; else for(const b of bodies) stepBody(b,dt);
   if(state==='clearing'){
     const busy=pending>0||bodies.some(b=>b.state==='fall'&&!b.float);
@@ -711,7 +942,8 @@ function frame(ts){const dt=Math.min(.04,last?(ts-last)/1000:0); last=ts; step(d
 
 setTargets(titleCfg(),true);
 layout();
-window.addEventListener('resize',layout);
+window.addEventListener('resize',()=>{layout(); smearSize();});
+smearSize(); loadSmear();
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(layout);
 requestAnimationFrame(frame);
 })();
