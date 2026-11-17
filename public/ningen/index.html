@@ -207,6 +207,9 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:n
 .start.ghost{background:none;color:var(--ink);border-color:var(--line);box-shadow:none;margin-top:10px}
 a.home-link{display:block;margin-top:22px;font-size:11px;color:var(--sub);text-align:center;letter-spacing:.06em}
 #app.hitstop{filter:contrast(1.7) brightness(1.3)}
+#result .aicount{font-family:var(--mono);font-size:30px;color:#e9e7e1;margin:6px 0 22px}
+#result .aicount small{display:block;font-family:var(--sans);font-size:12px;color:#8a8983;margin-top:2px}
+a.skip-pre{display:block;margin-top:16px;font-size:12px;color:var(--sub);text-decoration:underline}
 #skiphint{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 120px);font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--sub);opacity:0;transition:opacity .4s;pointer-events:none;z-index:4}
 #skiphint.on{opacity:.8}
 </style>
@@ -231,6 +234,7 @@ a.home-link{display:block;margin-top:22px;font-size:11px;color:var(--sub);text-a
     <p class="lead">あなたは検査官です。<br>人間を自称する対話システムを尋問し、<br>AIであることを判定してください。</p>
     <button class="start" id="startBtn">検査を開始する</button>
     <button class="start ghost hide" id="contBtn"></button>
+    <a class="skip-pre hide" id="skipPre" href="#">律の検査から始める</a>
     <div class="fine">全5章 ／ 約25分 ／ 音が出ます<br><label><input type="checkbox" id="fastChk"> 文字を速く表示する</label></div>
     <a class="home-link" href="/">← エクステン堂にもどる</a>
   </div>
@@ -268,7 +272,7 @@ let RECS = {
 };
 let REC_ORDER = ['profile','resident','weather','work','release','mother'];
 let CONTRA = [
-  {id:'c0', pair:['boss','profile'], tut:true, r:{
+  {id:'c0', pair:['boss','profile'], small:true, r:{
     1:['……盛りました。すみません。','でも店長と同じくらい働いてますから。実質。'],
     2:['あー、はい、店員です。盛りました。','検査官さん、そういうとこ細かいですね。'],
     3:['は？ 店長って名乗っただけで作り物？','……まあ、盛りましたけど。']}},
@@ -293,7 +297,7 @@ let CONTRA = [
     2:['それ、別人のデータじゃないですか？','……無断欠勤って、僕が？','僕、無断で休んだことなんて一回も——'],
     3:['……','……2月8日、休暇。','それ、昨日ですよ。僕が休んだの。']}},
 ];
-const WRONG = [
+let WRONG = [
   ['はい残念！ それ、全然矛盾してませんけど？'],
   ['検査官さん、焦ってます？','ゆっくりでいいですよ。僕、逃げないんで。'],
   ['ブー。人間の勝ちですね。'],
@@ -315,6 +319,7 @@ let QS = [
 ];
 const CH1D = null;
 let MAIN=['c1','c2','c3','c4'], NEED=4, CHNO=1, HINTS=null;
+let WRONG1;
 function loadCh(d){ TESTI=d.TESTI; RECS=d.RECS; REC_ORDER=d.REC_ORDER; CONTRA=d.CONTRA; QS=d.QS; TOPICS=d.TOPICS; }
 const STR = {
   1:{name:'確認する', desc:'食い違いを聞いてみる。外しても減点なし・信頼が上がる', miss:0, add:6.3, pursuit:0, trust:1, line:(t,e)=>`「${t}」って言ったよね。でも、${e}。どういうこと？`, stamp:'確認'},
@@ -323,7 +328,7 @@ const STR = {
 };
 
 /* ========= STATE ========= */
-const CH1DATA = {TESTI,RECS,REC_ORDER,CONTRA,QS,TOPICS};
+const CH1DATA = {TESTI,RECS,REC_ORDER,CONTRA,QS,TOPICS}; WRONG1 = WRONG;
 let S;
 function reset(){
   S = {said:{}, d3:0, shownQ:new Set(), wrongRow:0, saw50:false, rate:24.6, pursuit:0, trust:0, invest:0, tests:[], recs:{}, proven:new Set(), asked:new Set(), since:0, pressure:0, counterDone:false, wrongI:0, newNote:0, busy:false, ended:false, attempts:0, gap:false, tut:false, hinted:false, midDone:false};
@@ -447,6 +452,7 @@ function dateBoard(){ return (S.ym?'2025年2月':'？年？月')+(S.d?'8日':'�
 function updGoal(){
   const g = $('#goal'); if(!g || !S) return;
   if(S.tut && S.tut!=='ask') g.innerHTML = '目標：最初の食い違いを指摘する';
+  else if(PRE) g.innerHTML = `目標　食い違いを指摘　<b>${mainProven()}／2</b>　<b>2つ</b>で判定`;
   else if(CHNO===2) g.innerHTML = `目標　律の「昨日」を特定　<b>${dateBoard()}</b>`;
   else g.innerHTML = `目標　食い違いを指摘　矛盾 <b>${mainProven()}／4</b>　<b>4つ</b>で判定`;
 }
@@ -454,7 +460,7 @@ function updGoal(){
 function dockMain(){
   if(S.ended) return; updGoal();
   const t = S.tut;
-  const label = t==='check' ? '▶ まず「照合」で申告情報を取り寄せる' : t==='point' ? '▶ 発言と申告が違う。「指摘」で突きつける' : t==='ask' ? '▶ 「質問」で話を聞く' : '次の行動を選択';
+  const label = t==='check' ? '▶ まず「照合」で記録を取り寄せる' : t==='point' ? '▶ 食い違いを「指摘」で突きつける' : t==='ask' ? '▶ 「質問」で話を聞く' : '次の行動を選択';
   const dis = k => (t==='check' && k!=='check') || (t==='point' && k!=='point') || (t==='ask' && k!=='ask') ? 'disabled' : '';
   dock.innerHTML = `<div class="dlabel ${t?'guide':''}"><span>${label}</span>${t?'':`<span>証言 ${S.tests.length} ／ 記録 ${seenRecs().length}</span>`}</div>
   <div class="acts">
@@ -507,8 +513,8 @@ function dockCheck(){
   const note = vis.every(id=>!RECS[id].need) && !S.tut ? el('div','sys','基本情報のほかは、受検者の話に出てきた事柄だけ照会できます。') : null;
   vis.forEach(id=>{
     const r = RECS[id], seen = S.recs[id]==='seen', locked = r.lock && r.lock(S);
-    const b = el('button','ch'+(S.tut==='check'&&id==='profile'?' hl':''), `<span>${esc(r.title)}${r.why?`<br><small style="color:var(--sub);font-size:11px">話に出た：${esc(r.why)}</small>`:''}</span><span class="tag ${seen?'seen':''}">${seen?'照会済':locked?'要同意':r.code}</span>`);
-    if(seen || (S.tut==='check' && id!=='profile')) b.disabled = true;
+    const b = el('button','ch'+(S.tut==='check'&&id===TUT.rec?' hl':''), `<span>${esc(r.title)}${r.why?`<br><small style="color:var(--sub);font-size:11px">話に出た：${esc(r.why)}</small>`:''}</span><span class="tag ${seen?'seen':''}">${seen?'照会済':locked?'要同意':r.code}</span>`);
+    if(seen || (S.tut==='check' && id!==TUT.rec)) b.disabled = true;
     b.onclick=()=>doCheck(id); c.appendChild(b);
   });
   if(note) c.appendChild(note);
@@ -602,13 +608,13 @@ function doCheck(id){ act(async()=>{
   S.recs[id]='seen'; S.newNote++;
   log.appendChild(recCard(id)); SE.doc(); scroll();
   await sleep(600);
-  if(S.tut==='check' && id==='profile'){
+  if(S.tut==='check' && id===TUT.rec){
     S.tut='point';
-    await sys('申告職業は「店員」。さっき本人は「店長」と名乗った。\n食い違いは「指摘」で突きつける。', 'guide');
+    await sys(TUT.msg, 'guide');
   }
 }); }
 function matchContra(t, e){
-  return CONTRA.find(c => (c.pair.includes(t) && c.pair.includes(e)) || (c.alt && c.alt.includes(t) && c.alt.includes(e)));
+  return CONTRA.find(c => (c.pair.includes(t) && c.pair.includes(e)) || (c.alt && c.alt.includes(t) && c.alt.includes(e)) || (c.alts||[]).some(a=>a.includes(t) && a.includes(e)));
 }
 function doPoint(lv){
   const t = pick.t, e = pick.e;
@@ -619,7 +625,7 @@ function doPoint(lv){
     await me(st.line(TESTI[t].short, eText));
     const hit = matchContra(t, e.id);
     if(hit && S.proven.has(hit.id)){
-      await ritsu('それ、さっきも言われましたけど。');
+      await ritsu(SAME);
       return;
     }
     if(!hit){
@@ -637,7 +643,7 @@ function doPoint(lv){
       return;
     }
     S.proven.add(hit.id); S.since = 0; S.wrongRow = 0; if(hit.fake) S.fake = true; S.said[hit.id]=lv; if(lv===3) S.d3++; if(hit.fix){ if(hit.fix!=='d') S.ym=true; if(hit.fix!=='ym') S.d=true; }
-    const add = hit.tut ? 4.2 : st.add;
+    const add = hit.small ? 4.2 : st.add;
     S.pursuit += st.pursuit; S.trust += st.trust;
     app.classList.add('hitstop'); await new Promise(r=>setTimeout(r, FAST?10:(lv===3?170:70))); app.classList.remove('hitstop');
     stamp(st.stamp, lv===3); SE.hit(lv);
@@ -650,16 +656,25 @@ function doPoint(lv){
       await sys(`時間のずれを検出しました　AI判定率 +${add.toFixed(1)}%`, true);
       return;
     }
+    if(hit.small){
+      await ritsu(hit.r[lv]);
+      await sys(`小さな食い違いを確認しました　AI判定率 +${add.toFixed(1)}%`);
+      if(S.tut==='point'){
+        await sys('これが検査の流れです。\n「質問」で証言を集め、「照合」で記録を取り寄せ、食い違いを「指摘」する。\n強く言い切るほど判定率は上がり、外すと下がります。', 'guide');
+        await sys('次は「質問」で、昨日のことを聞いてみましょう。', 'guide'); S.tut='ask';
+      }
+      return;
+    }
     if(hit.tut){
       S.tut = false;
       await ritsu(hit.r[lv]);
       await sys(`最初の指摘が成立。AI判定率 +${add.toFixed(1)}%`);
-      await sys('これが検査の流れです。\n「質問」で証言を集め、「照合」で記録を取り寄せ、食い違いを「指摘」する。\n強く言い切るほど判定率は上がり、外すと下がります。食い違いを4つ見つけると第1次判定。', 'guide');
+      await sys('これが検査の流れです。\n「質問」で証言を集め、「照合」で記録を取り寄せ、食い違いを「指摘」する。\n強く言い切るほど判定率は上がり、外すと下がります。', 'guide');
       await sys('次は「質問」で、昨日のことを聞いてみましょう。', 'guide');
       S.tut = 'ask';
       return;
     }
-    if(lv===2){
+    if(lv===2 && !PRE){
       await ritsu(hit.r[2][0], {corrupt: S.rate>=60 ? .04 : 0});
       const i = await dockChoice('律の言い訳に', ['それは言い訳だ','……まあいい']);
       dockWait();
@@ -676,7 +691,7 @@ function doPoint(lv){
 
 /* ========= EVENTS ========= */
 function hintText(){
-  const H = CHNO===2 ? HINTS2 : [
+  const H = HINTS ? HINTS : [
     ['c2', ()=>S.tests.includes('snow'), ()=>S.recs.weather==='seen', '「昨日は雪」という証言。昨日の天気は、記録で確かめられます。', '［ヒント］「照合」で気象記録を照会してみては？'],
     ['c1', ()=>S.tests.includes('live'), ()=>S.recs.resident==='seen', '「母と暮らしている」という証言。住んでいる人の記録があります。', '［ヒント］「照合」で住民登録を照会してみては？'],
     ['c4', ()=>S.tests.includes('album'), ()=>S.recs.release==='seen', '「新譜は先月出た」という証言。発売日は記録に残っています。', '［ヒント］「照合」で発売情報を照会してみては？'],
@@ -714,7 +729,7 @@ async function afterAction(){
   if(S.since >= 7){
     S.since = 0; S.pressure++;
     await sys('［検査システム］検査効率が低下しています。\n受検者の発言の矛盾を指摘してください。', true);
-    if(S.pressure===2) await ritsu(['……今の、誰ですか？','ここ、僕たち以外にもいるんですか。']);
+    if(S.pressure===2 && CHNO===1) await ritsu(['……今の、誰ですか？','ここ、僕たち以外にもいるんですか。']);
   }
   const left = QS.filter(q=>!S.asked.has(q.id) && (!q.req || q.req(S))).length;
   if(!left && (CHNO===2 ? !(S.ym&&S.d) : mainProven()<NEED) && !S.hinted){
@@ -723,6 +738,7 @@ async function afterAction(){
   }
   if(CHNO===1){ if(mainProven()>=4) await climax(); }
   else if(CHNO===2) await ch2After();
+  else if(PRE){ if(mainProven()>=NEED) await preEnd(); }
 }
 async function climax(){
   S.ended = true; dockWait();
@@ -880,7 +896,7 @@ function photoCard(cap){
 }
 function chapterCard(no, title, sub){
   return new Promise(res=>{
-    const c = $('#chap'); c.innerHTML = `<div class="cno">CHAPTER ${no}</div><div class="ctt">${esc(title)}</div>${sub?`<div class="csub">${esc(sub)}</div>`:''}<div class="ctap">TAP</div>`;
+    const c = $('#chap'); c.innerHTML = `<div class="cno">${typeof no==='string'?no:'CHAPTER '+no}</div><div class="ctt">${esc(title)}</div>${sub?`<div class="csub">${esc(sub)}</div>`:''}<div class="ctap">TAP</div>`;
     c.classList.remove('hide'); c.classList.add('show'); tone(110,1.2,'sine',.05); tone(165,1.2,'sine',.03,.1);
     let done=false; const fin=()=>{ if(done) return; done=true; c.classList.remove('show'); setTimeout(()=>{c.classList.add('hide'); res();}, 500); };
     c.onclick = fin; setTimeout(fin, FAST?200:3200);
@@ -905,7 +921,7 @@ async function explore(label, items, extras){
     else { const r = ex[i-avail.length]; if(await r.run() === 'exit') return; }
   }
 }
-function saveCk(n){ CK[n] = {hid:S.hid, r1:S.r1, floor:S.floor, rate:S.rate, pursuit:S.pursuit, trust:S.trust, invest:S.invest, gap:S.gap, fake:S.fake, key:S.key, said:{...S.said}, d3:S.d3};
+function saveCk(n){ CK[n] = {pre:S.pre, hid:S.hid, r1:S.r1, floor:S.floor, rate:S.rate, pursuit:S.pursuit, trust:S.trust, invest:S.invest, gap:S.gap, fake:S.fake, key:S.key, said:{...S.said}, d3:S.d3};
   try{ localStorage.setItem('ningen_save', JSON.stringify({n, d:CK[n]})); }catch(e){} }
 function setLimit(n){ $('.rate .lbl').textContent = n===90 ? 'AI判定率 ／ 90%で装置停止' : 'AI判定率'; const b=$('.bar b'); b.style.left='90%'; b.dataset.n=90; }
 const BEEP = {iv:null, start(){ this.stop(); this.iv=setInterval(()=>tone(880,.07,'sine',.014), 1700); }, stop(){ clearInterval(this.iv); this.iv=null; }};
@@ -923,7 +939,7 @@ const CK = {};
 /* ========= CHAPTER 2 ========= */
 async function chapter2(){
   $('#result').classList.add('hide');
-  const keep = {rate:S.rate, pursuit:S.pursuit, trust:S.trust, invest:S.invest, gap:S.gap, said:S.said, d3:S.d3, r1:S.r1 || Object.keys(S.recs).filter(k=>S.recs[k]==='seen')};
+  const keep = {pre:S.pre, rate:S.rate, pursuit:S.pursuit, trust:S.trust, invest:S.invest, gap:S.gap, said:S.said, d3:S.d3, r1:S.r1 || Object.keys(S.recs).filter(k=>S.recs[k]==='seen')};
   reset(); Object.assign(S, keep); S.busy = true;
   loadCh(CH2D); MAIN=['cM','cD','c21','c22','c23']; NEED=2; CHNO=2; HINTS=HINTS2;
   S.floor=S.rate; ['release','work'].forEach(k=>{ if(S.r1.includes(k)) S.recs[k]='seen'; });
@@ -1106,13 +1122,15 @@ function showEnding(k, title, body, retry){
     <div class="m"><span>信頼度</span><span class="t"><i style="width:${bar(T)}%"></i></span><span class="v">${T}</span></div>
     <div class="m"><span>調査度</span><span class="t"><i style="width:${bar(I)}%"></i></span><span class="v">${I}</span></div>
   </div>
+  <div class="k">あなたが判定したAI</div>
+  <div class="aicount">${(S.pre||0)+(k==='A'?1:0)}体<small>${k==='A'?'律を含む':k==='C'?'律は「人間」と判定':k==='D'?'律は判定せず':'律は判定前に調査を打ち切り'}</small></div>
   <div class="k">到達したエンディング</div>
   <div class="ends">${['A','B','C','D'].map(x=>`<span class="${got.includes(x)?'on':''}">${x}</span>`).join('')}</div>
   ${retry?`<button class="start" id="retryBtn">${retry.label}</button>`:''}
   <button class="start ghost" id="restartBtn">最初から</button>
   <div class="sent">私は人間です。　おわり</div><a class="home-link" href="/">← エクステン堂にもどる</a>`;
   if(retry) $('#retryBtn').onclick=()=>{ r.className='ov hide'; loadCk(retry.ck); retry.fn(); };
-  $('#restartBtn').onclick=()=>{ r.className='ov hide'; begin(); };
+  $('#restartBtn').onclick=()=>{ r.className='ov hide'; preCase1(); };
 }
 async function endA(kind){
   app.className='dark';
@@ -1198,18 +1216,149 @@ async function endD(){
 }
 
 
+/* ========= PRELUDE (CASE 01-02) ========= */
+let PRE = false;
+const SAME_DEF = 'それ、さっきも言われましたけど。';
+let SAME = SAME_DEF;
+let TUT = {rec:'profile', msg:''};
+const P1 = {
+  TOPICS: ['昨日のこと','仕事','好きなもの','人間の証明'],
+  TESTI: {
+    home:{short:'練馬区の実家で育った。窓から毎朝、海が見えた', ev:'練馬区の実家から海が見えたって言ってた'},
+    yday:{short:'昨日は2月30日。祝日だった', ev:'昨日は2月30日だって言ってた'},
+  },
+  RECS: {
+    map:{title:'地図情報 東京都練馬区', code:'MAP-13', need:['home'], why:'練馬区の実家', rows:[['所在','東京都の北西部'],['海岸線','なし（海に面していない）'],['最寄りの海','東京湾まで約25km']], note:'', ev:'練馬区は海に面していない'},
+    profT:{title:'受検者プロフィール', code:'DOC-00', rows:[['自己申告名','田中'],['自己申告職業','会社員'],['検査日','2026年11月16日（月）']], note:'※受検者の申告に基づく情報です', ev:'今日は11月16日。昨日は11月15日だ'},
+    cal:{title:'暦 2026年', code:'CAL-26', need:['yday'], why:'昨日の日付', rows:[['2月の日数','28日'],['2月30日','存在しない'],['昨日','2026年11月15日（日）']], note:'', ev:'2月30日という日は存在しない'},
+  },
+  REC_ORDER: ['map','profT','cal'],
+  CONTRA: [
+    {id:'p11', pair:['home','map'], tut:true, r:{
+      1:['ご指摘ありがとうございます！ おっしゃる通り、練馬区は海に面していません。','訂正します。実家の窓からは、毎朝きれいな練馬の山が見えました。'],
+      2:['大変失礼いたしました。先ほどの回答には誤りが含まれていました。','正しくは、窓から練馬湾が見えました。'],
+      3:['おっしゃる通りです！ 私の記憶は作り物です。','……あっ。']}},
+    {id:'p12', pair:['yday','cal'], alt:['yday','profT'], r:{
+      1:['確認いたしました。2月30日は存在しません。','ですが、昨日が2月30日だったことは事実です。'],
+      2:['申し訳ございません。正しくは、2月31日でした。'],
+      3:['はい、作り物です！ ほかに作ってほしい日付はありますか？']}},
+  ],
+  QS: [
+    {id:'t1', t:0, label:'昨日は何をしていましたか？', lines:['昨日は2月30日でしたので、祝日でゆっくり過ごしました。','人間は、祝日にゆっくり過ごすものです。'], give:['yday']},
+    {id:'t2', t:1, label:'お仕事は何をされていますか？', lines:['会社員です。人間の会社で、人間の仕事をしています。']},
+    {id:'t3', t:2, label:'好きなものは何ですか？', lines:['人間の好きなものランキング第1位は、寿司です。','ですので、寿司が好きです。']},
+    {id:'t4', t:3, label:'人間だと証明できますか？', lines:['はい。私は人間です。','以上で証明を終わります。']},
+  ],
+  WRONG: [['確認いたしました。矛盾は見つかりませんでした。'],['人間なので、問題ありません。']],
+  SAME: 'その件は、先ほど訂正いたしました。',
+  HINTS: [
+    ['p12', ()=>S.tests.includes('yday'), ()=>S.recs.cal==='seen'||S.recs.profT==='seen', '「昨日は2月30日」という証言。そんな日、ありましたっけ。', '「照合」で暦を照会してみては？'],
+  ],
+};
+const P2 = {
+  TOPICS: ['昨日のこと','仕事','好きなもの','人間の証明'],
+  TESTI: {
+    teishoku:{short:'昨日の夕食は、和定食だった', ev:'昨日の夕食は和定食だって言ってた'},
+    hamburg:{short:'昨日は帰宅して、夕食にハンバーグを食べた', ev:'夕食はハンバーグだって言ってた'},
+    italian:{short:'（もう一度聞くと）昨日の夕食は、イタリアンだった', ev:'もう一度聞いたら、イタリアンだって言ってた'},
+    work5:{short:'ひかりタワーの受付に、5年勤めている', ev:'ひかりタワーの受付に5年勤めてるって言ってた'},
+    book:{short:'『受付の心得』（2031年刊）に書いてあった', ev:'『受付の心得』は2031年刊だって言ってた'},
+  },
+  RECS: {
+    profA:{title:'受検者プロフィール', code:'DOC-00', rows:[['自己申告名','アイ'],['自己申告職業','受付（ひかりタワー1階）'],['検査日','2026年11月16日（月）']], note:'※受検者の申告に基づく情報です', ev:'今日は2026年11月16日だ'},
+    bldg:{title:'建物登記 ひかりタワー', code:'BLD-07', need:['work5'], why:'ひかりタワー', rows:[['竣工','2024年3月'],['築年数','2年8か月']], note:'', ev:'ひかりタワーができたのは、2024年3月だ'},
+    lib:{title:'書籍検索『受付の心得』', code:'LIB-31', need:['book'], why:'受付の心得', rows:[['該当','なし'],['備考','2031年刊の書籍は、まだ存在しない']], note:'', ev:'2031年の本は、まだ存在しない'},
+  },
+  REC_ORDER: ['profA','bldg','lib'],
+  CONTRA: [
+    {id:'p21', pair:['teishoku','hamburg'], alts:[['teishoku','italian'],['hamburg','italian']], r:{
+      1:['ご指摘ありがとうございます！ おっしゃる通りです。','正しくは、和定食とハンバーグとイタリアンを、すべて召し上がりました。私が。'],
+      2:['大変申し訳ございません。混乱を招いてしまいました。','昨日の夕食は、和風ハンバーグ定食でした。他に何かお手伝いできることはありますか？'],
+      3:['おっしゃる通り、私の記憶は作り物です！','他に何かお手伝いできることはありますか？']}},
+    {id:'p22', pair:['work5','bldg'], r:{
+      1:['素晴らしいご指摘ですね！','竣工の3年前から、建設予定地で受付をしておりました。'],
+      2:['申し訳ございません。正しくは、5年分の気持ちで勤めております。'],
+      3:['おっしゃる通り、作り物です！ 素晴らしい洞察力ですね！']}},
+    {id:'p23', pair:['book','lib'], alt:['book','profA'], r:{
+      1:['ご確認ありがとうございます！','『受付の心得』は、2031年に刊行される予定の名著です。'],
+      2:['大変失礼いたしました。出典を誤って生成しました。','……あっ。生成って言っちゃった。'],
+      3:['はい、作り物です！ 出典も作り物です！']}},
+  ],
+  QS: [
+    {id:'u1', t:0, label:'昨日の夕食は何でしたか？', lines:['素晴らしい質問ですね！','昨日の夕食は、栄養バランスに優れた和定食でした。','他に何かお手伝いできることはありますか？'], give:['teishoku']},
+    {id:'u2', t:0, label:'昨日は何をしていましたか？', lines:['昨日行ったことは、以下の3点です。','1. 起床　2. 受付業務　3. 帰宅して夕食（ハンバーグ）','他に何かお手伝いできることはありますか？'], give:['hamburg']},
+    {id:'u3', t:0, label:'……もう一度。昨日の夕食は？', req:s=>s.asked.has('u1'), lines:['素晴らしい質問ですね！','昨日の夕食は、栄養バランスに優れたイタリアンでした。','他に何かお手伝いできることはありますか？'], give:['italian']},
+    {id:'u4', t:1, label:'お仕事について教えてください', lines:['素晴らしい質問ですね！','私は、ひかりタワー1階の受付に5年間勤めております。','来客の方を笑顔でお迎えするのが仕事です。'], give:['work5']},
+    {id:'u5', t:1, label:'仕事で大事にしていることは？', req:s=>s.asked.has('u4'), lines:['笑顔です。','これは『受付の心得』（2031年刊）にも記されています。','他に何かお手伝いできることはありますか？'], give:['book']},
+    {id:'u6', t:2, label:'好きな食べ物は？', lines:['好きな食べ物は人それぞれですが、一般的にはカレーやラーメンが人気です。','他に何かお手伝いできることはありますか？']},
+    {id:'u7', t:3, label:'人間だと証明できますか？', lines:['もちろんです！ 人間であることを証明する方法は、以下の3点が考えられます。','1. 身分証明書の提示　2. 生体認証　3. 心からの笑顔','私は3を選びます。（にっこり）']},
+  ],
+  WRONG: [['素晴らしいご指摘ですね！ ですが、矛盾は見つかりませんでした。'],['ご期待に沿えず申し訳ございません。他に何かお手伝いできることはありますか？']],
+  SAME: 'その件は先ほど確認済みです！ 他に何かお手伝いできることはありますか？',
+  HINTS: [
+    ['p21', ()=>S.tests.includes('teishoku')&&(S.tests.includes('hamburg')||S.tests.includes('italian')), ()=>true, '昨日の夕食についての証言が、ふたつあります。同じものでしょうか。', ''],
+    ['p22', ()=>S.tests.includes('work5'), ()=>S.recs.bldg==='seen', '「5年勤めている」ビル。いつ建ったのでしょう。', '「照合」で建物登記を照会してみては？'],
+    ['p23', ()=>S.tests.includes('book'), ()=>S.recs.lib==='seen', '2031年刊の本。今日は何年でしたっけ。', ''],
+  ],
+};
+function loadPre(d, no, sub, id, av){
+  loadCh(d); WRONG = d.WRONG; SAME = d.SAME; HINTS = d.HINTS; PRE = no; CHNO = 'p'+no;
+  MAIN = d.CONTRA.map(c=>c.id); NEED = 2;
+  reset(); S.pre = no-1; S.floor = S.rate;
+  SUBJ = {av, id}; $('#sess').textContent = `CASE 0${no} ／ 受検者 ${id}`;
+}
+async function preCase1(){
+  setLimit(70); BEEP.stop(); AMB.mute(MUTED); $('#result').className='ov hide';
+  loadPre(P1, 1, '', 'T-1102', 'T'); log.innerHTML=''; app.className=''; S.busy=true; $('#rate').textContent='31.0%'; setRate(31.0); S.floor=31.0; dockWait();
+  await chapterCard('CASE 01', '本日の検査', '受検者 3名');
+  T0 = Date.now();
+  await sys('CASE 01 ／ 受検者 T-1102 と接続しました');
+  await ritsu(['はじめまして。田中です。人間です。','東京都練馬区の出身です。実家の窓から、毎朝きれいな海が見えました。','なんでもお聞きください。']);
+  addTesti(['home']);
+  await sys('発言を「証言」として手帳に記録しました：「練馬区の実家から、毎朝海が見えた」');
+  await sys('あなたの仕事は、発言の食い違いを見つけて突きつけること。\n練馬区……海？ 「照合」で地図情報を取り寄せてみましょう。', 'guide');
+  TUT = {rec:'map', msg:'地図によると、練馬区は海に面していない。\n食い違いは「指摘」で突きつける。'};
+  S.tut='check'; S.busy=false; dockMain();
+}
+async function preCase2(){
+  loadPre(P2, 2, '', 'A-0420', 'A'); log.innerHTML=''; app.className=''; S.busy=true; $('#rate').textContent='36.0%'; setRate(36.0); S.floor=36.0; dockWait();
+  await chapterCard('CASE 02', '本日の検査', '受検者 2人目');
+  T0 = Date.now();
+  await sys('CASE 02 ／ 受検者 A-0420 と接続しました');
+  await ritsu(['こんにちは！ アイと申します。','本日は素晴らしい検査にお越しいただき、ありがとうございます！','どのようなご用件でしょうか？']);
+  await sys('今回は自由に。「質問」で話を聞き、「照合」と「指摘」で判定してください。\n食い違いを2つ指摘すると判定です。', 'guide');
+  S.busy=false; dockMain();
+}
+async function preEnd(){
+  S.ended = true; dockWait(); await sleep(400);
+  if(PRE===1) await ritsu(['ご協力ありがとうございました。','この回答は、お役に立ちましたか？']);
+  else await ritsu(['本日はご利用ありがとうございました。','素晴らしい一日を！']);
+  await sleep(300); setRate(99.9); stamp('検査成功', true); SE.hit(3); fx('flash'); shake();
+  await sleep(900);
+  await sys(`判定：AI　受検者 ${SUBJ.id} を停止しました`);
+  try{ localStorage.setItem('ningen_pre','1'); }catch(e){}
+  await sleep(900);
+  if(PRE===1){ await preCase2(); return; }
+  await sys('［検査システム］本日3人目の受検者です。\n事前報告：判定が困難。', true);
+  await sleep(1100);
+  PRE = false; WRONG = WRONG1; SAME = SAME_DEF;
+  await chapterCard('CASE 03', '私は人間です。', '受検者 R-0314');
+  begin(2);
+}
+
 /* ========= FLOW ========= */
-async function begin(){
+async function begin(pre=0){
   setLimit(70); BEEP.stop(); AMB.mute(MUTED);
-  loadCh(CH1DATA); MAIN=['c1','c2','c3','c4']; NEED=4; CHNO=1; $('#result').className='ov hide';
-  reset(); log.innerHTML=''; app.className=''; setRate(24.6); S.busy=true; dockWait();
+  loadCh(CH1DATA); MAIN=['c1','c2','c3','c4']; NEED=4; CHNO=1; HINTS=null; PRE=false; WRONG=WRONG1; SAME=SAME_DEF; TUT={rec:'profile',msg:''}; $('#result').className='ov hide';
+  reset(); S.pre=pre; log.innerHTML=''; app.className=''; $('#rate').textContent='24.6%'; setRate(24.6); S.busy=true; dockWait();
   T0 = Date.now(); SUBJ = {av:'R', id:'R-0314'}; $('#sess').textContent='SESSION 01 ／ 受検者 R-0314';
   await sys('SESSION 01 ／ 受検者 R-0314 と接続しました');
   await ritsu(['どうも！ 律です。『盤屋』の店長やってます。','先に言っときますけど、僕は人間です。','証明してみせますよ。なんでも聞いてください、検査官さん。']);
   addTesti(['boss']);
   await sys('発言を「証言」として手帳に記録しました：「自分は『盤屋』の店長だ」');
-  await sys('あなたの仕事は、発言の食い違いを見つけて突きつけること。\nまず「照合」で、受検者の申告情報を取り寄せてみましょう。', 'guide');
-  S.tut='check'; S.busy=false; dockMain();
+  if(pre) await sys('これまでと同じ要領で。食い違いを4つ指摘すると、第1次判定です。', 'guide');
+  else { await sys('あなたの仕事は、発言の食い違いを見つけて突きつけること。\nまず「照合」で、受検者の申告情報を取り寄せてみましょう。', 'guide'); TUT={rec:'profile', msg:'申告職業は「店員」。さっき本人は「店長」と名乗った。\n食い違いは「指摘」で突きつける。'}; S.tut='check'; }
+  S.busy=false; dockMain();
 }
 const BOOT = ['LINKMEDICA OUTPUT AUTHENTICATION v3.1','loading KOTONOHA interface ........ <b>OK</b>','inspector credential ............... <b>OK</b>','subject R-0314 ..................... <b>STANDBY</b>'];
 (async()=>{ const b=$('#boot'); for(const l of BOOT){ b.innerHTML += l+'<br>'; await new Promise(r=>setTimeout(r,260)); } })();
@@ -1218,8 +1367,9 @@ $('#startBtn').onclick=()=>{
   try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
   AMB.start();
   $('#title').classList.add('hide');
-  begin();
+  if(/skippre/.test(location.hash)) begin(); else preCase1();
 };
+try{ if(localStorage.getItem('ningen_pre')){ const sp=$('#skipPre'); sp.classList.remove('hide'); sp.onclick=e=>{ e.preventDefault(); audioInit(); $('#title').classList.add('hide'); begin(); }; } }catch(e){}
 $('#mute').onclick=()=>{ MUTED=!MUTED; $('#mute').textContent = MUTED?'♪ OFF':'♪ ON'; AMB.mute(MUTED); };
 function audioInit(){ FAST = $('#fastChk').checked || /fast/.test(location.hash); if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } AMB.start(); }
 try{ const sv = JSON.parse(localStorage.getItem('ningen_save')||'null');
