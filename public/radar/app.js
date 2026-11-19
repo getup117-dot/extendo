@@ -169,7 +169,15 @@
     tiles.on('tileload',()=>{state.tileLoaded++;$('mapLoadStatus').hidden=true;});
     tiles.on('tileerror',()=>{if(++state.tileErrors>=4&&!state.tileLoaded){$('mapLoadStatus').textContent='地図を読み込めません。インターネット接続を確認してください。';$('mapLoadStatus').hidden=false;}});
     L.control.zoom({position:'topright'}).addTo(state.map);
-    state.map.on('click',e=>chooseMapPoint({lat:e.latlng.lat,lng:e.latlng.lng},false));
+    // スマホで指が少しずれてもタップとして扱う（地図のドラッグ扱いでピンが刺さらないのを防ぐ）
+    {const box=state.map.getContainer();let tap=null,lastTap=0;
+      box.addEventListener('pointerdown',e=>{if(tap&&e.pointerId!==tap.id){tap.multi=true;return;}tap={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),multi:!e.isPrimary};});
+      box.addEventListener('pointercancel',()=>{tap=null;});
+      box.addEventListener('pointerup',e=>{const s=tap;if(!s||e.pointerId!==s.id)return;tap=null;
+        if(s.multi||Math.hypot(e.clientX-s.x,e.clientY-s.y)>14||Date.now()-s.t>700)return;
+        if(e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup'))return;
+        lastTap=Date.now();const ll=state.map.mouseEventToLatLng(e);chooseMapPoint({lat:ll.lat,lng:ll.lng},false);});
+      state.map.on('click',e=>{if(Date.now()-lastTap<800)return;chooseMapPoint({lat:e.latlng.lat,lng:e.latlng.lng},false);});}
     state.mapReady=true;
   }
   function chooseMapPoint(place, move) {
