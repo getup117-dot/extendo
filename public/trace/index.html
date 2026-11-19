@@ -399,6 +399,7 @@ function makeMatcher(t,tol){
 }
 
 /* ---------- 動画 ---------- */
+const LD={t0:0,msg:'',iv:null,info:'',set(m){this.msg=m;this.show();},show(){const el=$('#loadMsg');if(!this.msg){el.textContent='';return;}el.textContent=`${this.msg}・${Math.round((performance.now()-this.t0)/1000)}秒${this.info?'（'+this.info+'）':''}`;},start(){this.t0=performance.now();this.info='';clearInterval(this.iv);this.iv=setInterval(()=>this.show(),1000);},stop(){clearInterval(this.iv);this.iv=null;this.msg='';this.show();}};
 const within=(p,ms)=>Promise.race([Promise.resolve(p).catch(()=>{}),new Promise(r=>setTimeout(r,ms))]); // 返事がない処理で止まらないよう、時間で打ち切る
 function once(el,ev,ms){return new Promise(res=>{let done=false;const f=()=>{if(done)return;done=true;res();};el.addEventListener(ev,f,{once:true});if(ms)setTimeout(f,ms);});}
 async function seek(t){
@@ -438,13 +439,13 @@ async function readFps(file){
 }
 $('#file').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;S.pins=[];S.solved=false;
-  $('#loadMsg').textContent='読み込み中…';
+  LD.start();LD.set('読み込み中…');{const mb=f.size/1048576;LD.info=mb>=1024?(mb/1024).toFixed(1)+'GB':Math.round(mb)+'MB';}
   if(S.url) URL.revokeObjectURL(S.url);
   S.url=URL.createObjectURL(f);vid.src=S.url;vid.load();
-  $('#loadMsg').textContent='読み込み中…（動画を開いています）';
+  LD.set('動画を開いています');
   await once(vid,'loadedmetadata',10000);
-  if(!vid.videoWidth){$('#loadMsg').textContent='この動画は読み込めませんでした。別の動画で試してください。';return;}
-  $('#loadMsg').textContent='読み込み中…（最初のコマを用意しています）';
+  if(!vid.videoWidth){LD.stop();$('#loadMsg').textContent='この動画は読み込めませんでした。別の動画で試してください。';return;}
+  LD.info+=`・${vid.videoWidth}×${vid.videoHeight}・${Math.round(vid.duration)}秒`;LD.set('最初のコマを用意しています');
   try{await within(vid.play(),800);vid.pause();}catch(_){}
   if(vid.readyState<2)await once(vid,'loadeddata',1500);
   S.dur=vid.duration;S.vw=vid.videoWidth;S.vh=vid.videoHeight;
@@ -456,9 +457,9 @@ $('#file').addEventListener('change',async e=>{
     .catch(()=>{if(S.url===myUrl)$('#fpsNote').textContent='1秒あたりの枚数を読み取れなかったので、1秒30枚として扱います。';});
   S.cal=[];S.H=null;S.Hinv=null;S.tStart=null;S.tEnd=null;S.tap=null;S.target=null;S.trimA=0;S.trimB=null;S.scenes=null;S.sceneSel=null;$('#sceneBox').classList.add('hidden');S.keyH=[];S.reFix=null;S.mineK=null;S.hints=[];S.tStartHint=null;RPT.reset();
   ['#calSeek','#tgSeek'].forEach(s=>{const r=$(s);r.max=S.dur;r.value=0;});
-  $('#loadMsg').textContent='読み込み中…（はじめに戻しています）';
+  LD.set('はじめに戻しています');
   await seek(0.001);
-  $('#loadMsg').textContent='';e.target.value='';
+  LD.stop();e.target.value='';
   show('s-cal');S.manual=false;S.adj=null;calCv.style.touchAction='';
   trimDraw();
   await autoDetect([0.001,S.dur*0.25,S.dur*0.5,S.dur*0.75]);
@@ -2835,8 +2836,6 @@ window.__BT={dumpRaw:()=>({t0:S.tStart,t1:S.tEnd,vw:S.vw,vh:S.vh,tracks:(S.raw||
   for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const k=j*GN+i;for(let q=0;q<3;q++){im.data[((j*GN*3)+i)*4+q]=f.rect[k*3+q];im.data[((j*GN*3)+i+GN)*4+q]=S.bg[k*3+q];}const d=Math.abs(f.rect[k*3]-S.bg[k*3])+Math.abs(f.rect[k*3+1]-S.bg[k*3+1])+Math.abs(f.rect[k*3+2]-S.bg[k*3+2]);const o=((j*GN*3)+i+2*GN)*4;im.data[o]=im.data[o+1]=im.data[o+2]=Math.min(255,d*2);
     for(let q=0;q<3;q++)im.data[((j*GN*3)+i)*4+3]=im.data[((j*GN*3)+i+GN)*4+3]=im.data[o+3]=255;}
   x.putImageData(im,0,0);const pk=findBeys(f.rect,S.bg,null);x.strokeStyle='lime';pk.forEach(p=>{const ci=(p.u+HALF)/CELL,cj=(p.v+HALF)/CELL;x.beginPath();x.arc(ci+2*GN,cj,BEY_R,0,7);x.stroke();x.beginPath();x.arc(ci,cj,BEY_R,0,7);x.stroke();});return c.toDataURL();},detectRail:detectRailAuto,TPL,applyH,dbgHues:img=>hueCandidates(img.data,img.width,img.height).map(h=>{const r=detectRail(img,h,0.28);return [Math.round(h),r&&+r.score.toFixed(3)];})};
-})();
-
 /* ---------- 直した内容を開発者に送る（同意してから、直したコマの小さい画像と位置だけを送る。動画そのものは送らない） ---------- */
 const RPT_SB={url:'https://ulnuwlvayctgvifnacwt.supabase.co',key:'sb_publishable_PXoCtb7nHew3_bnfU1kNMA_k9DrpmVS'}; // 公開用のキー（書き込みだけ許可、読むのは管理者だけ）
 const RPT={items:[],sent:false,
@@ -2871,6 +2870,8 @@ $('#rptYes').addEventListener('click',async()=>{const b=$('#rptYes');if(b.disabl
   b.disabled=false;
   if(ok){RPT.items=[];RPT.sent=true;RPT.ui();}
   else $('#rptTxt').textContent='送れませんでした。電波のよい所で、もう一度お試しください。';});
+})();
+
 </script>
 </body>
 </html>
