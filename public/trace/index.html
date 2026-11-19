@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>BEY TRACE テスト版</title>
+<title>Beyry Tale（ベイリーテイル）テスト版</title>
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
@@ -107,7 +107,7 @@ table.cmp tr:last-child td{border-bottom:0}
 <!-- ホーム -->
 <section id="s-home" class="screen active">
   <div class="hero">
-    <div class="brand">BEY TRACE テスト版</div>
+    <div class="brand">Beyry Tale テスト版</div>
     <p class="big">シュートの軌跡を、<br>見える化しよう。</p>
   </div>
   <label class="modebtn main" id="goPractice" for="file">
@@ -2397,12 +2397,12 @@ $('#saveVid').addEventListener('click',async()=>{
   if(S.view==='video'){await new Promise(r=>{S.onPlayEnd=r;playVideo();});}
   else{await new Promise(r=>{playVideo();const w=()=>{if(!vraf)r();else setTimeout(w,100);};setTimeout(w,300);});}
   await new Promise(r=>setTimeout(r,300));rec.stop();await done;S.recording=false;btn.textContent='動画を保存';
-  const blob=new Blob(chunks,{type:type||'video/webm'});const name=`beytrace_${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.${ext}`;
+  const blob=new Blob(chunks,{type:type||'video/webm'});const name=`beyrytale_${new Date().toISOString().slice(0,16).replace(/[-:T]/g,'')}.${ext}`;
   const file=new File([blob],name,{type:blob.type});
   // claude.ai の中では、保存の確認を出してから保存する（iPhoneでは共有シートから写真に保存できる）
   let dl=null;try{if(window.claude&&window.claude.use)dl=await window.claude.use('downloads');}catch(_){}
   if(dl){try{await dl.save({filename:name,data:blob});btn.textContent='保存しました';setTimeout(()=>btn.textContent='動画を保存',2500);}catch(e){btn.textContent=e&&e.code==='declined'?'動画を保存':'保存できませんでした';}return;}
-  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'BEY TRACE'});return;}catch(_){}}
+  if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Beyry Tale'});return;}catch(_){}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);
 });
 let raf=null;
@@ -2857,7 +2857,7 @@ const RPT={items:[],sent:false,
     return body;}
 };
 $('#rptBtn').addEventListener('click',()=>{const n=RPT.items.length;if(!n)return;const m=RPT.items.filter(x=>x.img).length;
-  $('#rptTxt').textContent=`直した場面${m?`の小さな画像（${m}枚）と`:'の'}、直した位置・解析結果を、BEY TRACEの改善に使います。動画そのものは送りません。送りますか？`;
+  $('#rptTxt').textContent=`直した場面${m?`の小さな画像（${m}枚）と`:'の'}、直した位置・解析結果を、Beyry Taleの改善に使います。動画そのものは送りません。送りますか？`;
   $('#rptBox').classList.remove('hidden');});
 $('#rptNo').addEventListener('click',()=>$('#rptBox').classList.add('hidden'));
 $('#rptYes').addEventListener('click',async()=>{const b=$('#rptYes');if(b.disabled)return;b.disabled=true;$('#rptTxt').textContent='送っています…';
