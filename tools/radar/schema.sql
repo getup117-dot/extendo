@@ -210,3 +210,18 @@ drop policy if exists "positions_read_active" on public.positions;
 create policy "positions_read_active" on public.positions for select to authenticated
   using (expires_at > now() and (kind = 'checkin' or updated_at > now() - interval '5 minutes')
          and (not public.is_hidden('user', user_id::text) or public.is_admin()));
+
+-- ============================================================
+-- 見るだけモード（2026-11-19 追加）：ログインしていない人も、地図・いまいる人・出没予定を見られる
+grant select on public.profiles, public.positions, public.events, public.rsvps to anon;
+grant execute on function public.is_hidden(text, text) to anon;
+drop policy if exists "profiles_read_anon" on public.profiles;
+create policy "profiles_read_anon" on public.profiles for select to anon using (true);
+drop policy if exists "positions_read_anon" on public.positions;
+create policy "positions_read_anon" on public.positions for select to anon
+  using (expires_at > now() and (kind = 'checkin' or updated_at > now() - interval '5 minutes')
+         and not public.is_hidden('user', user_id::text));
+drop policy if exists "events_read_anon" on public.events;
+create policy "events_read_anon" on public.events for select to anon using (not public.is_hidden('event', id::text));
+drop policy if exists "rsvps_read_anon" on public.rsvps;
+create policy "rsvps_read_anon" on public.rsvps for select to anon using (true);

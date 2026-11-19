@@ -112,8 +112,9 @@
   const isMobile=()=>window.matchMedia('(max-width:800px)').matches;
   const savedSpots=()=>{const places=storage.get(SPOTS_KEY+':'+selfId(),[]);return Array.isArray(places)?places.filter(C.validPoint):[];};
   const placeKey=p=>Number(p.lat).toFixed(5)+','+Number(p.lng).toFixed(5);
-  const activePeople=()=>logged()?state.positions.filter(p=>C.validShare(p)):[];
-  const activeEvents=()=>logged()?state.events.filter(e=>Date.parse(e.ends_at)>Date.now()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)):[];
+  const viewing=()=>logged()||(state.mode==='live'&&!!state.sb);
+  const activePeople=()=>viewing()?state.positions.filter(p=>C.validShare(p)):[];
+  const activeEvents=()=>viewing()?state.events.filter(e=>Date.parse(e.ends_at)>Date.now()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)):[];
   const attendees=event=>[...new Set([event.user_id,...state.rsvps.filter(r=>r.event_id===event.id).map(r=>r.user_id)])];
   function notify(message) {
     $('toast').textContent=message; $('toast').classList.add('show');
@@ -259,11 +260,11 @@
     const saved=preserveFields();
     $('modeBadge').textContent=state.mode==='demo'?'試用版':'ライブ';
     $('modeBadge').classList.toggle('live',state.mode==='live');
-    $('mapTypeBadge').textContent=state.mode==='demo'?'架空のサンプルデータ':logged()?'登録ユーザーの情報':'ログインしてください';
+    $('mapTypeBadge').textContent=state.mode==='demo'?'架空のサンプルデータ':logged()?'登録ユーザーの情報':'見るだけモード';
     document.querySelectorAll('button[data-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.tab===state.tab);el.setAttribute('aria-current',el.dataset.tab===state.tab?'page':'false');});
     $('panelTitle').textContent=state.tab==='now'?'いま、誰がいる？':state.tab==='plans'?'いつ、どこに集まる？':'マイページ';
     $('panelDesc').textContent=state.tab==='now'?'近くのブレーダーを見つけよう。':state.tab==='plans'?'対戦の予定を立てて、集まろう。':'プロフィールと現在地共有の設定';
-    $('filterBar').hidden=state.tab==='account'||!logged();
+    $('filterBar').hidden=state.tab==='account'||!viewing();
     $('planFilters').hidden=state.tab!=='plans';
     const query=state.listQueries[state.tab]||'';
     if($('listSearch').value!==query)$('listSearch').value=query;
@@ -271,7 +272,7 @@
     $('listSearch').placeholder=listLabel;
     $('listSearch').setAttribute('aria-label',listLabel);
     document.querySelectorAll('[data-filter]').forEach(el=>{el.classList.toggle('active',el.dataset.filter===state.filter);el.setAttribute('aria-pressed',String(el.dataset.filter===state.filter));});
-    $('panelContent').innerHTML=!logged()?loginWall():state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():renderAccount();
+    $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():renderAccount());
     document.body.dataset.tab=state.tab;
     restoreFields(saved); renderMap(); updateShareIndicator();
   }
@@ -353,8 +354,9 @@
     const empty = '<div class="empty">該当する予定はありません。<br>「＋ 出没予定を登録」から作ってみましょう。</div>';
     return `<div class="section-title">これからの出没予定 <span class="count">${events.length}</span></div>${cards || empty}<p class="help">施設の利用ルールや周囲への配慮を守って集まりましょう。</p>`;
   }
+  function viewBanner(){return `<div class="notice view-notice">見るだけモードです。「ここにいる」や出没予定の登録・参加は、<button class="linklike" data-action="go-account">ニックネームではじめる</button>と使えます。</div>`;}
   function loginWall() {
-    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。ニックネームを入れると、共有中の現在地や出没予定を見たり登録したりできます。</p><form id="startForm" class="form-col"><div class="field"><label for="startName">ニックネーム</label><input type="text" id="startName" required maxlength="32" placeholder="例：しょうた" autocomplete="nickname"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。ブラウザのデータを消したり、別の端末で開いたりすると、新しい人として始まります。ニックネームはあとからマイページで変えられます。</p></div>`;
+    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。地図や予定はこのまま見られます。ニックネームを入れると、「ここにいる」や出没予定の登録・参加ができます。</p><form id="startForm" class="form-col"><div class="field"><label for="startName">ニックネーム</label><input type="text" id="startName" required maxlength="32" placeholder="例：しょうた" autocomplete="nickname"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。ブラウザのデータを消したり、別の端末で開いたりすると、新しい人として始まります。ニックネームはあとからマイページで変えられます。</p></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -733,13 +735,13 @@
     await loadLive();notify('通報しました。ご協力ありがとうございます');
   }
   async function loadLive() {
-    const client=state.sb,userId=selfId(),revision=state.revision,request=++state.request;if(!client||!state.user)return;
+    const client=state.sb,userId=selfId(),revision=state.revision,request=++state.request;if(!client)return;
     const results=await Promise.all([
       client.from('profiles').select('id,display_name,stadium_status,rank_level,battle_ready,is_admin').limit(1000),
       client.from('positions').select('user_id,lat,lng,precision,updated_at,expires_at,kind').gt('expires_at',iso()).or(`kind.eq.checkin,updated_at.gt.${new Date(Date.now()-C.FRESH_MS).toISOString()}`).limit(1000),
       client.from('events').select('*').gt('ends_at',iso()).order('starts_at',{ascending:true}).limit(300),
       client.from('rsvps').select('event_id,user_id').limit(10000),
-      client.from('reports').select('target_type,target_id,reporter').limit(10000)
+      state.user?client.from('reports').select('target_type,target_id,reporter').limit(10000):Promise.resolve({data:[]})
     ]);
     if(client!==state.sb||userId!==selfId()||revision!==state.revision||request!==state.request)return;
     const error=results.find(r=>r.error)?.error;if(error){setStatus('データを更新できません。通信状態と接続設定を確認してください。',true);throw error;}
@@ -747,9 +749,9 @@
   }
   function scheduleLoad() { clearTimeout(state.loadTimer);state.loadTimer=setTimeout(()=>loadLive().catch(e=>console.error(e)),200); }
   function startRealtime() {
-    const client=state.sb;if(!client||!state.user)return;
+    const client=state.sb;if(!client)return;
     client.removeAllChannels();let channel=client.channel('beybe-radar');
-    for(const table of ['positions','events','rsvps','profiles','reports'])channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleLoad);
+    for(const table of state.user?['positions','events','rsvps','profiles','reports']:['positions','events','rsvps','profiles'])channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleLoad);
     channel.subscribe(status=>{if(client!==state.sb)return;state.connected=status==='SUBSCRIBED';if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setStatus('接続し直しています。定期更新で情報を確認中です。');});
     clearInterval(state.refreshTimer);state.refreshTimer=setInterval(()=>loadLive().catch(()=>{}),30000);
   }
@@ -774,10 +776,10 @@
       setTimeout(async()=>{
         if(client!==state.sb)return;
         if(state.user){try{await ensureProfile(client,state.user);await loadLive();if(event!=='TOKEN_REFRESHED')startRealtime();}catch(e){setStatus('データを読み込めません。接続設定を確認してください。',true);}}
-        else{clearInterval(state.refreshTimer);await client.removeAllChannels();render();}
+        else{try{await loadLive();startRealtime();}catch(e){render();}}
       },0);
     }).data.subscription;
-    if(state.user){await ensureProfile(client,state.user);await loadLive();startRealtime();}else{setStatus();render();}
+    if(state.user){await ensureProfile(client,state.user);await loadLive();startRealtime();}else{state.tab='now';setStatus();try{await loadLive();startRealtime();}catch(e){render();}}
   }
   async function startAnon() {
     if(!state.sb)throw Error('接続を確認してください');
@@ -797,6 +799,7 @@
       if(t.dataset.tab){closePlace();endPick();$('mapSearchResults').hidden=true;state.tab=t.dataset.tab;setSheet(isMobile()&&state.tab==='now');render();return;}
       if(t.dataset.filter){state.filter=t.dataset.filter;render();return;}
       const action=t.dataset.action,id=t.dataset.id;
+      if(!logged()&&/^(new-event|event-here|register-here|manual-share|start-share|rsvp|report|report-reason|edit-event|delete-event|pick-map|save-spot)$/.test(action)){closePlace();endPick();state.tab='account';setSheet(isMobile());render();notify('登録や参加は、ニックネームではじめると使えます');return;}
       if(action==='confirm-no'){resolveConfirm(false);return;}if(action==='confirm-yes'){resolveConfirm(true);return;}
       await runBusy(t,async()=>{
         if(action==='new-event')newEvent();
