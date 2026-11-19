@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>BEY TRACE 届いた修正</title>
+<style>
+body{margin:0;font-family:-apple-system,"Hiragino Sans",sans-serif;background:#111;color:#eee;padding:16px;line-height:1.6}
+h1{font-size:18px;margin:0 0 8px}.note{color:#aaa;font-size:13px}
+.btn{background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:10px;padding:8px 12px;font-size:14px}
+.btn.p{background:#ff7a1a;border-color:#ff7a1a;color:#111;font-weight:700}
+.card{background:#1c1c1c;border-radius:12px;padding:12px;margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.th{display:flex;gap:6px;overflow-x:auto;margin-top:8px}.th figure{margin:0;position:relative;flex:none}
+.th img{height:90px;border-radius:6px;display:block}.th figcaption{font-size:11px;color:#bbb}
+.dot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;border:2px solid #fff}
+</style></head><body>
+<h1>BEY TRACE 届いた修正</h1>
+<p class="note" id="msg">読み込み中…</p>
+<div class="row" id="tools" hidden><button class="btn p" id="dlAll">全部をファイルで保存（Claudeに渡す用）</button><button class="btn" id="reload">読み込み直す</button></div>
+<div id="list"></div>
+<script src="../radar/vendor/supabase.min.js"></script>
+<script src="../radar/config.js"></script>
+<script>
+const C=window.BEYSPOT_CONFIG,$=s=>document.querySelector(s);let rows=[];
+const sb=window.supabase.createClient(C.supabaseUrl,C.supabasePublicKey,{auth:{persistSession:true,autoRefreshToken:true}});
+const kindJa={tap:'位置を直した',trace:'なぞった',ok:'合っている',swap:'入れかえ',absent:'いない'};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function load(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){$('#msg').textContent='Beybe Radar（/radar/）に管理者のアカウントでログインしている端末で開いてください。';return;}
+  const {data,error}=await sb.from('bey_trace_reports').select('id,created_at,payload').order('created_at',{ascending:false}).limit(200);
+  if(error){$('#msg').textContent='読み込めませんでした：'+error.message;return;}
+  rows=data||[];$('#tools').hidden=!rows.length;
+  $('#msg').textContent=rows.length?`${rows.length}件届いています。`:'まだ届いていません（管理者でないアカウントでも、この表示になります）。';
+  $('#list').innerHTML=rows.map(r=>{const p=r.payload||{},it=p.items||[];
+    const cnt={};it.forEach(x=>cnt[x.kind]=(cnt[x.kind]||0)+1);
+    const th=it.filter(x=>x.img).map(x=>{const pts=x.kind==='tap'?[[x.x,x.y]]:(x.pos||[]).filter(Boolean);
+      return `<figure><img src="${esc(x.img)}" alt="">${pts.map(q=>`<span class="dot" style="left:${q[0]/p.vw*100}%;top:${q[1]/p.vh*100}%;background:${x.kind==='tap'?'#ff7a1a':'#3c6'}"></span>`).join('')}<figcaption>${esc(kindJa[x.kind]||x.kind)} ${(+x.t).toFixed(2)}秒</figcaption></figure>`;}).join('');
+    return `<div class="card"><div class="row"><b>${new Date(r.created_at).toLocaleString('ja-JP')}</b><span class="note">${esc(Object.entries(cnt).map(([k,n])=>(kindJa[k]||k)+n).join('・'))}／動画 ${p.vw}×${p.vh}・${(+p.dur||0).toFixed(1)}秒</span></div>
+      <div class="note">${esc((p.ua||'').slice(0,90))}</div><div class="th">${th}</div>
+      <div class="row" style="margin-top:8px"><button class="btn" data-dl="${r.id}">この件を保存</button><button class="btn" data-del="${r.id}">削除</button></div></div>`;}).join('');
+}
+function save(obj,name){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj)],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},3000);}
+$('#dlAll').onclick=()=>save(rows,'beytrace_reports_'+new Date().toISOString().slice(0,10)+'.json');
+$('#reload').onclick=load;
+$('#list').onclick=async e=>{const d=e.target.dataset;
+  if(d.dl){const r=rows.find(x=>x.id==d.dl);save(r,'beytrace_report_'+r.id+'.json');}
+  if(d.del&&confirm('この件を削除しますか？')){const {error}=await sb.from('bey_trace_reports').delete().eq('id',d.del);if(error)alert(error.message);load();}};
+load();
+</script></body></html>
