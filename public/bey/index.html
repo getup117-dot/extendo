@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ベイ出没マップ</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1424;--panel:#161e33;--line:#2a3654;--ink:#eef2ff;--sub:#93a0c4;--now:#ff5a36;--plan:#3fa7ff;--ok:#38d39f}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:"M PLUS 1p",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+#app{display:flex;flex-direction:column;height:100%}
+header{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:18px;font-weight:800;letter-spacing:.04em}
+header h1 span{color:var(--now)}
+header .sp{flex:1}
+.ghost{background:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--sub)}
+#map{flex:1;min-height:0}
+#sheet{background:var(--panel);border-top:1px solid var(--line);height:42%;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.tabs{display:flex;gap:6px;padding:10px 12px 6px}
+.tab{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:none;font-weight:800;font-size:14px;color:var(--sub)}
+.tab.on.now{background:var(--now);border-color:var(--now);color:#fff}
+.tab.on.plan{background:var(--plan);border-color:var(--plan);color:#fff}
+.tab b{font-size:12px;opacity:.85;margin-left:4px}
+#list{overflow-y:auto;padding:4px 12px 6px;flex:1;min-height:0}
+.item{display:flex;gap:10px;padding:10px;border-radius:12px;background:#1c2540;margin-bottom:8px;cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none}
+.item .t{font-weight:800;font-size:15px}
+.item .m{font-size:12px;color:var(--sub);margin-top:2px}
+.item .c{font-size:13px;margin-top:4px;word-break:break-all}
+.empty{color:var(--sub);font-size:13px;text-align:center;padding:18px 0}
+.fabs{display:flex;gap:8px;padding:8px 12px 10px;border-top:1px solid var(--line)}
+.fab{flex:1;border:none;border-radius:12px;padding:13px 10px;font-weight:800;font-size:15px;color:#fff}
+.fab.now{background:var(--now)}.fab.plan{background:var(--plan)}
+#banner{display:none;background:#3a2b00;color:#ffd666;font-size:12px;padding:6px 14px;text-align:center}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(5,8,18,.72);display:none;align-items:flex-end;justify-content:center;z-index:2000}
+.modal.show{display:flex}
+.card{background:var(--panel);width:100%;max-width:520px;max-height:94%;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px)}
+.card h2{font-size:18px;margin-bottom:12px}
+label.f{display:block;font-size:12px;color:var(--sub);margin:12px 0 5px}
+input[type=text],input[type=date],input[type=time],select,textarea{width:100%;background:#0f1629;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:16px}
+textarea{min-height:64px;resize:vertical}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.locbtns{display:flex;gap:6px;margin-bottom:8px}
+.locbtns button{flex:1;padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:#1c2540;font-size:13px;font-weight:800}
+.locbtns button.on{border-color:var(--ok);color:var(--ok)}
+#pickmap{height:220px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.hint{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.6}
+.hint.ok{color:var(--ok)}.hint.err{color:#ff7b7b}
+.addr{display:none;gap:6px;margin-bottom:8px}
+.addr.show{display:flex}
+.addr input{flex:1}
+.addr button{flex:none;padding:0 14px;border-radius:10px;border:none;background:var(--ok);color:#06231a;font-weight:800}
+#addrResults{margin-bottom:8px}
+#addrResults button{display:block;width:100%;text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#1c2540;margin-bottom:4px;font-size:13px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:none;font-size:13px}
+.chip.on{background:var(--now);border-color:var(--now);color:#fff;font-weight:800}
+.actions{display:flex;gap:8px;margin-top:18px}
+.actions button{flex:1;padding:13px;border-radius:12px;border:none;font-weight:800;font-size:15px}
+.cancel{background:#26304d;color:var(--sub)}
+.submit{background:var(--now);color:#fff}
+.submit.plan{background:var(--plan)}
+.submit:disabled{opacity:.4}
+.rules{font-size:13px;line-height:1.8;color:#cfd7f2}
+.rules li{margin-left:1.2em}
+/* popup */
+.leaflet-popup-content-wrapper{background:var(--panel);color:var(--ink);border-radius:12px}
+.leaflet-popup-tip{background:var(--panel)}
+.leaflet-popup-content{margin:12px 14px;font-family:"M PLUS 1p",sans-serif}
+.pp .t{font-weight:800;font-size:15px}
+.pp .m{font-size:12px;color:var(--sub);margin:3px 0}
+.pp .c{font-size:13px;margin:4px 0;word-break:break-all}
+.pp a{color:var(--plan);font-size:12px;margin-right:10px}
+.pp button{background:none;border:1px solid #6b3a3a;color:#ff9b9b;border-radius:8px;padding:3px 8px;font-size:12px;margin-top:6px}
+.ppb{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.pp button.ok{border-color:#2f6b55;color:var(--ok)}
+.warn{font-size:12px;color:#ffb347;font-weight:800;margin-top:4px}
+.reasons button{display:block;width:100%;text-align:left;padding:12px;border-radius:10px;border:1px solid var(--line);background:#1c2540;margin-bottom:6px;font-size:15px}
+.pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.pin.now{background:var(--now)}.pin.plan{background:var(--plan)}
+.pin.now::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--now);animation:pulse 1.6s infinite}
+@keyframes pulse{from{opacity:.9;transform:scale(.6)}to{opacity:0;transform:scale(1.4)}}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);background:#000c;padding:8px 14px;border-radius:999px;font-size:13px;display:none;z-index:3000}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>ベイ<span>出没</span>マップ</h1>
+    <div class="sp"></div>
+    <button class="ghost" id="locateMe">現在地へ</button>
+    <button class="ghost" id="showRules">ルール</button>
+  </header>
+  <div id="banner">テストモード：サーバー未接続のため、この端末の中だけに保存しています</div>
+  <div id="map"></div>
+  <div id="sheet">
+    <div class="tabs">
+      <button class="tab now on" data-tab="now">いまいる<b id="cNow">0</b></button>
+      <button class="tab plan" data-tab="plan">出没予定<b id="cPlan">0</b></button>
+    </div>
+    <div id="list"></div>
+    <div class="fabs">
+      <button class="fab now" id="openNow">📍 いまここにいる</button>
+      <button class="fab plan" id="openPlan">＋ 出没予定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 投稿フォーム -->
+<div class="modal" id="formModal">
+  <div class="card">
+    <h2 id="formTitle">チェックイン</h2>
+    <label class="f">場所（3つの方法から選べます）</label>
+    <div class="locbtns">
+      <button data-m="pin" class="on">地図にピン</button>
+      <button data-m="addr">住所で探す</button>
+      <button data-m="gps">現在地</button>
+    </div>
+    <div class="addr" id="addrBox"><input type="text" id="addrQ" placeholder="例：世田谷区北沢2丁目 / 代々木公園"><button id="addrGo">検索</button></div>
+    <div id="addrResults"></div>
+    <div id="pickmap"></div>
+    <div class="hint" id="locHint">地図をタップしてピンを刺してください。ピンはドラッグで動かせます。</div>
+
+    <label class="f">場所の名前（任意）</label>
+    <input type="text" id="fPlace" maxlength="40" placeholder="例：〇〇公園の東屋、△△ショップ前">
+
+    <div id="nowFields">
+      <label class="f">ここにいる時間</label>
+      <div class="chips" id="durChips">
+        <button class="chip" data-h="1">1時間</button>
+        <button class="chip on" data-h="2">2時間</button>
+        <button class="chip" data-h="3">3時間</button>
+        <button class="chip" data-h="5">5時間</button>
+      </div>
+      <div class="hint">時間がたつと自動で消えます。位置の追跡はしません。</div>
+    </div>
+    <div id="planFields" style="display:none">
+      <label class="f">日付</label>
+      <input type="date" id="fDate">
+      <div class="row">
+        <div><label class="f">開始</label><input type="time" id="fStart" value="14:00"></div>
+        <div><label class="f">終了</label><input type="time" id="fEnd" value="17:00"></div>
+      </div>
+    </div>
+
+    <label class="f">ブレーダー名</label>
+    <input type="text" id="fName" maxlength="20" placeholder="ニックネーム">
+    <label class="f">ひとこと（任意）</label>
+    <textarea id="fComment" maxlength="120" placeholder="例：誰でも対戦歓迎！スタジアム持ってます"></textarea>
+
+    <div class="hint err" id="formErr"></div>
+    <div class="actions">
+      <button class="cancel" id="formCancel">やめる</button>
+      <button class="submit" id="formSubmit">チェックイン</button>
+    </div>
+  </div>
+</div>
+
+<!-- ルール / 初回確認 -->
+<div class="modal" id="rulesModal">
+  <div class="card">
+    <h2>ベイ出没マップのルール</h2>
+    <ul class="rules">
+      <li>18歳以上の方が使うアプリです。</li>
+      <li>投稿した場所・名前・ひとことは<b>誰でも見られます</b>。</li>
+      <li>自宅や職場など、個人の場所は登録しないでください。公園・ショップなど公共の場所で。</li>
+      <li>位置の追跡はしません。チェックインした1点だけが、決めた時間だけ表示されます。</li>
+      <li>初めて会う相手とは人の多い場所で。危ないと感じたら会わないで大丈夫です。</li>
+      <li>自分の投稿は、同じ端末からいつでも消せます。</li>
+      <li>困った投稿はピンを開いて「通報」できます。何人かから通報されると自動で見えなくなります。</li>
+    </ul>
+    <div class="actions">
+      <button class="submit" id="rulesOk">18歳以上です・同意して使う</button>
+    </div>
+  </div>
+</div>
+
+<!-- 確認ダイアログ -->
+<div class="modal" id="confirmModal">
+  <div class="card">
+    <h2 id="confirmText">この投稿を消しますか？</h2>
+    <div class="actions">
+      <button class="cancel" id="confirmNo">やめる</button>
+      <button class="submit" id="confirmYes">消す</button>
+    </div>
+  </div>
+</div>
+<!-- 通報 -->
+<div class="modal" id="reportModal">
+  <div class="card">
+    <h2>この投稿を通報する</h2>
+    <div class="hint" style="margin-bottom:10px">理由を選んでください。複数の人から通報された投稿は自動で見えなくなります。</div>
+    <div id="reportReasons" class="reasons">
+      <button>迷惑・いたずら</button><button>個人の住所・職場</button><button>不適切な内容</button><button>その他</button>
+    </div>
+    <div class="actions"><button class="cancel" id="reportCancel">やめる</button></div>
+  </div>
+</div>
+<!-- 管理者 -->
+<div class="modal" id="adminModal">
+  <div class="card">
+    <h2>管理者モード</h2>
+    <label class="f">管理者キー</label>
+    <input type="text" id="adminKey" autocomplete="off">
+    <div class="hint err" id="adminMsg"></div>
+    <div class="actions">
+      <button class="cancel" id="adminCancel">閉じる</button>
+      <button class="cancel" id="adminOut">終了</button>
+      <button class="submit" id="adminOk">入る</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(() => {
+const API = '/api/bey/posts';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', 2400); };
+
+/* ---------- データ（サーバー／テストモード） ---------- */
+let demo = false;
+let adminKey = store.get('bey_admin_key', '');
+const hdr = (h = {}) => adminKey ? { ...h, 'x-admin-key': adminKey } : h;
+const reported = store.get('bey_reported', {});
+const myTokens = store.get('bey_tokens', {}); // id -> 削除用トークン
+const backend = {
+  async list() {
+    if (!demo) {
+      try {
+        const r = await fetch(API, { cache: 'no-store', headers: hdr() });
+        if (r.ok && (r.headers.get('content-type') || '').includes('json')) return (await r.json()).posts;
+      } catch {}
+      demo = true; $('#banner').style.display = 'block';
+    }
+    const now = Date.now();
+    return store.get('bey_demo_posts', []).filter(p => p.end > now);
+  },
+  async add(p) {
+    if (!demo) {
+      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(p) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || '登録できませんでした');
+      myTokens[j.id] = j.token; store.set('bey_tokens', myTokens); return;
+    }
+    const id = Math.random().toString(36).slice(2, 10);
+    const all = store.get('bey_demo_posts', []);
+    all.push({ ...p, id, created: Date.now() });
+    store.set('bey_demo_posts', all);
+    myTokens[id] = 'demo'; store.set('bey_tokens', myTokens);
+  },
+  async remove(id) {
+    if (!demo) {
+      const r = await fetch(API + '/' + encodeURIComponent(id), { method: 'DELETE', headers: hdr({ 'x-delete-token': myTokens[id] || '' }) });
+      if (!r.ok) throw new Error('消せませんでした');
+    } else {
+      store.set('bey_demo_posts', store.get('bey_demo_posts', []).filter(p => p.id !== id));
+    }
+    delete myTokens[id]; store.set('bey_tokens', myTokens);
+  },
+  async report(id, reason) {
+    if (!demo) {
+      const r = await fetch(API + '/' + encodeURIComponent(id) + '/report', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || '通報できませんでした');
+    }
+    reported[id] = 1; store.set('bey_reported', reported);
+  },
+  async restore(id) {
+    const r = await fetch(API + '/' + encodeURIComponent(id) + '/restore', { method: 'POST', headers: hdr() });
+    if (!r.ok) throw new Error('戻せませんでした');
+  }
+};
+
+/* ---------- 地図 ---------- */
+const TILE = 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png';
+const ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a>';
+const last = store.get('bey_view', { lat: 35.6681, lng: 139.6720, z: 14 }); // 初期表示：下北沢周辺
+const map = L.map('map', { zoomControl: false }).setView([last.lat, last.lng], last.z);
+L.tileLayer(TILE, { attribution: ATTR, maxZoom: 18 }).addTo(map);
+map.on('moveend', () => { const c = map.getCenter(); store.set('bey_view', { lat: c.lat, lng: c.lng, z: map.getZoom() }); });
+const icon = kind => L.divIcon({ className: '', html: `<div class="pin ${kind}"></div>`, iconSize: [26, 26], iconAnchor: [13, 30], popupAnchor: [0, -28] });
+const layer = L.layerGroup().addTo(map);
+
+/* ---------- 一覧 ---------- */
+let posts = [], tab = 'now';
+const fmtTime = t => { const d = new Date(t); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const fmtDay = t => {
+  const d = new Date(t), today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((new Date(d).setHours(0, 0, 0, 0) - today) / 864e5);
+  const w = '日月火水木金土'[d.getDay()];
+  if (diff === 0) return '今日'; if (diff === 1) return '明日';
+  return `${d.getMonth() + 1}/${d.getDate()}(${w})`;
+};
+const isNowActive = p => p.start <= Date.now() && p.end > Date.now();
+const kindOf = p => (p.kind === 'now' || isNowActive(p)) ? 'now' : 'plan';
+const timeLabel = p => p.kind === 'now'
+  ? `${fmtTime(p.created || p.start)}にチェックイン・${fmtTime(p.end)}まで`
+  : `${fmtDay(p.start)} ${fmtTime(p.start)}〜${fmtTime(p.end)}${isNowActive(p) ? '（いま出没中）' : ''}`;
+
+const adminTag = p => adminKey && (p.reports || p.hidden) ? `<div class="warn">⚠ 通報${p.reports || 0}件${p.hidden ? '・非表示中' : ''}</div>` : '';
+function popupHtml(p) {
+  const g = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+  return `<div class="pp"><div class="t">${esc(p.name)}</div>
+    <div class="m">${esc(timeLabel(p))}</div>
+    ${p.place ? `<div class="m">📍 ${esc(p.place)}</div>` : ''}
+    ${p.comment ? `<div class="c">${esc(p.comment)}</div>` : ''}
+    <a href="${g}" target="_blank" rel="noopener">地図アプリで開く</a>
+    ${adminTag(p)}
+    <div class="ppb">${myTokens[p.id] ? `<button data-del="${esc(p.id)}">自分の投稿を消す</button>`
+      : (reported[p.id] ? '<span class="m">通報済み</span>' : `<button data-report="${esc(p.id)}">通報</button>`)}
+    ${adminKey && !myTokens[p.id] ? `<button data-del="${esc(p.id)}">管理者として消す</button>` : ''}
+    ${adminKey && p.hidden ? `<button data-restore="${esc(p.id)}" class="ok">表示に戻す</button>` : ''}</div></div>`;
+}
+const markers = {};
+function render() {
+  layer.clearLayers();
+  const nowList = posts.filter(p => kindOf(p) === 'now').sort((a, b) => b.start - a.start);
+  const planList = posts.filter(p => kindOf(p) === 'plan').sort((a, b) => a.start - b.start);
+  $('#cNow').textContent = nowList.length; $('#cPlan').textContent = planList.length;
+  posts.forEach(p => {
+    const m = L.marker([p.lat, p.lng], { icon: icon(kindOf(p)) }).bindPopup(popupHtml(p)).addTo(layer);
+    markers[p.id] = m;
+  });
+  const list = tab === 'now' ? nowList : planList;
+  $('#list').innerHTML = list.length ? list.map(p => `
+    <div class="item" data-id="${esc(p.id)}">
+      <div class="dot" style="background:var(--${kindOf(p)})"></div>
+      <div><div class="t">${esc(p.name)}${myTokens[p.id] ? ' <small style="color:var(--ok)">（自分）</small>' : ''}</div>
+      <div class="m">${esc(timeLabel(p))}${p.place ? '・' + esc(p.place) : ''}</div>
+      ${p.comment ? `<div class="c">${esc(p.comment)}</div>` : ''}${adminTag(p)}</div>
+    </div>`).join('')
+    : `<div class="empty">${tab === 'now' ? 'いまチェックインしているブレーダーはいません' : '登録された出没予定はまだありません'}</div>`;
+}
+async function refresh() { posts = await backend.list(); render(); }
+
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+$('#list').onclick = e => {
+  const it = e.target.closest('.item'); if (!it) return;
+  const p = posts.find(x => x.id === it.dataset.id); if (!p) return;
+  map.setView([p.lat, p.lng], Math.max(map.getZoom(), 16)); markers[p.id]?.openPopup();
+};
+
+/* ---------- 削除 ---------- */
+let pendingDel = null;
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  pendingDel = b.dataset.del; $('#confirmModal').classList.add('show');
+});
+let pendingReport = null;
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-report]'); if (!b) return;
+  pendingReport = b.dataset.report; $('#reportModal').classList.add('show');
+});
+$('#reportCancel').onclick = () => $('#reportModal').classList.remove('show');
+$('#reportReasons').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('#reportModal').classList.remove('show');
+  try { await backend.report(pendingReport, b.textContent); map.closePopup(); toast('通報しました。ご協力ありがとうございます'); await refresh(); }
+  catch (err) { toast(err.message); }
+};
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-restore]'); if (!b) return;
+  try { await backend.restore(b.dataset.restore); map.closePopup(); toast('表示に戻しました'); await refresh(); }
+  catch (err) { toast(err.message); }
+});
+$('#confirmNo').onclick = () => $('#confirmModal').classList.remove('show');
+$('#confirmYes').onclick = async () => {
+  $('#confirmModal').classList.remove('show');
+  try { await backend.remove(pendingDel); map.closePopup(); toast('消しました'); await refresh(); }
+  catch (err) { toast(err.message); }
+};
+
+/* ---------- 現在地（1回だけ取得・追跡しない） ---------- */
+function getHere() {
+  return new Promise((ok, ng) => {
+    if (!navigator.geolocation) return ng(new Error('この端末では現在地が使えません'));
+    navigator.geolocation.getCurrentPosition(
+      p => ok({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }),
+      e => ng(new Error(e.code === 1 ? '位置情報の利用が許可されていません（設定で許可してください）' : '現在地を取得できませんでした')),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+  });
+}
+$('#locateMe').onclick = async () => {
+  try { const h = await getHere(); map.setView([h.lat, h.lng], 16); } catch (e) { toast(e.message); }
+};
+
+/* ---------- 投稿フォーム ---------- */
+let mode = 'now', pick = null, pickMap = null, pickMarker = null, dur = 2;
+function setPick(lat, lng, how) {
+  pick = { lat: +lat.toFixed(6), lng: +lng.toFixed(6) };
+  if (!pickMarker) {
+    pickMarker = L.marker([lat, lng], { draggable: true, icon: icon(mode) }).addTo(pickMap);
+    pickMarker.on('dragend', () => { const ll = pickMarker.getLatLng(); pick = { lat: +ll.lat.toFixed(6), lng: +ll.lng.toFixed(6) }; hint('ピンの位置を調整しました', 'ok'); });
+  } else { pickMarker.setLatLng([lat, lng]); pickMarker.setIcon(icon(mode)); }
+  pickMap.setView([lat, lng], Math.max(pickMap.getZoom(), 16));
+  hint(how + '：ここで登録します。ずれていたらピンをドラッグで調整できます。', 'ok');
+  validate();
+}
+const hint = (msg, cls = '') => { const h = $('#locHint'); h.textContent = msg; h.className = 'hint ' + cls; };
+function setLocMode(m) {
+  document.querySelectorAll('.locbtns button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  $('#addrBox').classList.toggle('show', m === 'addr');
+  $('#addrResults').innerHTML = '';
+  if (m === 'pin') hint(pick ? 'ピンをドラッグするか、地図をタップして場所を変えられます。' : '地図をタップしてピンを刺してください。', pick ? 'ok' : '');
+  if (m === 'addr') { hint('住所や施設名を入れて検索してください。'); setTimeout(() => $('#addrQ').focus(), 50); }
+  if (m === 'gps') {
+    hint('現在地を取得しています…（この1回だけです）');
+    getHere().then(h => setPick(h.lat, h.lng, `現在地（誤差 約${Math.round(h.acc)}m）`)).catch(e => hint(e.message, 'err'));
+  }
+}
+document.querySelectorAll('.locbtns button').forEach(b => b.onclick = () => setLocMode(b.dataset.m));
+
+async function searchAddr() {
+  const q = $('#addrQ').value.trim(); if (!q) return;
+  $('#addrResults').innerHTML = '<div class="hint">検索中…</div>';
+  try {
+    const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q));
+    const arr = (await r.json()).slice(0, 6);
+    if (!arr.length) { $('#addrResults').innerHTML = '<div class="hint err">見つかりませんでした。表記を変えて試してください。</div>'; return; }
+    $('#addrResults').innerHTML = arr.map((a, i) => `<button data-i="${i}">${esc(a.properties.title)}</button>`).join('');
+    $('#addrResults').onclick = e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const a = arr[+b.dataset.i]; const [lng, lat] = a.geometry.coordinates;
+      $('#addrResults').innerHTML = '';
+      if (!$('#fPlace').value) $('#fPlace').value = a.properties.title.slice(0, 40);
+      setPick(lat, lng, '住所');
+    };
+  } catch { $('#addrResults').innerHTML = '<div class="hint err">検索できませんでした。通信状況を確認してください。</div>'; }
+}
+$('#addrGo').onclick = searchAddr;
+$('#addrQ').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); searchAddr(); } };
+
+document.querySelectorAll('#durChips .chip').forEach(c => c.onclick = () => {
+  dur = +c.dataset.h; document.querySelectorAll('#durChips .chip').forEach(x => x.classList.toggle('on', x === c));
+});
+
+function openForm(m) {
+  mode = m; pick = null; $('#formErr').textContent = '';
+  $('#formTitle').textContent = m === 'now' ? '📍 いまここにいる（チェックイン）' : '＋ 出没予定を登録';
+  $('#formSubmit').textContent = m === 'now' ? 'チェックイン' : '予定を登録';
+  $('#formSubmit').classList.toggle('plan', m === 'plan');
+  $('#nowFields').style.display = m === 'now' ? '' : 'none';
+  $('#planFields').style.display = m === 'plan' ? '' : 'none';
+  $('#fName').value = store.get('bey_name', '');
+  $('#fComment').value = ''; $('#fPlace').value = '';
+  const d = new Date(); $('#fDate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  $('#formModal').classList.add('show');
+  setTimeout(() => {
+    if (!pickMap) {
+      pickMap = L.map('pickmap', { zoomControl: false, attributionControl: false }).setView(map.getCenter(), map.getZoom());
+      L.tileLayer(TILE, { maxZoom: 18 }).addTo(pickMap);
+      pickMap.on('click', e => { setLocMode('pin'); setPick(e.latlng.lat, e.latlng.lng, 'ピン'); });
+    } else {
+      pickMap.setView(map.getCenter(), map.getZoom());
+      if (pickMarker) { pickMap.removeLayer(pickMarker); pickMarker = null; }
+    }
+    pickMap.invalidateSize();
+    setLocMode(m === 'now' ? 'gps' : 'pin');
+    validate();
+  }, 30);
+}
+function validate() { $('#formSubmit').disabled = !pick; }
+$('#openNow').onclick = () => openForm('now');
+$('#openPlan').onclick = () => openForm('plan');
+$('#formCancel').onclick = () => $('#formModal').classList.remove('show');
+$('#formSubmit').onclick = async () => {
+  const err = m => $('#formErr').textContent = m;
+  const name = $('#fName').value.trim();
+  if (!pick) return err('場所を決めてください');
+  if (!name) return err('ブレーダー名を入れてください');
+  let start, end;
+  if (mode === 'now') { start = Date.now(); end = start + dur * 3600e3; }
+  else {
+    const day = $('#fDate').value; if (!day) return err('日付を選んでください');
+    start = new Date(`${day}T${$('#fStart').value || '00:00'}`).getTime();
+    end = new Date(`${day}T${$('#fEnd').value || '00:00'}`).getTime();
+    if (end <= start) end += 864e5; // 日付をまたぐ予定
+    if (end <= Date.now()) return err('終わった時間の予定は登録できません');
+    if (end - start > 12 * 3600e3) return err('予定は12時間以内にしてください');
+    if (start - Date.now() > 60 * 864e5) return err('60日先までの予定にしてください');
+  }
+  store.set('bey_name', name);
+  $('#formSubmit').disabled = true;
+  try {
+    await backend.add({ kind: mode, name, comment: $('#fComment').value.trim(), place: $('#fPlace').value.trim(), lat: pick.lat, lng: pick.lng, start, end });
+    $('#formModal').classList.remove('show');
+    toast(mode === 'now' ? 'チェックインしました' : '予定を登録しました');
+    tab = mode; document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+    map.setView([pick.lat, pick.lng], Math.max(map.getZoom(), 15));
+    await refresh();
+  } catch (e) { err(e.message); validate(); }
+};
+
+/* ---------- ルール ---------- */
+$('#showRules').onclick = () => $('#rulesModal').classList.add('show');
+$('#rulesOk').onclick = () => { store.set('bey_agreed', true); $('#rulesModal').classList.remove('show'); };
+if (!store.get('bey_agreed', false)) $('#rulesModal').classList.add('show');
+
+async function adminLogin() {
+  $('#adminModal').classList.add('show'); $('#adminKey').value = adminKey; $('#adminMsg').textContent = '';
+}
+$('#adminCancel').onclick = () => { $('#adminModal').classList.remove('show'); history.replaceState(null, '', location.pathname); };
+$('#adminOut').onclick = () => { adminKey = ''; store.set('bey_admin_key', ''); $('#adminModal').classList.remove('show'); toast('管理者モードを終了しました'); refresh(); };
+$('#adminOk').onclick = async () => {
+  const k = $('#adminKey').value.trim();
+  try {
+    const r = await fetch(API + '?check-admin=1', { headers: { 'x-admin-key': k } });
+    const j = await r.json();
+    if (!j.admin) { $('#adminMsg').textContent = 'キーが違います'; return; }
+    adminKey = k; store.set('bey_admin_key', k);
+    $('#adminModal').classList.remove('show'); toast('管理者モードです'); refresh();
+  } catch { $('#adminMsg').textContent = '確認できませんでした'; }
+};
+if (location.hash === '#admin') adminLogin();
+window.addEventListener('hashchange', () => { if (location.hash === '#admin') adminLogin(); });
+
+refresh();
+setInterval(refresh, 30000); // 30秒ごとに最新化（自分の位置は送らない）
+})();
+</script>
+</body>
+</html>

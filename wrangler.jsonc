@@ -8,5 +8,10 @@
     "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
-  }
+  },
+  // ベイ出没マップ（/bey/）の投稿を保存する場所
+  "durable_objects": {
+    "bindings": [{ "name": "BEY_STORE", "class_name": "BeyStore" }]
+  },
+  "migrations": [{ "tag": "bey-v1", "new_sqlite_classes": ["BeyStore"] }]
 }
