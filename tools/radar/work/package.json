@@ -1,0 +1,7 @@
+{
+  "name": "beybe-radar-checks",
+  "private": true,
+  "type": "commonjs",
+  "scripts": { "test": "node run-checks.cjs" },
+  "devDependencies": { "happy-dom": "21.0.4" }
+}

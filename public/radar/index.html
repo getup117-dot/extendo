@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="ベイブレーダーの現在地と出没予定を共有するマップ。位置共有は任意・時間制限つき。">
+<title>Beybe Radar（ベイブレーダー）｜出没マップ</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://tile.openstreetmap.org">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="header">
+  <div class="brand"><img class="brand-logo" src="assets/beybe-radar-logo.png" alt="Beybe Radar（ベイブレーダー）" width="2172" height="724"></div>
+  <div class="header-right"><span id="modeBadge" class="mode-badge">デモモード</span><button class="top-button" data-action="settings">設定</button></div>
+</header>
+<div class="layout">
+  <aside class="side" id="sidePanel">
+    <button class="sheet-handle" data-action="toggle-sheet" aria-label="地図を広く表示" aria-expanded="true">リストをたたむ</button>
+    <div class="sidehead"><div class="eyebrow">FIND YOUR BATTLE</div><h1 id="panelTitle">いま、誰がいる？</h1><p id="panelDesc">いまいる人と、これから集まる予定をチェック。</p></div>
+    <nav class="tabbar" aria-label="表示切り替え"><button class="tab active" data-tab="now">いまいる</button><button class="tab" data-tab="plans">出没予定</button><button class="tab" data-tab="account">マイページ</button></nav>
+    <div id="connectionStatus" class="connection-status" role="status"></div>
+    <div id="filterBar" class="filter-bar" hidden><input id="listSearch" type="search" placeholder="場所・名前・予定を検索" aria-label="場所・名前・予定を検索"><div id="planFilters" class="filter-options"><button class="filter active" data-filter="all">すべて</button><button class="filter" data-filter="today">今日</button><button class="filter" data-filter="joined">参加予定</button><button class="filter" data-filter="mine">自分の予定</button></div></div>
+    <div id="panelContent" class="scroll" aria-live="polite"></div>
+    <div class="actionbar"><button id="mainAction" class="btn primary wide" data-action="new-event">＋ 出没予定を登録</button><button class="btn outline" data-action="center-map" aria-label="東京の地図を見る">⌖</button></div>
+  </aside>
+  <section class="map-wrap" aria-label="ベイブレーダーの位置と出没予定の地図">
+    <div id="map" class="map"></div><div id="mapFallback" class="mapfallback"><div>地図を読み込めませんでした。<br>インターネット接続を確認してください。<br>予定リストなどはそのまま操作できます。</div></div>
+    <div class="map-search" id="mapSearchPanel">
+      <form id="mapSearchForm" class="map-search-form" role="search" aria-label="地図の場所を検索">
+        <span class="search-symbol" aria-hidden="true">⌕</span>
+        <input id="mapSearch" type="search" placeholder="場所・住所を検索" aria-label="地図の場所・住所を検索" enterkeyhint="search" autocomplete="off">
+        <button class="search-submit" id="mapSearchSubmit" type="submit">検索</button>
+      </form>
+      <div id="mapSearchResults" class="map-search-results" aria-live="polite" hidden></div>
+    </div>
+    <div class="map-top"><div class="map-keys"><button class="mapchip" data-action="show-people"><i class="person-key" aria-hidden="true"></i><span id="mapPeople">いまいる 0人</span></button><button class="mapchip" data-action="show-plans"><i class="event-key" aria-hidden="true"></i><span id="mapPlans">出没予定 0件</span></button></div><div id="mapTypeBadge" class="mapchip">デモデータ</div></div>
+    <div class="mapfloat"><button class="roundbtn" data-action="go-gps" title="GPSで現在地へ" aria-label="GPSで現在地へ">⌖</button><button class="roundbtn" data-action="new-event" title="出没予定を登録" aria-label="出没予定を登録">＋</button></div>
+    <div id="pickPrompt" class="location-picker" hidden><span id="pickText">地図をタップして場所を指定してください</span> <button data-action="cancel-pick" class="pick-cancel">キャンセル</button></div>
+    <div id="mapLoadStatus" class="map-load-status" role="status" hidden></div>
+    <section id="selectedPlace" class="selected-place" aria-label="選んだ場所" hidden>
+      <div class="selected-top"><span class="selected-tag">選んだ場所</span><button class="xbtn" data-action="close-place" aria-label="選んだ場所を閉じる">×</button></div>
+      <label class="sr-only" for="selectedName">選んだ場所の名前</label><input id="selectedName" maxlength="100" placeholder="この場所の名前">
+      <p id="selectedDetail" class="selected-detail"></p>
+      <button id="saveSpotButton" class="save-spot" data-action="save-spot">☆ この場所を保存</button>
+      <div class="selected-actions"><button class="btn teal" data-action="register-here">ここにいる</button><button class="btn primary" data-action="event-here">出没予定を登録</button></div>
+      <p class="selected-note" id="selectedNote">「ここにいる」は概略位置を5分間登録します。</p>
+    </section>
+    <section id="mapEvent" class="selected-place map-event" aria-labelledby="mapEventTitle" hidden>
+      <div class="selected-top"><span class="event-kicker"><i class="event-key" aria-hidden="true"></i><span id="mapEventStatus">出没予定</span></span><button class="xbtn" data-action="close-place" aria-label="予定の詳細を閉じる">×</button></div>
+      <h2 id="mapEventTitle" tabindex="-1"></h2>
+      <div class="map-event-scroll">
+        <p id="mapEventTime" class="map-event-time"></p>
+        <a id="mapEventPlace" class="map-event-place" target="_blank" rel="noopener noreferrer"></a>
+        <p class="event-stadium" id="mapEventStadium"></p>
+        <p id="mapEventNote" class="card-note"></p>
+        <div class="map-event-host"><span id="mapEventHost"></span><div id="mapEventBadges"></div></div>
+      </div>
+      <div class="map-event-foot"><span id="mapEventCount"></span><button id="mapEventAction" class="btn" type="button"></button></div>
+    </section>
+  </section>
+</div>
+<nav class="mobile-nav" aria-label="メインメニュー">
+  <button class="mobile-tab active" data-tab="now"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></svg><span>マップ</span></button>
+  <button class="mobile-tab" data-tab="plans"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4M16 3v4M4 11h16M8 15h3M8 18h6"/></svg><span>出没予定</span></button>
+  <button class="mobile-tab" data-tab="account"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>マイページ</span></button>
+</nav>
+<div id="eventOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-label="出没予定の登録"><div class="modal">
+  <div class="modal-head"><h2 id="eventDialogTitle">出没予定を登録</h2><button class="xbtn" data-action="close-event" aria-label="閉じる">×</button></div>
+  <form id="eventForm" class="form-col"><input type="hidden" id="editId">
+    <div class="field"><label for="eventTitle">タイトル</label><input id="eventTitle" maxlength="60" required placeholder="例：秋葉原でフリーバトル"></div>
+    <div class="grid2"><div class="field"><label for="eventDate">開始日</label><input id="eventDate" type="date" required></div><div class="field"><label for="eventStart">開始時刻</label><input id="eventStart" type="time" required></div></div>
+    <div class="grid2"><div class="field"><label for="eventEndDate">終了日</label><input id="eventEndDate" type="date" required></div><div class="field"><label for="eventEnd">終了時刻</label><input id="eventEnd" type="time" required></div></div><div class="field"><label for="eventPlace">場所・施設名</label><input id="eventPlace" maxlength="100" required placeholder="秋葉原の○○店"></div>
+    <div class="field"><label for="placeQuery">地図上の位置（必須）</label><div class="searchline"><input id="placeQuery" placeholder="施設名・住所・緯度,経度・マップURL" autocomplete="off"><button type="button" class="btn subtle" data-action="search-place">検索</button></div><div id="placeResults" class="search-results"></div><button type="button" class="btn outline" data-action="pick-map">地図をタップして指定</button><div class="help" id="coordText">位置はまだ選ばれていません。地図タップや検索結果から選択してください。</div></div>
+    <div class="field"><label for="eventStadium">当日のスタジアム</label><select id="eventStadium"></select></div>
+    <div class="field"><label for="eventDetail">ひとこと（任意）</label><textarea id="eventDetail" maxlength="300" placeholder="対戦歓迎、初心者OK、持ち物など"></textarea></div>
+    <div class="notice">出没予定は登録ユーザー全員に公開されます。自宅など個人を特定できる住所は登録しないでください。</div>
+    <button class="btn primary wide" type="submit" id="eventSave">予定を登録する</button>
+  </form>
+</div></div>
+<div id="settingsOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-label="接続設定"><div class="modal">
+  <div class="modal-head"><h2>接続設定（開発用）</h2><button class="xbtn" data-action="close-settings" aria-label="閉じる">×</button></div>
+  <div class="form-col"><p class="hint">デモモードでは、このブラウザ内だけに保存されます。複数人で共有するには、Supabaseプロジェクトと付属の <code>schema.sql</code> を用意してください。</p>
+  <div class="field"><label for="sbUrl">Supabase Project URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co" inputmode="url"></div>
+  <div class="field"><label for="sbKey">Publishable key / anon public key</label><textarea id="sbKey" style="min-height:68px" placeholder="sb_publishable_... または eyJ..."></textarea><div class="help">公開用のキーだけを指定。<strong>service_role / secret キーは絶対に入力しないでください。</strong></div></div>
+  <button class="btn teal wide" data-action="connect-supabase">Supabaseに接続</button><button class="btn outline wide" data-action="use-demo">デモモードで利用する</button><p class="help">接続設定はこのブラウザに保存されます。実利用にはHTTPSでの公開とメール認証設定が必要です。</p>
+  </div>
+</div></div>
+<div id="confirmOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modal"><div class="modal-head"><h2 id="confirmTitle">確認</h2><button class="xbtn" data-action="confirm-no" aria-label="閉じる">×</button></div><p id="confirmMessage" class="hint"></p><div class="confirm-actions"><button class="btn outline" data-action="confirm-no">キャンセル</button><button class="btn primary" data-action="confirm-yes" id="confirmYes">削除する</button></div></div></div>
+<div id="reportOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="modal"><div class="modal-head"><h2 id="reportTitle">通報する</h2><button class="xbtn" data-action="close-report" aria-label="閉じる">×</button></div><p class="hint">理由を選んでください。3人から通報されると自動で見えなくなります。</p><div class="report-reasons"><button class="btn outline wide" data-action="report-reason" data-reason="迷惑・いたずら">迷惑・いたずら</button><button class="btn outline wide" data-action="report-reason" data-reason="個人の住所・職場">個人の住所・職場</button><button class="btn outline wide" data-action="report-reason" data-reason="不適切な内容">不適切な内容</button><button class="btn outline wide" data-action="report-reason" data-reason="その他">その他</button></div></div></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body></html>
