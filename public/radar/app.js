@@ -216,7 +216,7 @@
       const ready=!!state.profiles.find(profile=>profile.id===p.user_id)?.battle_ready;
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
       const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready)).addTo(state.map)
-        .bindPopup(`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>`);
+        .bindPopup(`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>`);
       labelMarker(m,label);
       m.on('click',()=>{
         closePlace();
@@ -297,7 +297,7 @@
           <span class="avatar">${esc(initial(nameFor(person.user_id)))}</span>
           <div class="person-name">
             <strong>${esc(nameFor(person.user_id))}${person.user_id === selfId() ? '（あなた）' : ''}</strong>
-            <div class="person-sub">${esc(ago(person.updated_at))}更新・${person.precision === 'approx' ? '約500m表示' : '詳細表示'}</div>
+            <div class="person-sub">${esc(ago(person.updated_at))}更新・${person.precision === 'approx' ? '約500m表示' : person.kind === 'checkin' ? '地点を指定' : '詳細表示'}</div>
           </div>
           <span class="pill">共有中</span>
         </div>
@@ -565,13 +565,13 @@
   const CHECKIN_CHOICES=[30,60,120,180,360];
   const minutesLabel=m=>m<60?`${m}分`:`${m/60}時間`;
   function checkinMinutes(){const v=Number($('checkinDuration')?.value);return CHECKIN_CHOICES.includes(v)?v:60;}
-  function updateCheckinNote(){const m=checkinMinutes();$('selectedNote').textContent=state.mode==='demo'?`「ここにいる」は約500mの概略位置を${minutesLabel(m)}、端末内に登録します。`:`「ここにいる」は約500mの概略位置を${minutesLabel(m)}、利用者に共有します。あとから停止できます。`;}
+  function updateCheckinNote(){const m=checkinMinutes();$('selectedNote').textContent=state.mode==='demo'?`「ここにいる」は選んだ地点を${minutesLabel(m)}、端末内に登録します。`:`「ここにいる」は選んだ地点を${minutesLabel(m)}、利用者に共有します。あとから停止できます。`;}
   async function registerHere() {
     const place=selectedPoint();if(!place)return;
     if(!logged())throw Error('ログインしてください');
     if(state.share||activePeople().some(p=>p.user_id===selfId()))await stopShare(true);
     const minutes=checkinMinutes();storage.set(CHECKIN_KEY,minutes);
-    const token=shares.begin();state.share={token,until:Date.now()+minutes*60000,kind:'manual',privacy:'approx',phase:'locating'};
+    const token=shares.begin();state.share={token,until:Date.now()+minutes*60000,kind:'manual',privacy:'exact',phase:'locating'};
     try{
       const sent=await publishLocation(place,Date.now(),token);if(!sent)throw Error('地点を登録できませんでした');
       state.stopFailed=false;closePlace();showMapTab();notify(state.mode==='demo'?`この場所にいる状態を${minutesLabel(minutes)}登録しました`:`この場所を${minutesLabel(minutes)}共有します`);
