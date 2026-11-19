@@ -443,16 +443,15 @@ $('#file').addEventListener('change',async e=>{
   await once(vid,'loadedmetadata',10000);
   if(!vid.videoWidth){$('#loadMsg').textContent='この動画は読み込めませんでした。別の動画で試してください。';return;}
   $('#loadMsg').textContent='読み込み中…（最初のコマを用意しています）';
-  try{await within(vid.play(),2000);vid.pause();}catch(_){}
-  await once(vid,'loadeddata',1500);
+  try{await within(vid.play(),800);vid.pause();}catch(_){}
+  if(vid.readyState<2)await once(vid,'loadeddata',1500);
   S.dur=vid.duration;S.vw=vid.videoWidth;S.vh=vid.videoHeight;
-  $('#loadMsg').textContent='読み込み中…（コマ数を調べています）';
-  let fi=null;try{fi=await within(readFps(f),4000);}catch(_){}
-  S.fps=fi&&fi.fps>5&&fi.fps<1000?fi.fps:30;
-  const fpsR=Math.round(S.fps);
-  if(fi){if(S.fps>=90){$('#slow').value='1';$('#fpsNote').textContent=`この動画は1秒に${fpsR}枚の映像です。スローで撮った元の動画として、そのままの速さで計算します。`;}
-    else $('#fpsNote').textContent=`この動画は1秒に${fpsR}枚の映像です。スローで撮ってから書き出した動画なら、スローの倍率を選んでください。`;}
-  else $('#fpsNote').textContent='1秒あたりの枚数を読み取れなかったので、1秒30枚として扱います。';
+  // コマ数は裏で調べる（読み込みを待たせない）。わかったら表示と計算に反映する
+  S.fps=30;$('#fpsNote').textContent='1秒あたりの枚数を調べています…（わからなければ1秒30枚として扱います）';
+  const myUrl=S.url;readFps(f).then(fi=>{if(S.url!==myUrl||!fi||!(fi.fps>5&&fi.fps<1000))throw 0;S.fps=fi.fps;const fpsR=Math.round(S.fps);
+    if(S.fps>=90){$('#slow').value='1';$('#fpsNote').textContent=`この動画は1秒に${fpsR}枚の映像です。スローで撮った元の動画として、そのままの速さで計算します。`;}
+    else $('#fpsNote').textContent=`この動画は1秒に${fpsR}枚の映像です。スローで撮ってから書き出した動画なら、スローの倍率を選んでください。`;})
+    .catch(()=>{if(S.url===myUrl)$('#fpsNote').textContent='1秒あたりの枚数を読み取れなかったので、1秒30枚として扱います。';});
   S.cal=[];S.H=null;S.Hinv=null;S.tStart=null;S.tEnd=null;S.tap=null;S.target=null;S.trimA=0;S.trimB=null;S.scenes=null;S.sceneSel=null;$('#sceneBox').classList.add('hidden');S.keyH=[];S.reFix=null;S.mineK=null;S.hints=[];S.tStartHint=null;RPT.reset();
   ['#calSeek','#tgSeek'].forEach(s=>{const r=$(s);r.max=S.dur;r.value=0;});
   $('#loadMsg').textContent='読み込み中…（はじめに戻しています）';
