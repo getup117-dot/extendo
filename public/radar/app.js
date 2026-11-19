@@ -824,7 +824,7 @@
       });
     });
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
-    $('mapSearch').addEventListener('focus',()=>{if(isMobile())setSheet(true);showSavedResults();});
+    $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
     $('mapSearch').addEventListener('input',()=>{++state.mapSearchRequest;$('mapSearchResults').hidden=true;});
     document.addEventListener('pointerdown',e=>{if(!$('mapSearchPanel').contains(e.target))$('mapSearchResults').hidden=true;});
     $('selectedName').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedName').value)||state.selected.name;});
