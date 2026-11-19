@@ -2159,6 +2159,14 @@ function computeResult(pts,img0){
   const Rm=0.01; // cm→m
   let tr=pts.filter(p=>!p.lost).map(p=>({t:p.t/S.slow,u:p.u,v:p.v,x:p.x,y:p.y}));
   if(!tr.length)return {traj:[]};
+  // レールぎわを速く走った所（エクストリームダッシュ・強く弾かれた後）は、コマの間も弦ではなくレールに沿って結ぶ
+  {const th=p=>Math.atan2(p.v,p.u),off=p=>RAIL_R(th(p))-Math.hypot(p.u,p.v),wrap=x=>((x+3*Math.PI)%(2*Math.PI))-Math.PI;const out=[];
+   for(let i=0;i<tr.length;i++){const A=tr[i],B=tr[i+1];out.push(A);if(!B||B.t-A.t>0.2)continue;
+     const oA=off(A),oB=off(B);if(oA<-2.5||oB<-2.5||oA>6||oB>6||inPocket(A.u,A.v)>=0||inPocket(B.u,B.v)>=0)continue;
+     const d=wrap(th(B)-th(A));if(Math.abs(d)<0.22)continue;const n=Math.min(12,Math.ceil(Math.abs(d)/0.08));
+     for(let k=1;k<n;k++){const z=k/n,a=th(A)+d*z,r=RAIL_R(a)-(oA+(oB-oA)*z),u=r*Math.cos(a),v=r*Math.sin(a),t=A.t+(B.t-A.t)*z;
+       const q=applyH(HAt(t*S.slow),u,v);out.push({t,u,v,x:q[0]/S.vw,y:q[1]/S.vh,railArc:true});}}
+   tr=out;}
   // ありえない動きを取り除く：ベイは5 m/sより速くは動かない
   const VMAX=500,vel=(a,b)=>Math.hypot(b.u-a.u,b.v-a.v)/Math.max(b.t-a.t,1e-3);
   for(let pass=0;pass<3;pass++){const n0=tr.length;
@@ -2832,7 +2840,7 @@ function renderCompare(){
 }
 
 renderHome();
-window.__BT={dumpRaw:()=>({t0:S.tStart,t1:S.tEnd,vw:S.vw,vh:S.vh,tracks:(S.raw||[]).map(tr=>{const L=tr.filter(p=>p.u!=null&&!p.lost);const pk=L.find(p=>p.pocket);const out=L.filter(p=>!pk||p.t<=pk.t);if(pk)for(let t=pk.t+0.05;t<=S.tEnd-S.tStart+0.5;t+=0.05)out.push({t,u:pk.u,v:pk.v,pocket:true});return out.map(p=>{const q=applyH(HAt(p.t),p.u,p.v);return [+(S.tStart+p.t).toFixed(3),Math.round(q[0]),Math.round(q[1]),p.pocket?1:0];});})}),sceneCuts:F=>sceneCuts(F),findScenes:()=>findScenes(),selectScene:i=>selectScene(i),flip:()=>flipStadium(),setCalib:h=>setCalib(h),applyH:(h,u,v)=>applyH(h,u,v),solveTracks:(d,o)=>solveTracks(d,o),cand:()=>{const s=FX&&FX.list[FX.i];return s?candAt(s.t):[];},lostScenes:()=>lostScenes(),testFix:l=>{FX={list:l,i:0};show('s-fix');fixGo();},S,seekTo:t=>seek(t),dbgF:async t=>{const f=await frameAt(t,S.Hinv);const c=document.createElement('canvas');c.width=GN*3;c.height=GN;const x=c.getContext('2d');const im=x.createImageData(GN*3,GN);
+window.__BT={dumpUV:()=>(S.raw||[]).map(P=>P.map(p=>[+p.t.toFixed(3),p.u==null?null:+p.u.toFixed(1),p.v==null?null:+p.v.toFixed(1),p.lost?1:0,p.pocket?1:0,p.interp?1:0])),railOff:(u,v)=>RAIL_R(Math.atan2(v,u))-Math.hypot(u,v),dumpRaw:()=>({t0:S.tStart,t1:S.tEnd,vw:S.vw,vh:S.vh,tracks:(S.raw||[]).map(tr=>{const L=tr.filter(p=>p.u!=null&&!p.lost);const pk=L.find(p=>p.pocket);const out=L.filter(p=>!pk||p.t<=pk.t);if(pk)for(let t=pk.t+0.05;t<=S.tEnd-S.tStart+0.5;t+=0.05)out.push({t,u:pk.u,v:pk.v,pocket:true});return out.map(p=>{const q=applyH(HAt(p.t),p.u,p.v);return [+(S.tStart+p.t).toFixed(3),Math.round(q[0]),Math.round(q[1]),p.pocket?1:0];});})}),sceneCuts:F=>sceneCuts(F),findScenes:()=>findScenes(),selectScene:i=>selectScene(i),flip:()=>flipStadium(),setCalib:h=>setCalib(h),applyH:(h,u,v)=>applyH(h,u,v),solveTracks:(d,o)=>solveTracks(d,o),cand:()=>{const s=FX&&FX.list[FX.i];return s?candAt(s.t):[];},lostScenes:()=>lostScenes(),testFix:l=>{FX={list:l,i:0};show('s-fix');fixGo();},S,seekTo:t=>seek(t),dbgF:async t=>{const f=await frameAt(t,S.Hinv);const c=document.createElement('canvas');c.width=GN*3;c.height=GN;const x=c.getContext('2d');const im=x.createImageData(GN*3,GN);
   for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const k=j*GN+i;for(let q=0;q<3;q++){im.data[((j*GN*3)+i)*4+q]=f.rect[k*3+q];im.data[((j*GN*3)+i+GN)*4+q]=S.bg[k*3+q];}const d=Math.abs(f.rect[k*3]-S.bg[k*3])+Math.abs(f.rect[k*3+1]-S.bg[k*3+1])+Math.abs(f.rect[k*3+2]-S.bg[k*3+2]);const o=((j*GN*3)+i+2*GN)*4;im.data[o]=im.data[o+1]=im.data[o+2]=Math.min(255,d*2);
     for(let q=0;q<3;q++)im.data[((j*GN*3)+i)*4+3]=im.data[((j*GN*3)+i+GN)*4+3]=im.data[o+3]=255;}
   x.putImageData(im,0,0);const pk=findBeys(f.rect,S.bg,null);x.strokeStyle='lime';pk.forEach(p=>{const ci=(p.u+HALF)/CELL,cj=(p.v+HALF)/CELL;x.beginPath();x.arc(ci+2*GN,cj,BEY_R,0,7);x.stroke();x.beginPath();x.arc(ci,cj,BEY_R,0,7);x.stroke();});return c.toDataURL();},detectRail:detectRailAuto,TPL,applyH,dbgHues:img=>hueCandidates(img.data,img.width,img.height).map(h=>{const r=detectRail(img,h,0.28);return [Math.round(h),r&&+r.score.toFixed(3)];})};
