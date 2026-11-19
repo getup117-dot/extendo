@@ -162,3 +162,5 @@ button{min-height:44px}
 
 .agree{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.5}
 .agree input{margin-top:3px}
+
+.checkin-duration{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.checkin-duration label{font-size:12px;font-weight:800;color:#415b64;white-space:nowrap}.checkin-duration select{flex:1;width:auto;padding:8px 10px;font-size:16px;min-height:40px}

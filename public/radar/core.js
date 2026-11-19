@@ -13,7 +13,7 @@
   function validShare(p, time = Date.now()) {
     if (!validPoint(p)) return false;
     const updated = Date.parse(p.updated_at), expires = Date.parse(p.expires_at);
-    return Number.isFinite(updated) && Number.isFinite(expires) && expires > time && updated > time - FRESH_MS && updated <= time + 120000;
+    return Number.isFinite(updated) && Number.isFinite(expires) && expires > time && (p.kind === 'checkin' || updated > time - FRESH_MS) && updated <= time + 120000;
   }
   function coarse(lat, lng) {
     if (!validPoint({lat, lng})) throw Error('座標が不正です');

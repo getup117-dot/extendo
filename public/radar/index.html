@@ -47,8 +47,9 @@
       <label class="sr-only" for="selectedName">選んだ場所の名前</label><input id="selectedName" maxlength="100" placeholder="この場所の名前">
       <p id="selectedDetail" class="selected-detail"></p>
       <button id="saveSpotButton" class="save-spot" data-action="save-spot">☆ この場所を保存</button>
+      <div class="checkin-duration"><label for="checkinDuration">「ここにいる」の時間</label><select id="checkinDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="180">3時間</option><option value="360">6時間</option></select></div>
       <div class="selected-actions"><button class="btn teal" data-action="register-here">ここにいる</button><button class="btn primary" data-action="event-here">出没予定を登録</button></div>
-      <p class="selected-note" id="selectedNote">「ここにいる」は概略位置を5分間登録します。</p>
+      <p class="selected-note" id="selectedNote">「ここにいる」は約500mの概略位置を共有します。</p>
     </section>
     <section id="mapEvent" class="selected-place map-event" aria-labelledby="mapEventTitle" hidden>
       <div class="selected-top"><span class="event-kicker"><i class="event-key" aria-hidden="true"></i><span id="mapEventStatus">出没予定</span></span><button class="xbtn" data-action="close-place" aria-label="予定の詳細を閉じる">×</button></div>

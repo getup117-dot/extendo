@@ -199,3 +199,14 @@ begin
     execute 'alter publication supabase_realtime add table public.reports';
   end if;
 end $$;
+
+-- ============================================================
+-- 「ここにいる」の時間指定（2026-11-19 追加）
+-- kind = 'live'（GPSで自動更新。5分更新が止まると消える）/ 'checkin'（選んだ地点。期限まで表示）
+alter table public.positions add column if not exists kind text not null default 'live';
+alter table public.positions drop constraint if exists positions_kind_valid;
+alter table public.positions add constraint positions_kind_valid check (kind in ('live','checkin'));
+drop policy if exists "positions_read_active" on public.positions;
+create policy "positions_read_active" on public.positions for select to authenticated
+  using (expires_at > now() and (kind = 'checkin' or updated_at > now() - interval '5 minutes')
+         and (not public.is_hidden('user', user_id::text) or public.is_admin()));

@@ -373,10 +373,11 @@
     const el=$('shareStatus'); if(!el)return;
     const share=state.share, mine=activePeople().find(p=>p.user_id===selfId());
     if(state.stopFailed){el.textContent='GPS更新は止まりました。通信が戻ったら公開停止を再試行してください。更新から5分で地図から消えます。';return;}
+    if(!share&&mine?.kind==='checkin'){el.textContent=`選んだ地点を共有中。残り約${Math.max(0,Math.ceil((Date.parse(mine.expires_at)-Date.now())/60000))}分。自動更新はありません。`;return;}
     if(!share){el.textContent='前に共有した位置が表示されています。この端末ではGPSを更新していません。';return;}
     const remaining=Math.max(0,Math.ceil((share.until-Date.now())/60000));
     if(share.phase==='locating'){el.textContent='位置情報を取得しています。ブラウザの許可を確認してください。';return;}
-    const stale=!mine||Date.now()-Date.parse(mine.updated_at)>C.FRESH_MS;
+    const stale=!mine||(share.kind!=='manual'&&Date.now()-Date.parse(mine.updated_at)>C.FRESH_MS);
     el.textContent=`${share.kind==='manual'?'選んだ地点':'GPSの現在地'}を共有${stale?'待機中':'中'}。残り約${remaining}分。${stale?'新しい位置情報を取得できていません。':share.kind==='gps'?'画面を閉じると更新が止まることがあります。':'自動更新はありません。'}`;
   }
   function mapGo(lat,lng) {
@@ -519,7 +520,8 @@
     $('selectedName').value=state.selected.name;
     $('selectedDetail').textContent=state.selected.address||`緯度 ${state.selected.lat.toFixed(5)} ・ 経度 ${state.selected.lng.toFixed(5)}`;
     $('selectedPlace').hidden=false;document.body.classList.add('place-selected');
-    $('selectedNote').textContent=state.mode==='demo'?'「ここにいる」は約500mの概略位置を5分間、端末内に登録します。':'「ここにいる」は約500mの概略位置を5分間、利用者に共有します。';
+    {const saved=Number(storage.get(CHECKIN_KEY,60));if(CHECKIN_CHOICES.includes(saved))$('checkinDuration').value=String(saved);}
+    updateCheckinNote();
     updateSavedButton();
     if(state.mapReady){
       state.selectedMarker?.remove();
@@ -551,14 +553,20 @@
     if(!exists){if(next.length>=100)throw Error('保存できる場所は100件までです');next.unshift(place);}
     storage.set(key,next);state.selected=place;updateSavedButton();render();notify(exists?'場所の保存を解除しました':'場所をこの端末に保存しました');
   }
+  const CHECKIN_KEY='beyspot_checkin_minutes';
+  const CHECKIN_CHOICES=[30,60,120,180,360];
+  const minutesLabel=m=>m<60?`${m}分`:`${m/60}時間`;
+  function checkinMinutes(){const v=Number($('checkinDuration')?.value);return CHECKIN_CHOICES.includes(v)?v:60;}
+  function updateCheckinNote(){const m=checkinMinutes();$('selectedNote').textContent=state.mode==='demo'?`「ここにいる」は約500mの概略位置を${minutesLabel(m)}、端末内に登録します。`:`「ここにいる」は約500mの概略位置を${minutesLabel(m)}、利用者に共有します。あとから停止できます。`;}
   async function registerHere() {
     const place=selectedPoint();if(!place)return;
     if(!logged())throw Error('ログインしてください');
     if(state.share||activePeople().some(p=>p.user_id===selfId()))await stopShare(true);
-    const token=shares.begin();state.share={token,until:Date.now()+5*60000,kind:'manual',privacy:'approx',phase:'locating'};
+    const minutes=checkinMinutes();storage.set(CHECKIN_KEY,minutes);
+    const token=shares.begin();state.share={token,until:Date.now()+minutes*60000,kind:'manual',privacy:'approx',phase:'locating'};
     try{
       const sent=await publishLocation(place,Date.now(),token);if(!sent)throw Error('地点を登録できませんでした');
-      state.stopFailed=false;closePlace();showMapTab();notify(state.mode==='demo'?'この場所にいる状態を5分間登録しました':'この場所を5分間共有します');
+      state.stopFailed=false;closePlace();showMapTab();notify(state.mode==='demo'?`この場所にいる状態を${minutesLabel(minutes)}登録しました`:`この場所を${minutesLabel(minutes)}共有します`);
     }catch(error){state.share=null;throw error;}
   }
   function eventHere() {
@@ -634,7 +642,7 @@
     if(!C.validPoint(point)||!Number.isFinite(measuredAt)||Date.now()-measuredAt>60000||measuredAt>Date.now()+10000)return false;
     const mode=state.mode,client=state.sb,userId=selfId();
     const location=share.privacy==='approx'?C.coarse(point.lat,point.lng):point;
-    const record={user_id:userId,lat:Number(location.lat),lng:Number(location.lng),precision:share.privacy,updated_at:new Date(measuredAt).toISOString(),expires_at:new Date(share.until).toISOString()};
+    const record={user_id:userId,lat:Number(location.lat),lng:Number(location.lng),precision:share.privacy,kind:share.kind==='manual'?'checkin':'live',updated_at:new Date(measuredAt).toISOString(),expires_at:new Date(share.until).toISOString()};
     return shares.enqueue(token,async()=>{
       if(mode==='demo'){await updateDemo(latest=>{
         if(share.written && !latest.positions.some(p=>p.user_id===userId && p.session===share.session))return;
@@ -720,7 +728,7 @@
     const client=state.sb,userId=selfId(),revision=state.revision,request=++state.request;if(!client||!state.user)return;
     const results=await Promise.all([
       client.from('profiles').select('id,display_name,stadium_status,rank_level,battle_ready,is_admin').limit(1000),
-      client.from('positions').select('user_id,lat,lng,precision,updated_at,expires_at').gt('expires_at',iso()).gt('updated_at',new Date(Date.now()-C.FRESH_MS).toISOString()).limit(1000),
+      client.from('positions').select('user_id,lat,lng,precision,updated_at,expires_at,kind').gt('expires_at',iso()).or(`kind.eq.checkin,updated_at.gt.${new Date(Date.now()-C.FRESH_MS).toISOString()}`).limit(1000),
       client.from('events').select('*').gt('ends_at',iso()).order('starts_at',{ascending:true}).limit(300),
       client.from('rsvps').select('event_id,user_id').limit(10000),
       client.from('reports').select('target_type,target_id,reporter').limit(10000)
@@ -825,6 +833,7 @@
     });
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
     $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
+    $('checkinDuration').addEventListener('change',updateCheckinNote);
     $('mapSearch').addEventListener('input',()=>{++state.mapSearchRequest;$('mapSearchResults').hidden=true;});
     document.addEventListener('pointerdown',e=>{if(!$('mapSearchPanel').contains(e.target))$('mapSearchResults').hidden=true;});
     $('selectedName').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedName').value)||state.selected.name;});
