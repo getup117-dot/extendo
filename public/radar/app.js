@@ -230,7 +230,7 @@
     });
   }
   function preserveFields() {
-    const panel=$('panelContent'), key=state.mode+':'+(selfId()||'')+':'+state.tab;
+    const panel=$('panelContent'), key=state.mode+':'+(selfId()||'')+':'+state.tab+':'+(state.profiles.some(p=>p.id===selfId())?'p':'-');
     if (state.renderKey!==key) { state.renderKey=key; panel.scrollTop=0; return null; }
     const fields=[...panel.querySelectorAll('input,select,textarea')].map(el=>({id:el.id,value:el.value}));
     const active=panel.contains(document.activeElement)?document.activeElement:null;
