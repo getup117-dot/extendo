@@ -11,3 +11,5 @@
 - 位置共有はGPT版のまま（共有中はGPSで自動更新、最大6時間、概略約500m／詳細）
 - 3人から通報で自動非表示。管理者は profiles.is_admin = true
 - 旧「ベイ出没マップ」（/bey/）はRadarの本番接続後に置きかえ
+- （同日変更）招待制はやめて全員公開に。ログインは X（Supabase の X / Twitter OAuth 2.0、provider 'x'）を主に、メールは予備
+- Supabase プロジェクト：beybe-radar（ref ulnuwlvayctgvifnacwt、Tokyo）。X の Callback URL は https://ulnuwlvayctgvifnacwt.supabase.co/auth/v1/callback

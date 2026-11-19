@@ -159,3 +159,9 @@ button{min-height:44px}
 .report-badge{font-size:12px;font-weight:800;color:#c26a00;align-self:center}
 .report-reasons{display:grid;gap:8px;margin-top:12px}
 .card-buttons{gap:6px;flex-wrap:wrap}
+
+/* Xログイン */
+.x-login{background:#000;color:#fff;border:none;font-weight:800}
+.mail-login{margin-top:6px}
+.mail-login summary{cursor:pointer;font-size:13px;color:#5b6472;padding:6px 0}
+.mail-login form{margin-top:8px}
