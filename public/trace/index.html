@@ -397,6 +397,7 @@ function makeMatcher(t,tol){
 }
 
 /* ---------- 動画 ---------- */
+const within=(p,ms)=>Promise.race([Promise.resolve(p).catch(()=>{}),new Promise(r=>setTimeout(r,ms))]); // 返事がない処理で止まらないよう、時間で打ち切る
 function once(el,ev,ms){return new Promise(res=>{let done=false;const f=()=>{if(done)return;done=true;res();};el.addEventListener(ev,f,{once:true});if(ms)setTimeout(f,ms);});}
 async function seek(t){
   t=clamp(t,0,Math.max(0,S.dur-0.001));
@@ -438,12 +439,15 @@ $('#file').addEventListener('change',async e=>{
   $('#loadMsg').textContent='読み込み中…';
   if(S.url) URL.revokeObjectURL(S.url);
   S.url=URL.createObjectURL(f);vid.src=S.url;vid.load();
+  $('#loadMsg').textContent='読み込み中…（動画を開いています）';
   await once(vid,'loadedmetadata',10000);
   if(!vid.videoWidth){$('#loadMsg').textContent='この動画は読み込めませんでした。別の動画で試してください。';return;}
-  try{await vid.play();vid.pause();}catch(_){}
+  $('#loadMsg').textContent='読み込み中…（最初のコマを用意しています）';
+  try{await within(vid.play(),2000);vid.pause();}catch(_){}
   await once(vid,'loadeddata',1500);
   S.dur=vid.duration;S.vw=vid.videoWidth;S.vh=vid.videoHeight;
-  let fi=null;try{fi=await readFps(f);}catch(_){}
+  $('#loadMsg').textContent='読み込み中…（コマ数を調べています）';
+  let fi=null;try{fi=await within(readFps(f),4000);}catch(_){}
   S.fps=fi&&fi.fps>5&&fi.fps<1000?fi.fps:30;
   const fpsR=Math.round(S.fps);
   if(fi){if(S.fps>=90){$('#slow').value='1';$('#fpsNote').textContent=`この動画は1秒に${fpsR}枚の映像です。スローで撮った元の動画として、そのままの速さで計算します。`;}
@@ -451,6 +455,7 @@ $('#file').addEventListener('change',async e=>{
   else $('#fpsNote').textContent='1秒あたりの枚数を読み取れなかったので、1秒30枚として扱います。';
   S.cal=[];S.H=null;S.Hinv=null;S.tStart=null;S.tEnd=null;S.tap=null;S.target=null;S.trimA=0;S.trimB=null;S.scenes=null;S.sceneSel=null;$('#sceneBox').classList.add('hidden');S.keyH=[];S.reFix=null;S.mineK=null;S.hints=[];S.tStartHint=null;RPT.reset();
   ['#calSeek','#tgSeek'].forEach(s=>{const r=$(s);r.max=S.dur;r.value=0;});
+  $('#loadMsg').textContent='読み込み中…（はじめに戻しています）';
   await seek(0.001);
   $('#loadMsg').textContent='';e.target.value='';
   show('s-cal');S.manual=false;S.adj=null;calCv.style.touchAction='';
