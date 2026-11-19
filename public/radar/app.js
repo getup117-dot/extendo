@@ -346,7 +346,7 @@
     return `<div class="section-title">これからの出没予定 <span class="count">${events.length}</span></div>${cards || empty}<p class="help">施設の利用ルールや周囲への配慮を守って集まりましょう。</p>`;
   }
   function loginWall() {
-    return `<div class="setting-card form-col"><h2 class="login-heading">ログイン</h2><p class="hint">ログインすると、共有中の現在地や出没予定を見られます。18歳以上の方が対象です。</p><button class="btn x-login wide" data-action="login-x">𝕏 でログイン</button><details class="mail-login"><summary>メールでログインする</summary><form id="loginForm" class="form-col"><div class="field"><label for="loginEmail">メールアドレス</label><input type="email" id="loginEmail" autocomplete="email" required placeholder="you@example.com" maxlength="254"></div><button class="btn teal wide" type="submit">ログインメールを送信</button></form><p class="help">届いたメールのリンクを、このアプリを開いているブラウザで押してください。</p></details></div>`;
+    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。ニックネームを入れると、共有中の現在地や出没予定を見たり登録したりできます。</p><form id="startForm" class="form-col"><div class="field"><label for="startName">ニックネーム</label><input type="text" id="startName" required maxlength="32" placeholder="例：しょうた" autocomplete="nickname"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。ブラウザのデータを消したり、別の端末で開いたりすると、新しい人として始まります。ニックネームはあとからマイページで変えられます。</p></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -739,7 +739,7 @@
   }
   async function ensureProfile(client,user) {
     const {data,error}=await client.from('profiles').select('id').eq('id',user.id).maybeSingle();if(error)throw error;
-    if(!data){const meta=user.user_metadata||{};const display=String(meta.name||meta.full_name||meta.user_name||meta.preferred_username||'ブレーダー').trim().slice(0,32)||'ブレーダー';const {error}=await client.from('profiles').upsert({id:user.id,display_name:display},{onConflict:'id',ignoreDuplicates:true});if(error)throw error;}
+    if(!data){const meta=user.user_metadata||{};const display=String(state.pendingName||meta.name||meta.full_name||meta.user_name||meta.preferred_username||'ブレーダー').trim().slice(0,32)||'ブレーダー';const {error}=await client.from('profiles').upsert({id:user.id,display_name:display},{onConflict:'id',ignoreDuplicates:true});if(error)throw error;}
   }
   async function disconnect() {
     ++state.revision;++state.request;state.authSub?.unsubscribe();state.authSub=null;
@@ -762,6 +762,15 @@
       },0);
     }).data.subscription;
     if(state.user){await ensureProfile(client,state.user);await loadLive();startRealtime();}else{setStatus();render();}
+  }
+  async function startAnon() {
+    if(!state.sb)throw Error('接続を確認してください');
+    const name=clean($('startName').value).slice(0,32);if(!name)throw Error('ニックネームを入れてください');
+    if(!$('startAgree').checked)throw Error('同意のチェックを入れてください');
+    state.pendingName=name;
+    const {error}=await state.sb.auth.signInAnonymously({options:{data:{name}}});
+    if(error)throw Error('はじめられませんでした。少し時間をおいて試してください');
+    notify(`${name}さん、ようこそ！`);
   }
   async function logout() { await stopShare(true);const {error}=await state.sb.auth.signOut();if(error)throw error;state.user=null;state.tab='account';state.profiles=[];state.positions=[];state.events=[];state.rsvps=[];render();notify('ログアウトしました'); }
   async function switchDemo() { await stopShare(true);await disconnect();state.mode='demo';state.tab='now';setStatus();closeModal('settings');demo=readDemo();render(); }
@@ -800,8 +809,7 @@
         else if(action==='start-share')startGps();else if(action==='manual-share')manualShare();else if(action==='stop-share')await stopShare();
         else if(action==='center-map')mapGo(...TOKYO);
         else if(action==='go-gps')locateMe();
-        else if(action==='logout')await logout();
-        else if(action==='login-x'){if(!state.sb)throw Error('接続を確認してください');const {error}=await state.sb.auth.signInWithOAuth({provider:'x',options:{redirectTo:location.origin+location.pathname}});if(error)throw Error('Xでログインできませんでした。時間をおいて試すか、メールでログインしてください');}
+        else if(action==='logout'){if(state.user?.is_anonymous&&!(await askConfirm('ニックネームで始めた場合、ログアウトすると同じアカウントには戻れません。予定や参加情報も自分では編集できなくなります。','ログアウトしますか？','ログアウトする')))return;await logout();}
         else if(action==='reset-demo'){if(await askConfirm('プロフィール・現在地・予定・参加情報を初期化します。保存した場所は残ります。','試用データをリセット','リセットする')){await stopShare(true);state.renderKey='';await updateDemo(latest=>Object.assign(latest,seedDemo()));notify('最初の状態に戻しました');}}
         else if(action==='settings'){$('sbUrl').value=config.supabaseUrl||savedConnection?.url||'';$('sbKey').value=config.supabasePublicKey||savedConnection?.key||'';openModal('settings');}
         else if(action==='close-settings')closeModal('settings');else if(action==='use-demo')await switchDemo();
@@ -809,9 +817,9 @@
       });
     });
     document.addEventListener('submit',e=>{
-      if(!['mapSearchForm','eventForm','profileForm','loginForm'].includes(e.target.id))return;e.preventDefault();
+      if(!['mapSearchForm','eventForm','profileForm','loginForm','startForm'].includes(e.target.id))return;e.preventDefault();
       runBusy(e.submitter,async()=>{
-        if(e.target.id==='mapSearchForm')await searchMap();else if(e.target.id==='eventForm')await saveEvent();else if(e.target.id==='profileForm')await setProfile();
+        if(e.target.id==='startForm')await startAnon();else if(e.target.id==='mapSearchForm')await searchMap();else if(e.target.id==='eventForm')await saveEvent();else if(e.target.id==='profileForm')await setProfile();
         else{const email=clean($('loginEmail').value);if(!state.sb)throw Error('接続を確認してください');const redirect=location.protocol.startsWith('http')?location.origin+location.pathname:undefined;const {error}=await state.sb.auth.signInWithOtp({email,options:redirect?{emailRedirectTo:redirect}:{}});if(error)throw error;notify('ログインメールを送りました。受信箱を確認してください');}
       });
     });
