@@ -2085,7 +2085,7 @@ async function runFine(t0,t1,tap,auto){
   if(!S.solved)tracks.forEach(tr=>fillRailGaps(tr.pts));
   // 決まり手：ポケットの点で終わっている方のベイ
   tracks.forEach(tr=>{const last=[...tr.pts].reverse().find(p=>!p.lost);if(last&&last.pocket){const fz=finishes.find(x=>Math.abs(x.t-last.t)<0.05);tr.finish=fz?{name:fz.name,t:fz.t/S.slow,k:fz.k,evidence:fz.evidence||null}:null;}});
-  const res=tracks.map(tr=>{const r=computeResult(tr.pts,img0);r.finish=tr.finish||null;return r;}).filter(r=>r.traj.length>5);
+  const res=tracks.map((tr,i)=>{const r=computeResult(unshare(tr.pts,tracks.length===2?tracks[1-i].pts:null),img0);r.finish=tr.finish||null;return r;}).filter(r=>r.traj.length>5);
   if(!res.length){S.autoMsg='追跡がうまくいきませんでした。範囲かベイを指定し直してください。';openTarget();return;}
   res.forEach((r,i)=>{r.beyNo=i+1;r.truncated=nAll>=20000;});
   S.rawMap=tracks.map((tr,i)=>i).filter(i=>computeResult(tracks[i].pts,img0).traj.length>5);
@@ -2155,10 +2155,31 @@ function rts(ts,zs){ // 1軸の等速モデル＋前向き・後ろ向きの2回
     const dx=x[k+1]-xp[k+1],dv=v[k+1]-vp[k+1];x[k]+=C00*dx+C01*dv;v[k]+=C10*dx+C11*dv;}
   return {x,v};
 }
+function unshare(P,O){ // 2台が同じ1つの候補に乗った所：前後の動きが自然なほうだけに残し、もう一方は「見失った」にする
+  if(!O)return P;P=P.map(p=>({...p}));const ok=p=>p&&!p.lost&&!p.pocket&&p.u!=null;
+  const oAt=t=>{let b=null,bd=0.02;for(const o of O){const d=Math.abs(o.t-t);if(d<bd&&ok(o)){bd=d;b=o;}}return b;};
+  const sh=P.map(p=>{if(!ok(p))return false;const o=oAt(p.t);return !!o&&Math.hypot(o.u-p.u,o.v-p.v)<2.5;});
+  const nb=(L,i,dir)=>{for(let j=i+dir;j>=0&&j<L.length;j+=dir){const q=L[j];if(ok(q)&&!(L===P&&sh[j]))return q;if(Math.abs(q.t-L[i].t)>0.6)return null;}return null;};
+  const spd=(a,b)=>a&&b?Math.hypot(b.u-a.u,b.v-a.v)/Math.max(Math.abs(b.t-a.t),1e-3):null;
+  for(let i=0;i<P.length;i++){if(!sh[i])continue;let j=i;while(j+1<P.length&&sh[j+1])j++;
+    const pa=nb(P,i,-1),pb=nb(P,j,1);const oi=O.indexOf(oAt(P[i].t)),oj=O.indexOf(oAt(P[j].t));
+    const oa=oi>=0?nb(O,oi,-1):null,ob=oj>=0?nb(O,oj,1):null;
+    const cost=(a,b,s0,s1)=>[spd(a,s0),spd(s1,b)].filter(x=>x!=null).reduce((m,x)=>Math.max(m,x),0);
+    const cP=cost(pa,pb,P[i],P[j]),cO=cost(oa,ob,oi>=0?O[oi]:P[i],oj>=0?O[oj]:P[j]);
+    if(cP>220&&cP>cO*1.8)for(let k=i;k<=j;k++)P[k]={...P[k],lost:true}; // こちらが無理な動き＝相手のベイを拾っていた
+    i=j;}
+  return P;
+}
 function computeResult(pts,img0){
   const Rm=0.01; // cm→m
-  let tr=pts.filter(p=>!p.lost).map(p=>({t:p.t/S.slow,u:p.u,v:p.v,x:p.x,y:p.y}));
+  let tr=pts.filter(p=>!p.lost).map(p=>({t:p.t/S.slow,u:p.u,v:p.v,x:p.x,y:p.y,pocket:!!p.pocket,interp:!!p.interp}));
   if(!tr.length)return {traj:[]};
+  // 弾かれてポケット（オーバー・エクストリームゾーン）へ飛んだ所は、映像で見えていなくても、最後に見えた所からゾーンまで点線で結ぶ
+  {const out=[];for(let i=0;i<tr.length;i++){const B=tr[i],A=tr[i-1];
+     if(A&&B.pocket&&!A.pocket){const g=B.t-A.t;if(g>0.04&&g<=1.0){const n=Math.max(1,Math.round(g*30));
+       for(let k=1;k<n;k++){const z=k/n,u=A.u+(B.u-A.u)*z,v=A.v+(B.v-A.v)*z,t=A.t+g*z;const q=applyH(HAt(t*S.slow),u,v);out.push({t,u,v,x:q[0]/S.vw,y:q[1]/S.vh,interp:true,fly:true});}}
+       out.push({...B,fly:true,interp:true});continue;}
+     out.push(B);}tr=out;}
   // レールぎわを速く走った所（エクストリームダッシュ・強く弾かれた後）は、コマの間も弦ではなくレールに沿って結ぶ
   {const th=p=>Math.atan2(p.v,p.u),off=p=>RAIL_R(th(p))-Math.hypot(p.u,p.v),wrap=x=>((x+3*Math.PI)%(2*Math.PI))-Math.PI;const out=[];
    for(let i=0;i<tr.length;i++){const A=tr[i],B=tr[i+1];out.push(A);if(!B||B.t-A.t>0.2)continue;
@@ -2170,13 +2191,13 @@ function computeResult(pts,img0){
   // ありえない動きを取り除く：ベイは5 m/sより速くは動かない
   const VMAX=500,vel=(a,b)=>Math.hypot(b.u-a.u,b.v-a.v)/Math.max(b.t-a.t,1e-3);
   for(let pass=0;pass<3;pass++){const n0=tr.length;
-    tr=tr.filter((p,i)=>{if(i===0||i===tr.length-1)return true;const a=tr[i-1],b=tr[i+1];return !(vel(a,p)>VMAX&&vel(p,b)>VMAX&&vel(a,b)<VMAX);}); // 1点だけ飛んだ点
+    tr=tr.filter((p,i)=>{if(i===0||i===tr.length-1||p.fly)return true;const a=tr[i-1],b=tr[i+1];return !(vel(a,p)>VMAX&&vel(p,b)>VMAX&&vel(a,b)<VMAX);}); // 1点だけ飛んだ点
     if(tr.length===n0)break;}
   // 長く見失った所・瞬間移動した所では線をつながない
-  tr.forEach((p,i)=>{p.brk=i>0&&(p.t-tr[i-1].t>0.25||vel(tr[i-1],p)>VMAX);});
+  tr.forEach((p,i)=>{const g=i>0?p.t-tr[i-1].t:0;p.brk=i>0&&!p.fly&&(g>0.5||vel(tr[i-1],p)>VMAX);if(i>0&&!p.brk&&g>0.12)p.interp=true;});
   // 孤立した短い区間（0.15秒未満）は捨てる
   {const keep=new Array(tr.length).fill(true);let s=0;for(let i=1;i<=tr.length;i++){if(i===tr.length||tr[i].brk){if(tr[i-1].t-tr[s].t<0.15&&tr.length>10)for(let k=s;k<i;k++)keep[k]=false;s=i;}}
-   tr=tr.filter((p,i)=>keep[i]);tr.forEach((p,i)=>{p.brk=i>0&&(p.brk||p.t-tr[i-1].t>0.25||vel(tr[i-1],p)>VMAX);});}
+   tr=tr.filter((p,i)=>keep[i]);tr.forEach((p,i)=>{p.brk=i>0&&!p.fly&&(p.brk||p.t-tr[i-1].t>0.5||vel(tr[i-1],p)>VMAX);});}
   if(!tr.length)return {traj:[]};
   // 軌跡全体をならす：前後の動きも使うカルマンスムーザー（区切りはまたがない）
   const sm=tr.map(p=>({...p}));const vu=new Float64Array(tr.length),vv=new Float64Array(tr.length);
@@ -2762,7 +2783,7 @@ function applyFixes(opt){
         const H=(pa,pb,ma,mb)=>h00*pa+h10*T*ma+h01*pb+h11*T*mb;
         pts[i]={...pts[i],u:H(A.u,B.u,va[0],vb[0]),v:H(A.v,B.v,va[1],vb[1]),x:H(A.x,B.x,va[2],vb[2]),y:H(A.y,B.y,va[3],vb[3]),lost:false,interp:true};}}});}
   // 相手が場外なら、もう一方の決まり手は消す（入れ替わりの直しを反映）
-  const res=S.raw.map((pts,i)=>{const r=computeResult(pts,S.img0);r.finish=fin[i]||null;r.beyNo=i+1;r.mine=mine[i];return r;});
+  const res=S.raw.map((pts,i)=>{const r=computeResult(unshare(pts,S.raw.length===2?S.raw[1-i]:null),S.img0);r.finish=fin[i]||null;r.beyNo=i+1;r.mine=mine[i];return r;});
   if(opt&&opt.core){S.results=res;S.result=res.find(r=>r.mine)||res[0];S.fixes=[];return;}
   S.results=res;S.result=res.find(r=>r.mine)||res[0];FX=null;S.fixes=[];S.absent=[];
   if(opt&&opt.stay){const t=S.playT||0;renderResult();stopVideo();drawAt(t);return;} // 位置を直している最中：その場にとどまる
