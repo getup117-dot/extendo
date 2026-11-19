@@ -750,7 +750,12 @@
   function scheduleLoad() { clearTimeout(state.loadTimer);state.loadTimer=setTimeout(()=>loadLive().catch(e=>console.error(e)),200); }
   function startRealtime() {
     const client=state.sb;if(!client)return;
-    client.removeAllChannels();state.channelSeq=(state.channelSeq||0)+1;let channel=client.channel('beybe-radar-'+state.channelSeq+'-'+Date.now().toString(36));
+    // 前の接続を外し終えてから作り直す（同時に呼ばれても順番に処理する）
+    state.rtChain=(state.rtChain||Promise.resolve()).then(()=>openRealtime(client)).catch(e=>console.error(e));
+  }
+  async function openRealtime(client) {
+    if(client!==state.sb)return;
+    await client.removeAllChannels();if(client!==state.sb)return;state.channelSeq=(state.channelSeq||0)+1;let channel=client.channel('beybe-radar-'+state.channelSeq+'-'+Date.now().toString(36));
     for(const table of state.user?['positions','events','rsvps','profiles','reports']:['positions','events','rsvps','profiles'])channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleLoad);
     state.channel=channel;
     channel.subscribe(status=>{if(client!==state.sb||channel!==state.channel)return;state.connected=status==='SUBSCRIBED';if(status==='SUBSCRIBED'&&/接続し直しています/.test($('connectionStatus')?.textContent||''))setStatus();if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setStatus('接続し直しています。定期更新で情報を確認中です。');});
