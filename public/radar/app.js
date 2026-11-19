@@ -311,7 +311,7 @@
       <button class="btn teal wide" data-action="go-account">${state.share ? '現在地の共有状況を見る' : '自分の現在地を共有する'}</button>
       <div class="section-title">いまいるブレーダー <span class="count">${people.length}</span></div>
       ${cards || empty}
-      <p class="help">位置共有は任意です。更新が5分以上止まると、地図から自動で消えます。</p>`;
+      <p class="help">位置共有は任意です。GPSの共有は更新が5分以上止まると、「ここにいる」は選んだ時間が過ぎると、地図から自動で消えます。</p>`;
   }
 
   function filteredEvents() {
@@ -752,7 +752,8 @@
     const client=state.sb;if(!client)return;
     client.removeAllChannels();let channel=client.channel('beybe-radar');
     for(const table of state.user?['positions','events','rsvps','profiles','reports']:['positions','events','rsvps','profiles'])channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleLoad);
-    channel.subscribe(status=>{if(client!==state.sb)return;state.connected=status==='SUBSCRIBED';if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setStatus('接続し直しています。定期更新で情報を確認中です。');});
+    state.channel=channel;
+    channel.subscribe(status=>{if(client!==state.sb||channel!==state.channel)return;state.connected=status==='SUBSCRIBED';if(status==='SUBSCRIBED'&&/接続し直しています/.test($('connectionStatus')?.textContent||''))setStatus();if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setStatus('接続し直しています。定期更新で情報を確認中です。');});
     clearInterval(state.refreshTimer);state.refreshTimer=setInterval(()=>loadLive().catch(()=>{}),30000);
   }
   async function ensureProfile(client,user) {
