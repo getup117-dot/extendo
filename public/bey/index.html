@@ -29,6 +29,12 @@ header .sp{flex:1}
 .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none}
 .item .t{font-weight:800;font-size:15px}
 .item .m{font-size:12px;color:var(--sub);margin-top:2px}
+.near{padding:10px 12px 0}
+#nearBtn{width:100%;padding:10px;border-radius:10px;border:1px dashed var(--ok);background:none;color:var(--ok);font-weight:800;font-size:14px}
+#radChips .chip.on{background:var(--ok);border-color:var(--ok);color:#06231a}
+#radChips .off{margin-left:auto;color:var(--sub)}
+.dist{color:var(--ok);font-weight:800;font-size:12px;margin-left:6px}
+.me{width:16px;height:16px;border-radius:50%;background:var(--ok);border:3px solid #fff;box-shadow:0 0 0 6px rgba(56,211,159,.25)}
 .item .c{font-size:13px;margin-top:4px;word-break:break-all}
 .empty{color:var(--sub);font-size:13px;text-align:center;padding:18px 0}
 .fabs{display:flex;gap:8px;padding:8px 12px 10px;border-top:1px solid var(--line)}
@@ -84,7 +90,7 @@ textarea{min-height:64px;resize:vertical}
 .pin.now{background:var(--now)}.pin.plan{background:var(--plan)}
 .pin.now::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--now);animation:pulse 1.6s infinite}
 @keyframes pulse{from{opacity:.9;transform:scale(.6)}to{opacity:0;transform:scale(1.4)}}
-#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);background:#000c;padding:8px 14px;border-radius:999px;font-size:13px;display:none;z-index:3000}
+#toast{position:fixed;left:50%;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis;top:calc(env(safe-area-inset-top) + 64px);transform:translateX(-50%);background:#000c;padding:8px 14px;border-radius:999px;font-size:13px;display:none;z-index:3000}
 </style>
 </head>
 <body>
@@ -92,12 +98,22 @@ textarea{min-height:64px;resize:vertical}
   <header>
     <h1>ベイ<span>出没</span>マップ</h1>
     <div class="sp"></div>
-    <button class="ghost" id="locateMe">現在地へ</button>
+    
     <button class="ghost" id="showRules">ルール</button>
   </header>
   <div id="banner">テストモード：サーバー未接続のため、この端末の中だけに保存しています</div>
   <div id="map"></div>
   <div id="sheet">
+    <div class="near">
+      <button id="nearBtn">📡 近くのブレーダーを探す</button>
+      <div class="chips" id="radChips" style="display:none">
+        <button class="chip" data-r="1">1km</button>
+        <button class="chip on" data-r="3">3km</button>
+        <button class="chip" data-r="10">10km</button>
+        <button class="chip" data-r="0">すべて</button>
+        <button class="chip off" id="nearOff">×</button>
+      </div>
+    </div>
     <div class="tabs">
       <button class="tab now on" data-tab="now">いまいる<b id="cNow">0</b></button>
       <button class="tab plan" data-tab="plan">出没予定<b id="cPlan">0</b></button>
@@ -323,12 +339,30 @@ function popupHtml(p) {
     ${adminKey && p.hidden ? `<button data-restore="${esc(p.id)}" class="ok">表示に戻す</button>` : ''}</div></div>`;
 }
 const markers = {};
+let here = null, radius = 3, meLayer = L.layerGroup().addTo(map);
+function distKm(a, b) {
+  const R = 6371, r = x => x * Math.PI / 180;
+  const dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const fmtDist = d => d < 1 ? `${Math.max(50, Math.round(d * 1000 / 50) * 50)}m・徒歩${Math.max(1, Math.round(d * 1000 / 80))}分` : `${d < 10 ? d.toFixed(1) : Math.round(d)}km`;
+function drawNear() {
+  meLayer.clearLayers(); if (!here) return;
+  L.marker([here.lat, here.lng], { icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false }).addTo(meLayer);
+  if (radius) {
+    const c = L.circle([here.lat, here.lng], { radius: radius * 1000, color: '#38d39f', weight: 1.5, fillOpacity: .06, interactive: false }).addTo(meLayer);
+    map.fitBounds(c.getBounds(), { padding: [10, 10] });
+  } else map.setView([here.lat, here.lng], 12);
+}
 function render() {
   layer.clearLayers();
-  const nowList = posts.filter(p => kindOf(p) === 'now').sort((a, b) => b.start - a.start);
-  const planList = posts.filter(p => kindOf(p) === 'plan').sort((a, b) => a.start - b.start);
+  const vis = here ? posts.map(p => ({ ...p, d: distKm(here, p) })).filter(p => !radius || p.d <= radius) : posts;
+  const byD = (a, b) => a.d - b.d;
+  const nowList = vis.filter(p => kindOf(p) === 'now').sort(here ? byD : (a, b) => b.start - a.start);
+  const planList = vis.filter(p => kindOf(p) === 'plan').sort(here ? (a, b) => (a.d - b.d) || (a.start - b.start) : (a, b) => a.start - b.start);
   $('#cNow').textContent = nowList.length; $('#cPlan').textContent = planList.length;
-  posts.forEach(p => {
+  vis.forEach(p => {
     const m = L.marker([p.lat, p.lng], { icon: icon(kindOf(p)) }).bindPopup(popupHtml(p)).addTo(layer);
     markers[p.id] = m;
   });
@@ -336,10 +370,11 @@ function render() {
   $('#list').innerHTML = list.length ? list.map(p => `
     <div class="item" data-id="${esc(p.id)}">
       <div class="dot" style="background:var(--${kindOf(p)})"></div>
-      <div><div class="t">${esc(p.name)}${myTokens[p.id] ? ' <small style="color:var(--ok)">（自分）</small>' : ''}</div>
+      <div><div class="t">${esc(p.name)}${myTokens[p.id] ? ' <small style="color:var(--ok)">（自分）</small>' : ''}${here ? `<span class="dist">${fmtDist(p.d)}</span>` : ''}</div>
       <div class="m">${esc(timeLabel(p))}${p.place ? '・' + esc(p.place) : ''}</div>
       ${p.comment ? `<div class="c">${esc(p.comment)}</div>` : ''}${adminTag(p)}</div>
     </div>`).join('')
+    : here && radius ? `<div class="empty">${radius}km以内には見つかりませんでした。範囲を広げてみてください</div>`
     : `<div class="empty">${tab === 'now' ? 'いまチェックインしているブレーダーはいません' : '登録された出没予定はまだありません'}</div>`;
 }
 async function refresh() { posts = await backend.list(); render(); }
@@ -395,8 +430,27 @@ function getHere() {
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
   });
 }
-$('#locateMe').onclick = async () => {
-  try { const h = await getHere(); map.setView([h.lat, h.lng], 16); } catch (e) { toast(e.message); }
+// 近くのブレーダーを探す（現在地はこの端末の中だけで使い、送信しない）
+$('#nearBtn').onclick = async () => {
+  $('#nearBtn').textContent = '現在地を確認中…';
+  try {
+    here = await getHere();
+    $('#nearBtn').style.display = 'none'; $('#radChips').style.display = 'flex';
+    drawNear(); render();
+    const near = posts.filter(p => distKm(here, p) <= (radius || 1e9));
+    const nn = near.filter(p => kindOf(p) === 'now').length, np = near.length - nn;
+    toast(near.length ? `${radius ? radius + 'km以内に' : ''}いまいる${nn}人・出没予定${np}件` : `${radius}km以内にはいませんでした`);
+  } catch (e) { toast(e.message); $('#nearBtn').textContent = '📡 近くのブレーダーを探す'; }
+};
+document.querySelectorAll('#radChips [data-r]').forEach(c => c.onclick = () => {
+  radius = +c.dataset.r;
+  document.querySelectorAll('#radChips [data-r]').forEach(x => x.classList.toggle('on', x === c));
+  drawNear(); render();
+});
+$('#nearOff').onclick = () => {
+  here = null; meLayer.clearLayers();
+  $('#radChips').style.display = 'none'; $('#nearBtn').style.display = ''; $('#nearBtn').textContent = '📡 近くのブレーダーを探す';
+  render();
 };
 
 /* ---------- 投稿フォーム ---------- */
