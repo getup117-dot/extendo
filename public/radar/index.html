@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="preconnect" href="https://tile.openstreetmap.org">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="styles.css?v=202611201551">
+<link rel="stylesheet" href="styles.css?v=202611201601">
 </head>
 <body>
 <header class="header">
@@ -47,7 +47,7 @@
       <div id="mapSearchResults" class="map-search-results" aria-live="polite" hidden></div>
     </div>
     <div class="map-top"><div class="map-keys"><button class="mapchip" data-action="show-people"><i class="person-key" aria-hidden="true"></i><span id="mapPeople">いまいる 0人</span></button><button class="mapchip" data-action="show-plans"><i class="event-key" aria-hidden="true"></i><span id="mapPlans">出没予定 0件</span></button><button class="mapchip" data-action="show-people" hidden><i class="area-key" aria-hidden="true"></i><span id="mapAreas">出没エリア 0件</span></button></div><div id="mapTypeBadge" class="mapchip">デモデータ</div></div>
-    <div class="mapfloat"><button class="roundbtn radar-btn" data-action="radar-here" aria-label="レーダーで探す"><img src="assets/scan-radar.jpg" alt="" aria-hidden="true"></button><button class="roundbtn gps-btn" data-action="go-gps" aria-label="いまここにいる"><span aria-hidden="true">📍</span><span class="gps-label">ここにいる</span></button><button class="roundbtn" data-action="new-event" title="出没予定を登録" aria-label="出没予定を登録">＋</button></div>
+    <div class="mapfloat"><button class="roundbtn radar-btn" data-action="radar-here" aria-label="レーダーで探す"><img src="assets/radar-button.png" alt="" aria-hidden="true"></button><button class="roundbtn locate-btn" data-action="my-location" aria-label="現在地へ"><span class="locate-dot" aria-hidden="true"></span></button></div>
     <div id="pickPrompt" class="location-picker" hidden><span id="pickText">地図をタップして場所を指定してください</span> <button data-action="cancel-pick" class="pick-cancel">キャンセル</button></div>
     <div id="mapLoadStatus" class="map-load-status" role="status" hidden></div>
     <section id="selectedPlace" class="selected-place place-card is-peek" aria-label="選んだ場所" hidden>
@@ -131,6 +131,6 @@
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/supabase.min.js"></script>
 <script src="config.js"></script>
-<script src="core.js?v=202611201551"></script>
-<script src="app.js?v=202611201551"></script>
+<script src="core.js?v=202611201601"></script>
+<script src="app.js?v=202611201601"></script>
 </body></html>

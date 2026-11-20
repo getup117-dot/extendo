@@ -242,6 +242,14 @@
       $('radarResult').hidden=false;document.body.classList.add('radar-open');},reduce?0:T+250);
   }
   function pinIntoView(){if(!state.selected||!state.mapReady)return;const pt=state.map.latLngToContainerPoint([state.selected.lat,state.selected.lng]),limit=state.map.getSize().y-$('selectedPlace').offsetHeight-60;if(pt.y>limit)state.map.panBy([0,pt.y-limit],{animate:true});}
+  function goMyLocation(){
+    if(!navigator.geolocation||!window.isSecureContext){notify('この開き方では現在地を使えません');return;}
+    navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];if(!state.mapReady)return;
+      if(!state.meDot){state.meDot=L.circleMarker(ll,{radius:8,weight:3,color:'#fff',fillColor:'#1a73e8',fillOpacity:1,interactive:false}).addTo(state.map);state.meHalo=L.circle(ll,{radius:p.coords.accuracy||30,weight:0,fillColor:'#1a73e8',fillOpacity:.12,interactive:false}).addTo(state.map);}
+      else{state.meDot.setLatLng(ll);state.meHalo.setLatLng(ll).setRadius(p.coords.accuracy||30);}
+      if(isMobile())setSheet(true);state.map.flyTo(ll,Math.max(state.map.getZoom(),16),{duration:.5});},
+      ()=>notify('現在地を取得できません。位置情報の許可を確認してください'),{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+  }
   function hideRadar(){$('radarResult').hidden=true;document.body.classList.remove('radar-open');}
   function ping(ctx,t,f){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.5,t+0.08);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.25,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+0.4);}
   function radarHere(){
@@ -1090,6 +1098,7 @@
         else if(action==='go-event'){const p=activeEvents().find(ev=>ev.id===id);if(p&&state.mapReady)openMapEvent(p);else notify('地図を読み込めませんでした');}
         else if(action==='go-point'){hideRadar();mapGo(+t.dataset.lat,+t.dataset.lng);}
         else if(action==='radar-here')radarHere();
+        else if(action==='my-location')goMyLocation();
         else if(action==='toggle-place'){$('selectedPlace').classList.toggle('is-peek');setTimeout(pinIntoView,60);}
         else if(action==='close-radar')hideRadar();
         else if(action==='go-person'){const p=activePeople().find(p=>p.user_id===id);if(p)mapGo(p.lat,p.lng);}

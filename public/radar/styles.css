@@ -318,3 +318,10 @@ body.radar-open .mapfloat{display:none}
 .big-range{position:absolute;right:10%;top:calc(50% + 4px);font-size:12px;color:#8fc9b4}
 .radar-trace{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--line);font-size:14px;color:#5f6368}
 .radar-dot.is-trace{background:#ff8a2a;opacity:.5}
+
+/* 右下ボタン：捜索・現在地（Googleマップ風） */
+.mapfloat .radar-btn{width:58px;height:58px;min-height:58px;border-radius:50%;background:#fff;padding:3px;box-shadow:0 2px 10px #0003}
+.mapfloat .radar-btn img{transform:none;border-radius:50%}
+.locate-btn{width:58px;height:58px;min-height:58px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 10px #0003}
+.locate-dot{width:22px;height:22px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 7px #1a73e82e}
+@media(max-width:800px){body[data-tab="now"] .actionbar{display:none}}
