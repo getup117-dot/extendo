@@ -277,7 +277,7 @@ button{min-height:44px}
 .radar-list{overflow:auto;margin-top:4px}
 .radar-row{display:flex;align-items:center;gap:10px;width:100%;border:0;border-top:1px solid var(--line);background:none;text-align:left;padding:8px 2px;min-height:46px;font-size:15px;color:var(--ink)}
 .radar-row:first-child{border-top:0}
-.radar-dot{width:12px;height:12px;border-radius:50%;background:#ff7a1a;flex:none}.radar-dot.is-area{background:#7a5cff}
+.radar-dot{width:12px;height:12px;border-radius:50%;background:#9bd31c;flex:none}.radar-dot.is-area{background:#7a5cff}
 .radar-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .radar-dist{font-size:13px;color:var(--muted);white-space:nowrap}
 .side{will-change:transform}
@@ -302,3 +302,19 @@ body.radar-open .mapfloat{display:none}
 @keyframes pinDrop{from{transform:translateY(-24px) rotate(-45deg);opacity:0}to{transform:rotate(-45deg);opacity:1}}
 @media(max-width:800px){.place-card{left:8px;right:8px;bottom:8px;padding:4px 18px 14px}.place-card .selected-note{display:none}}
 .selected-place.place-card #selectedLabel{border:0;padding:2px 0;margin:0;min-height:40px;font-size:22px;font-weight:700;color:#1f1f1f;box-shadow:none}
+
+/* 捜査ボタンの大きいレーダー */
+.radar-overlay{position:fixed;inset:0;z-index:3500;display:flex;align-items:center;justify-content:center;background:#04141b80;animation:scanIn .2s ease-out;transition:opacity .4s}
+.radar-overlay.done{opacity:0}
+.big-radar{position:relative;border-radius:50%;overflow:visible}
+.big-radar>img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;box-shadow:0 10px 40px #0008}
+.big-sweep{position:absolute;inset:3%;border-radius:50%;background:conic-gradient(from 0deg,rgba(197,252,68,0) 0deg,rgba(197,252,68,0) 280deg,rgba(197,252,68,.5) 360deg);animation:scanSpin 1.8s linear forwards}
+.big-center{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#ff9238;border:2px solid #fff}
+.big-blip{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;opacity:0;animation:blipIn .4s ease-out forwards}
+.big-blip.k-now{background:#c5fc44;box-shadow:0 0 0 4px #c5fc4433}.big-blip.k-area{background:#a99cff}.big-blip.k-trace{background:#ff8a2a;opacity:0;width:12px;height:12px;margin:-6px 0 0 -6px}
+.big-blip.k-trace{animation-name:traceIn}
+@keyframes traceIn{0%{opacity:0;transform:scale(.3)}60%{opacity:.8;transform:scale(1.4)}100%{opacity:.45;transform:scale(1)}}
+.big-blip span{position:absolute;left:20px;top:-4px;font-size:14px;font-weight:700;color:#e8fff6;white-space:nowrap;text-shadow:0 1px 2px #000}
+.big-range{position:absolute;right:10%;top:calc(50% + 4px);font-size:12px;color:#8fc9b4}
+.radar-trace{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--line);font-size:14px;color:#5f6368}
+.radar-dot.is-trace{background:#ff8a2a;opacity:.5}

@@ -87,7 +87,7 @@
     renderKey:'', sheetCollapsed:false, previousFocus:null, confirmResolve:null,
     lastPosition:0, lastPush:0, freshRequest:false, selected:null, selectedMarker:null,
     mapSearchRequest:0, mapHits:[], tileLoaded:0, tileErrors:0, selectedEventId:null,
-    areas:[], battles:[], extras:false, battleDraft:null, seenBumped:false, knownRequests:null
+    areas:[], battles:[], traces:[], extras:false, battleDraft:null, seenBumped:false, knownRequests:null
   };
   const shares=C.createShareQueue();
   const selfId=()=>state.mode==='demo'?'demo-me':state.user?.id;
@@ -243,10 +243,39 @@
   }
   function pinIntoView(){if(!state.selected||!state.mapReady)return;const pt=state.map.latLngToContainerPoint([state.selected.lat,state.selected.lng]),limit=state.map.getSize().y-$('selectedPlace').offsetHeight-60;if(pt.y>limit)state.map.panBy([0,pt.y-limit],{animate:true});}
   function hideRadar(){$('radarResult').hidden=true;document.body.classList.remove('radar-open');}
+  function ping(ctx,t,f){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.5,t+0.08);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.25,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+0.4);}
   function radarHere(){
-    if(!state.mapReady)return;closePlace();if(isMobile())setSheet(true);
-    setTimeout(()=>{const ll=state.map.getCenter();radarScan({lat:ll.lat,lng:ll.lng},true);},isMobile()?260:0);
+    if(!state.mapReady)return;closePlace();hideRadar();if(isMobile())setSheet(true);
+    const ll=state.map.getCenter(),pt={lat:ll.lat,lng:ll.lng},RANGE=2000,me=selfId(),T=1800,now=Date.now();
+    let ctx=null;try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch{}
+    const near=new Map(),add=(o)=>{const d=meters(pt,o);if(d>RANGE)return;const old=near.get(o.key);if(!old||d<old.d)near.set(o.key,{...o,d});};
+    activePeople().filter(p=>p.user_id!==me).forEach(p=>add({key:'n'+p.user_id,id:p.user_id,lat:p.lat,lng:p.lng,kind:'now'}));
+    (state.extras?state.areas:[]).filter(a=>a.user_id!==me&&C.validPoint(a)).forEach(a=>add({key:'a'+a.user_id,id:a.user_id,lat:a.lat,lng:a.lng,kind:'area'}));
+    const nowIds=new Set([...near.values()].filter(h=>h.kind==='now').map(h=>h.id));
+    (state.traces||[]).filter(t=>t.user_id!==me&&!nowIds.has(t.user_id)).forEach(t=>add({key:'t'+t.user_id,id:t.user_id,lat:t.lat,lng:t.lng,kind:'trace',at:Date.parse(t.seen_at)}));
+    const hits=[...near.values()],S=Math.min(window.innerWidth-36,380),Rpx=S/2-14;
+    const lab=d=>d>=1000?(d/1000).toFixed(1)+'km':Math.round(d/10)*10+'m';
+    const blips=hits.map(h=>{const dx=meters(pt,{lat:pt.lat,lng:h.lng})*(h.lng<pt.lng?-1:1),dy=meters(pt,{lat:h.lat,lng:pt.lng})*(h.lat<pt.lat?1:-1);
+      const x=S/2+dx/RANGE*Rpx,y=S/2+dy/RANGE*Rpx,ang=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;h.delay=ang/360*T;
+      return `<div class="big-blip k-${h.kind}" style="left:${x}px;top:${y}px;animation-delay:${Math.round(h.delay)}ms">${h.kind==='trace'?'':`<span>${esc(nameFor(h.id))}</span>`}</div>`;}).join('');
+    const ov=document.createElement('div');ov.className='radar-overlay';
+    ov.innerHTML=`<div class="big-radar" style="width:${S}px;height:${S}px"><img src="assets/scan-radar.jpg" alt=""><div class="big-sweep"></div><span class="big-center"></span>${blips}<span class="big-range">${RANGE/1000}km</span></div>`;
+    document.body.appendChild(ov);
+    if(ctx)hits.forEach(h=>ping(ctx,ctx.currentTime+0.15+h.delay/1000,h.kind==='trace'?700:h.kind==='area'?900:1200));
+    if(!hits.length&&ctx)ping(ctx,ctx.currentTime+T/1000,500);
+    setTimeout(()=>{ov.classList.add('done');setTimeout(()=>{ov.remove();ctx?.close?.();},450);showRadarResult(hits,now);},T+700);
   }
+  function showRadarResult(hits,now){
+    const live=hits.filter(h=>h.kind!=='trace').sort((a,b)=>a.d-b.d),tr=hits.filter(h=>h.kind==='trace');
+    const ago=t=>{const m=Math.max(1,Math.round((now-t)/60000));return m<60?`${m}分前`:m<1440?`${Math.round(m/60)}時間前`:`${Math.round(m/1440)}日前`;};
+    const lab=d=>d>=1000?(d/1000).toFixed(1)+'km':Math.round(d/10)*10+'m';
+    let html=live.slice(0,6).map(h=>`<button class="radar-row" data-action="go-point" data-lat="${h.lat}" data-lng="${h.lng}"><span class="radar-dot${h.kind==='area'?' is-area':''}"></span><span class="radar-name">${esc(fullName(h.id))}</span><span class="radar-dist">${lab(h.d)}${h.kind==='area'?'・出没エリア':''}</span></button>`).join('');
+    if(tr.length){const far=Math.max(...tr.map(h=>h.d)),last=Math.max(...tr.map(h=>h.at));html+=`<div class="radar-trace"><span class="radar-dot is-trace"></span><span>半径${lab(Math.max(500,Math.ceil(far/500)*500))}以内に、${tr.length}人の気配（最後は${ago(last)}）</span></div>`;}
+    $('radarList').innerHTML=html||'<p class="hint">近くには誰もいないみたい。</p>';
+    $('radarCount').textContent=live.length?`${live.length}人`:'';
+    $('radarResult').hidden=false;document.body.classList.add('radar-open');
+  }
+
   function chooseMapPoint(place, move) {
     const forEvent=state.pickMode==='event', forArea=state.pickMode==='area';
     endPick();
@@ -955,6 +984,7 @@
     if(client!==state.sb||userId!==selfId()||request!==state.request)return;
     state.extras=!extra.some(r=>r.error);
     [state.areas,state.battles]=state.extras?extra.map(r=>r.data||[]):[[],[]];
+    {const tr=await client.from('traces').select('user_id,lat,lng,seen_at').gt('seen_at',new Date(Date.now()-7*864e5).toISOString()).order('seen_at',{ascending:false}).limit(3000);state.traces=tr.error?[]:(tr.data||[]);}
     setStatus();noticeRequests();render();bumpAreas();
   }
   function noticeRequests(){
