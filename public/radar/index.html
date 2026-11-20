@@ -32,7 +32,7 @@
     <div class="sidehead"><div class="eyebrow">FIND YOUR BATTLE</div><h1 id="panelTitle">いま、誰がいる？</h1><p id="panelDesc">いまいる人と、これから集まる予定をチェック。</p></div>
     <nav class="tabbar" aria-label="表示切り替え"><button class="tab active" data-tab="now">いまいる</button><button class="tab" data-tab="plans">出没予定</button><button class="tab" data-tab="account">マイページ</button></nav>
     <div id="connectionStatus" class="connection-status" role="status"></div>
-    <div id="filterBar" class="filter-bar" hidden><input id="listSearch" type="search" placeholder="場所・名前・予定を検索" aria-label="場所・名前・予定を検索"><div id="planFilters" class="filter-options"><button class="filter active" data-filter="all">すべて</button><button class="filter" data-filter="today">今日</button><button class="filter" data-filter="joined">参加予定</button><button class="filter" data-filter="mine">自分の予定</button></div></div>
+    <div id="filterBar" class="filter-bar" hidden><input autocomplete="off" id="listSearch" type="search" placeholder="場所・名前・予定を検索" aria-label="場所・名前・予定を検索"><div id="planFilters" class="filter-options"><button class="filter active" data-filter="all">すべて</button><button class="filter" data-filter="today">今日</button><button class="filter" data-filter="joined">参加予定</button><button class="filter" data-filter="mine">自分の予定</button></div></div>
     <div id="panelContent" class="scroll" aria-live="polite"></div>
     <div class="actionbar"><button id="mainAction" class="btn primary wide" data-action="new-event">＋ 出没予定を登録</button><button class="btn outline" data-action="center-map" aria-label="東京の地図を見る">⌖</button></div>
   </aside>
@@ -52,7 +52,7 @@
     <div id="mapLoadStatus" class="map-load-status" role="status" hidden></div>
     <section id="selectedPlace" class="selected-place" aria-label="選んだ場所" hidden>
       <div class="selected-top"><span class="selected-tag">選んだ場所</span><button class="xbtn" data-action="close-place" aria-label="選んだ場所を閉じる">×</button></div>
-      <label class="sr-only" for="selectedName">選んだ場所の名前</label><input id="selectedName" maxlength="100" placeholder="この場所の名前">
+      <label class="sr-only" for="selectedLabel">選んだ場所の名前</label><input autocomplete="off" id="selectedLabel" maxlength="100" placeholder="この場所の名前">
       <p id="selectedDetail" class="selected-detail"></p>
       <button id="saveSpotButton" class="save-spot" data-action="save-spot">☆ この場所を保存</button>
       <div class="checkin-duration"><label for="checkinDuration">「ここにいる」の時間</label><select id="checkinDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="180">3時間</option><option value="360">6時間</option></select></div>
@@ -82,9 +82,9 @@
 <div id="eventOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-label="出没予定の登録"><div class="modal">
   <div class="modal-head"><h2 id="eventDialogTitle">出没予定を登録</h2><button class="xbtn" data-action="close-event" aria-label="閉じる">×</button></div>
   <form id="eventForm" class="form-col"><input type="hidden" id="editId">
-    <div class="field"><label for="eventTitle">タイトル</label><input id="eventTitle" maxlength="60" required placeholder="例：秋葉原でフリーバトル"></div>
+    <div class="field"><label for="eventTitle">タイトル</label><input autocomplete="off" id="eventTitle" maxlength="60" required placeholder="例：秋葉原でフリーバトル"></div>
     <div class="grid2"><div class="field"><label for="eventDate">開始日</label><input id="eventDate" type="date" required></div><div class="field"><label for="eventStart">開始時刻</label><input id="eventStart" type="time" required></div></div>
-    <div class="grid2"><div class="field"><label for="eventEndDate">終了日</label><input id="eventEndDate" type="date" required></div><div class="field"><label for="eventEnd">終了時刻</label><input id="eventEnd" type="time" required></div></div><div class="field"><label for="eventPlace">場所・施設名</label><input id="eventPlace" maxlength="100" required placeholder="秋葉原の○○店"></div>
+    <div class="grid2"><div class="field"><label for="eventEndDate">終了日</label><input id="eventEndDate" type="date" required></div><div class="field"><label for="eventEnd">終了時刻</label><input id="eventEnd" type="time" required></div></div><div class="field"><label for="eventPlace">場所・施設名</label><input autocomplete="off" id="eventPlace" maxlength="100" required placeholder="秋葉原の○○店"></div>
     <div class="field"><label for="placeQuery">地図上の位置</label><div class="searchline"><input id="placeQuery" placeholder="施設名・住所・緯度,経度・マップURL" autocomplete="off"><button type="button" class="btn subtle" data-action="search-place">検索</button></div><div id="placeResults" class="search-results"></div><button type="button" class="btn outline" data-action="pick-map">地図をタップして指定</button><div class="help" id="coordText">位置が未選択です。</div></div>
     <div class="field"><label for="eventStadium">当日のスタジアム</label><select id="eventStadium"></select></div>
     <div class="field"><label for="eventDetail">ひとこと（任意）</label><textarea id="eventDetail" maxlength="300" placeholder="対戦歓迎、初心者OK、持ち物など"></textarea></div>
@@ -95,7 +95,7 @@
 <div id="settingsOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-label="接続設定"><div class="modal">
   <div class="modal-head"><h2>接続設定（開発用）</h2><button class="xbtn" data-action="close-settings" aria-label="閉じる">×</button></div>
   <div class="form-col"><p class="hint">デモモードでは、このブラウザ内だけに保存されます。複数人で共有するには、Supabaseプロジェクトと付属の <code>schema.sql</code> を用意してください。</p>
-  <div class="field"><label for="sbUrl">Supabase Project URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co" inputmode="url"></div>
+  <div class="field"><label for="sbUrl">Supabase Project URL</label><input autocomplete="off" id="sbUrl" placeholder="https://xxxx.supabase.co" inputmode="url"></div>
   <div class="field"><label for="sbKey">Publishable key / anon public key</label><textarea id="sbKey" style="min-height:68px" placeholder="sb_publishable_... または eyJ..."></textarea><div class="help">公開用のキーだけを指定。<strong>service_role / secret キーは絶対に入力しないでください。</strong></div></div>
   <button class="btn teal wide" data-action="connect-supabase">Supabaseに接続</button><button class="btn outline wide" data-action="use-demo">デモモードで利用する</button><p class="help">接続設定はこのブラウザに保存されます。実利用にはHTTPSでの公開とメール認証設定が必要です。</p>
   </div>
@@ -106,8 +106,8 @@
   <div class="modal-head"><h2 id="areaDialogTitle">出没エリアに登録</h2><button class="xbtn" data-action="close-area" aria-label="閉じる">×</button></div>
   <form id="areaForm" class="form-col">
     <p class="hint">よくいる場所を地図に出しておけます。<span id="areaCount"></span></p>
-    <div class="field"><label for="areaName">場所の名前</label><input id="areaName" maxlength="60" required placeholder="例：○○店、○○公園"></div>
-    <div class="field"><label for="areaWhen">よくいる曜日・時間帯（任意）</label><input id="areaWhen" maxlength="40" placeholder="例：土日の午後、平日の夜"></div>
+    <div class="field"><label for="areaLabel">場所の名前</label><input autocomplete="off" id="areaLabel" maxlength="60" required placeholder="例：○○店、○○公園"></div>
+    <div class="field"><label for="areaWhen">よくいる曜日・時間帯（任意）</label><input autocomplete="off" id="areaWhen" maxlength="40" placeholder="例：土日の午後、平日の夜"></div>
     <div class="notice">誰でも見られます。お店・公園など公共の場所だけにしてください。</div>
     <button class="btn primary wide" type="submit" id="areaSave">登録する</button>
   </form>

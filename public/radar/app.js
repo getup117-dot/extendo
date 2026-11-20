@@ -403,7 +403,7 @@
   }
   function viewBanner(){return `<div class="notice view-notice">見るだけモードです。<button class="linklike" data-action="go-account">ニックネームではじめる</button></div>`;}
   function loginWall() {
-    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startName">ニックネーム</label><input type="text" id="startName" required maxlength="32" placeholder="例：しょうた" autocomplete="nickname"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>`;
+    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startNick">ニックネーム</label><input type="text" id="startNick" required maxlength="32" placeholder="例：しょうた" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -413,7 +413,7 @@
       <div class="setting-card">
         <div class="section-title">プロフィール <span class="tag">${state.mode==='demo'?'試用版':'ログイン中'}</span></div>
         <form id="profileForm" class="form-col">
-          <div class="field"><label for="displayName">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="displayName" maxlength="32" required value="${esc(selfName())}" autocomplete="nickname"></div>
+          <div class="field"><label for="nickField">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="nickField" maxlength="32" required value="${esc(selfName())}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
           <div class="field"><label for="battleReady">対戦歓迎の表示</label><select id="battleReady">${profileOptions({no:'表示しない',yes:'対戦歓迎'},profile.battle_ready?'yes':'no')}</select></div>
           <div class="field"><label for="stadiumStatus">スタジアム</label><select id="stadiumStatus">${profileOptions(STADIUM_OPTIONS, profile.stadium_status || 'unset')}</select></div>
           <div class="field"><label for="rankLevel">ランク（仮）</label><select id="rankLevel">${profileOptions(RANK_OPTIONS, profile.rank_level || 'unset')}</select></div>
@@ -532,7 +532,7 @@
   }
   function selectedPoint() {
     if(!state.selected)return null;
-    return {...state.selected,name:clean($('selectedName').value)||state.selected.name||'選んだ場所'};
+    return {...state.selected,name:clean($('selectedLabel').value)||state.selected.name||'選んだ場所'};
   }
   function showMapTab() {
     state.tab='now';render();if(isMobile())setSheet(true);
@@ -587,7 +587,7 @@
     closePlace();
     state.selected={lat:Number(place.lat),lng:Number(place.lng),name:clean(place.name)||'地図で選んだ場所',address:clean(place.address)};
     showMapTab();$('mapSearch').blur();$('mapSearchResults').hidden=true;
-    $('selectedName').value=state.selected.name;
+    $('selectedLabel').value=state.selected.name;
     $('selectedDetail').textContent=state.selected.address||`緯度 ${state.selected.lat.toFixed(5)} ・ 経度 ${state.selected.lng.toFixed(5)}`;
     $('selectedPlace').hidden=false;document.body.classList.add('place-selected');
     {const saved=Number(storage.get(CHECKIN_KEY,60));if(CHECKIN_CHOICES.includes(saved))$('checkinDuration').value=String(saved);}
@@ -775,7 +775,7 @@
     if(!state.user)throw Error('ニックネームではじめると登録できます');
     if(!area.id&&myAreas().length>=AREA_MAX)throw Error(`出没エリアは${AREA_MAX}か所までです。マイページで消してから追加してください`);
     state.areaDraft={id:area.id||'',lat:Number(area.lat),lng:Number(area.lng)};
-    $('areaName').value=area.name&&area.name!=='地図で選んだ場所'&&area.name!=='現在地'?area.name:'';
+    $('areaLabel').value=area.name&&area.name!=='地図で選んだ場所'&&area.name!=='現在地'?area.name:'';
     $('areaWhen').value=area.when_text||'';
     $('areaDialogTitle').textContent=area.id?'出没エリアを編集':'出没エリアに登録';
     $('areaSave').textContent=area.id?'変更を保存':'登録する';
@@ -789,7 +789,7 @@
   }
   async function saveArea(){
     const d=state.areaDraft;if(!d)return;
-    const name=clean($('areaName').value),when=clean($('areaWhen').value);
+    const name=clean($('areaLabel').value),when=clean($('areaWhen').value);
     if(!name)throw Error('場所の名前を入れてください');if(name.length>60||when.length>40)throw Error('入力できる文字数を超えています');
     const record={name,when_text:when,lat:d.lat,lng:d.lng};
     const q=d.id?state.sb.from('areas').update(record).eq('id',d.id).eq('user_id',selfId()):state.sb.from('areas').insert({...record,user_id:selfId()});
@@ -826,7 +826,7 @@
   function renderBattleForm(){
     const d=state.battleDraft;if(!d)return;
     const box=$('battleOpponent');
-    if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeName">相手のニックネーム</label><input id="battleFreeName" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">自分だけのメモになります。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;}
+    if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeNick">相手のニックネーム</label><input autocomplete="off" id="battleFreeNick" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">自分だけのメモになります。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;}
     else if(d.opponent){box.innerHTML=`<div class="picked-opponent"><span class="avatar">${esc(initial(nameFor(d.opponent)))}</span><div><strong>${esc(fullName(d.opponent))}</strong>${profileBadges(d.opponent)}</div><button type="button" class="tiny-btn" data-action="pick-opponent" data-id="">変える</button></div>`;}
     else{
       const groups=battleCandidates();
@@ -845,7 +845,7 @@
   }
   async function saveBattle(){
     const d=state.battleDraft;if(!d)return;
-    if(d.free)d.freeName=clean($('battleFreeName')?.value);
+    if(d.free)d.freeName=clean($('battleFreeNick')?.value);
     if(!d.free&&!d.opponent)throw Error('対戦相手を選んでください');
     if(d.free&&!d.freeName)throw Error('相手のニックネームを入れてください');
     if(!d.result)throw Error('勝ち・負け・引き分けを選んでください');
@@ -866,7 +866,7 @@
     await loadLive();notify(reject?'記録を消しました':'対戦記録を消しました');
   }
   async function setProfile() {
-    const displayName = clean($('displayName').value);
+    const displayName = clean($('nickField').value);
     const stadiumStatus = $('stadiumStatus').value;
     const rankLevel = $('rankLevel').value;
     if (!displayName || displayName.length > 32) throw Error('ニックネームは1〜32文字で入力してください');
@@ -966,7 +966,7 @@
   }
   async function startAnon() {
     if(!state.sb)throw Error('接続を確認してください');
-    const name=clean($('startName').value).slice(0,32);if(!name)throw Error('ニックネームを入れてください');
+    const name=clean($('startNick').value).slice(0,32);if(!name)throw Error('ニックネームを入れてください');
     if(!$('startAgree').checked)throw Error('同意のチェックを入れてください');
     state.pendingName=name;
     const {error}=await state.sb.auth.signInAnonymously({options:{data:{name}}});
@@ -1044,7 +1044,7 @@
     $('checkinDuration').addEventListener('change',updateCheckinNote);
     $('mapSearch').addEventListener('input',()=>{++state.mapSearchRequest;$('mapSearchResults').hidden=true;});
     document.addEventListener('pointerdown',e=>{if(!$('mapSearchPanel').contains(e.target))$('mapSearchResults').hidden=true;});
-    $('selectedName').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedName').value)||state.selected.name;});
+    $('selectedLabel').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedLabel').value)||state.selected.name;});
     $('placeQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBusy(document.querySelector('[data-action="search-place"]'),searchPlace);}});
     $('eventDate').addEventListener('change',()=>{if($('eventEndDate').value<$('eventDate').value)$('eventEndDate').value=$('eventDate').value;});
     for(const name of ['event','settings','confirm','report','area','battle'])$(name+'Overlay').addEventListener('click',e=>{if(e.target!==$(name+'Overlay'))return;if(name==='confirm')resolveConfirm(false);else closeModal(name);});
