@@ -312,6 +312,7 @@
     document.querySelectorAll('[data-filter]').forEach(el=>{el.classList.toggle('active',el.dataset.filter===state.filter);el.setAttribute('aria-pressed',String(el.dataset.filter===state.filter));});
     $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():renderAccount());
     document.body.dataset.tab=state.tab;
+    {const m=$('mainAction');if(state.tab==='now'){m.dataset.action='go-gps';m.textContent='📍 いまここにいる';m.className='btn teal wide';}else{m.dataset.action='new-event';m.textContent='＋ 出没予定を登録';m.className='btn primary wide';}}
     document.querySelectorAll('[data-tab="account"]').forEach(el=>el.classList.toggle('has-alert',state.extras&&incomingRequests().length>0));
     restoreFields(saved); renderMap(); updateShareIndicator();
   }
@@ -347,11 +348,10 @@
     const empty = `<div class="empty">${state.listQueries.now ? '該当するブレーダーはいません。' : '現在地を共有している人はまだいません。'}</div>`;
     return `${sample}
       <div class="statstrip"><div class="stat"><b>${activePeople().length}</b><span>現在地を共有中</span></div><div class="stat"><b>${activeEvents().length}</b><span>これからの出没予定</span></div></div>
-      <button class="btn teal wide" data-action="go-account">${state.share ? '現在地の共有状況を見る' : '自分の現在地を共有する'}</button>
       <div class="section-title">いまいるブレーダー <span class="count">${people.length}</span></div>
       ${cards || empty}
       ${areaListHTML()}
-      <p class="help">位置共有は任意です。GPSの共有は更新が5分以上止まると、「ここにいる」は選んだ時間が過ぎると、地図から自動で消えます。</p>`;
+`;
   }
 
   function areaListHTML(){
@@ -359,7 +359,7 @@
     const q=state.listQueries.now.toLowerCase();
     const list=state.areas.filter(a=>[a.name,a.when_text,fullName(a.user_id)].join(' ').toLowerCase().includes(q)).sort((a,b)=>areaStale(a)-areaStale(b)||b.seen_at.localeCompare(a.seen_at));
     const cards=list.slice(0,60).map(a=>`<div class="card area-card${areaStale(a)?' is-stale':''}"><div class="person-top"><span class="avatar area-avatar">${esc(initial(nameFor(a.user_id)))}</span><div class="person-name"><strong>${esc(a.name)}</strong><div class="person-sub">${esc(fullName(a.user_id))}${a.user_id===selfId()?'（あなた）':''}${a.when_text?' ・ '+esc(a.when_text):''}${areaStale(a)?' ・ 最近は来ていないかも':''}</div></div><span class="pill area-pill">出没エリア</span></div><div class="card-buttons"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図で見る</button>${a.user_id!==selfId()&&logged()?`<button class="tiny-btn" data-action="new-battle" data-id="${esc(a.user_id)}">対戦を記録</button>`:''}</div></div>`).join('');
-    return `<div class="section-title">出没エリア <span class="count">${list.length}</span></div>${cards||`<div class="empty">${q?'該当する出没エリアはありません。':'まだ登録がありません。地図で場所を選んで「出没エリアに登録」から登録できます。'}</div>`}`;
+    return `<div class="section-title">出没エリア <span class="count">${list.length}</span></div>${cards||`<div class="empty">${q?'該当する出没エリアはありません。':'まだありません。'}</div>`}`;
   }
   function filteredEvents() {
     const q=state.listQueries.plans.toLowerCase(), today=dateYMD(new Date());
@@ -392,18 +392,18 @@
         ${event.details ? `<p class="card-note">${esc(event.details)}</p>` : ''}
         <div class="host-profile"><p class="event-owner">主催：${esc(nameFor(event.user_id))}</p>${profileBadges(event.user_id)}</div>
         <div class="event-foot">
-          <div class="event-owner">参加予定 ${attendees(event).length}人（主催者含む）</div>
+          <div class="event-owner">参加 ${attendees(event).length}人</div>
           <div class="event-actions"><button class="tiny-btn" data-action="go-event" data-id="${esc(event.id)}">地図</button>${actions}${reportTools('event', event.id, event.user_id)}</div>
         </div>
         ${participantInfo(event)}
       </article>`;
     }).join('');
-    const empty = '<div class="empty">該当する予定はありません。<br>「＋ 出没予定を登録」から作ってみましょう。</div>';
-    return `<div class="section-title">これからの出没予定 <span class="count">${events.length}</span></div>${cards || empty}<p class="help">施設の利用ルールや周囲への配慮を守って集まりましょう。</p>`;
+    const empty = '<div class="empty">予定はありません。</div>';
+    return `<div class="section-title">これからの出没予定 <span class="count">${events.length}</span></div>${cards || empty}`;
   }
-  function viewBanner(){return `<div class="notice view-notice">見るだけモードです。「ここにいる」や出没予定の登録・参加は、<button class="linklike" data-action="go-account">ニックネームではじめる</button>と使えます。</div>`;}
+  function viewBanner(){return `<div class="notice view-notice">見るだけモードです。<button class="linklike" data-action="go-account">ニックネームではじめる</button></div>`;}
   function loginWall() {
-    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。地図や予定はこのまま見られます。ニックネームを入れると、「ここにいる」や出没予定の登録・参加ができます。</p><form id="startForm" class="form-col"><div class="field"><label for="startName">ニックネーム</label><input type="text" id="startName" required maxlength="32" placeholder="例：しょうた" autocomplete="nickname"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。ブラウザのデータを消したり、別の端末で開いたりすると、新しい人として始まります。ニックネームはあとからマイページで変えられます。</p></div>`;
+    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startName">ニックネーム</label><input type="text" id="startName" required maxlength="32" placeholder="例：しょうた" autocomplete="nickname"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -413,32 +413,31 @@
       <div class="setting-card">
         <div class="section-title">プロフィール <span class="tag">${state.mode==='demo'?'試用版':'ログイン中'}</span></div>
         <form id="profileForm" class="form-col">
-          <div class="field"><label for="displayName">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="displayName" maxlength="32" required value="${esc(selfName())}" autocomplete="nickname">${tagFor(selfId())?`<p class="help">#${esc(tagFor(selfId()))} はあなたの番号です。同じ名前の人がいても、番号で見分けられます。対戦相手に伝えると探してもらいやすくなります。</p>`:''}</div>
-          <div class="field"><label for="battleReady">対戦歓迎の表示</label><select id="battleReady">${profileOptions({no:'表示しない',yes:'対戦歓迎'},profile.battle_ready?'yes':'no')}</select><p class="help">位置を共有している間、地図の丸が二重リングになります。</p></div>
+          <div class="field"><label for="displayName">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="displayName" maxlength="32" required value="${esc(selfName())}" autocomplete="nickname"></div>
+          <div class="field"><label for="battleReady">対戦歓迎の表示</label><select id="battleReady">${profileOptions({no:'表示しない',yes:'対戦歓迎'},profile.battle_ready?'yes':'no')}</select></div>
           <div class="field"><label for="stadiumStatus">スタジアム</label><select id="stadiumStatus">${profileOptions(STADIUM_OPTIONS, profile.stadium_status || 'unset')}</select></div>
-          <div class="field"><label for="rankLevel">ランク（仮）</label><select id="rankLevel" aria-describedby="rankHelp">${profileOptions(RANK_OPTIONS, profile.rank_level || 'unset')}</select><p class="help" id="rankHelp">今は自己申告で選べます。</p></div>
+          <div class="field"><label for="rankLevel">ランク（仮）</label><select id="rankLevel">${profileOptions(RANK_OPTIONS, profile.rank_level || 'unset')}</select></div>
           <button class="btn dark wide" type="submit">プロフィールを保存</button>
         </form>
       </div>
       <div class="setting-card"><div class="toggle-line"><strong>現在地の共有</strong><span class="pill" id="sharePill">${sharing?'共有中':'OFF'}</span></div><div class="separator"></div>
-      ${sharing?`<div class="share-active" id="shareStatus"></div><button class="btn outline wide" style="margin-top:12px" data-action="stop-share">${state.stopFailed?'公開停止をもう一度試す':'位置共有を停止する'}</button>`:`<p class="hint">共有は初期OFF。時間と位置の精度を選んで開始します。</p><div class="grid2 share-settings"><div class="field"><label for="shareDuration">共有する時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><div class="field"><label for="sharePrecision">位置の精度</label><select id="sharePrecision"><option value="approx">概略（約500m）</option><option value="exact">詳細位置</option></select></div></div><button class="btn teal wide" data-action="start-share">GPSで現在地を共有</button><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button><p class="help">地図で指定した地点は5分間共有されます。</p>`}
-      <p class="help" style="margin-top:12px">${state.mode==='demo'?'試用版のため、位置情報が他の利用者に送られることはありません。':'ログイン済みの利用者全員に表示されます。自宅付近での詳細位置の共有は避けてください。'}</p></div>
+      ${sharing?`<div class="share-active" id="shareStatus"></div><button class="btn outline wide" style="margin-top:12px" data-action="stop-share">${state.stopFailed?'公開停止をもう一度試す':'位置共有を停止する'}</button>`:`<div class="grid2 share-settings"><div class="field"><label for="shareDuration">共有する時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><div class="field"><label for="sharePrecision">位置の精度</label><select id="sharePrecision"><option value="approx">概略（約500m）</option><option value="exact">詳細位置</option></select></div></div><button class="btn teal wide" data-action="start-share">GPSで現在地を共有</button><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button>`}
+      </div>
       ${areaAccountHTML()}
-      <div class="setting-card"><strong>保存した場所</strong><div class="saved-places">${savedSpots().map((p,i)=>`<button class="saved-place" data-action="open-saved" data-index="${i}"><span>☆</span><span>${esc(p.name)}</span><span>地図</span></button>`).join('')||'<p class="hint">地図をタップ、または場所を検索して保存できます。</p>'}</div></div>
-      <div class="setting-card"><strong>位置情報について</strong><p class="hint">GPSはアプリを開いている間に更新されます。画面を閉じたり、更新が5分以上止まったりすると地図から消えます。概略表示では、端末内で丸めた座標だけを共有します。</p></div>
+      <div class="setting-card"><strong>保存した場所</strong><div class="saved-places">${savedSpots().map((p,i)=>`<button class="saved-place" data-action="open-saved" data-index="${i}"><span>☆</span><span>${esc(p.name)}</span><span>地図</span></button>`).join('')||'<p class="hint">まだありません。</p>'}</div></div>
       ${state.mode==='demo'?'<button class="btn outline wide" data-action="reset-demo">試用データを最初に戻す</button>':'<button class="btn outline wide" data-action="logout">ログアウト</button>'}`;
   }
   function battleAccountHTML(){
     if(!state.extras||state.mode!=='live')return '';
     const reqs=incomingRequests(), rec=recordOf(selfId()), list=myBattles().slice(0,30);
-    const reqHTML=reqs.length?`<div class="setting-card request-card"><div class="section-title">承認待ちの対戦 <span class="count">${reqs.length}</span></div>${reqs.map(b=>{const v=battleView(b);return `<div class="battle-row"><div><strong>${esc(fullName(b.reporter))}</strong> との対戦<div class="person-sub">あなたの${esc(RESULT_TEXT[v.result])}${esc(scoreText(v))} ・ ${esc(fmtDate(b.played_at))}${b.place?' ・ '+esc(b.place):''}</div>${b.note?`<div class="card-note">${esc(b.note)}</div>`:''}</div><div class="battle-actions"><button class="tiny-btn joined" data-action="confirm-battle" data-id="${esc(b.id)}">OK</button><button class="tiny-btn" data-action="reject-battle" data-id="${esc(b.id)}">ちがう</button></div></div>`;}).join('')}<p class="help">OKを押すと確定し、おたがいの戦績に数えられます。「ちがう」を押すと記録は消えます。</p></div>`:'';
-    const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(scoreText(v).trim()||'スコアなし')} ・ ${esc(fmtDate(b.played_at))}${b.place?' ・ '+esc(b.place):''}</div>${b.note?`<div class="card-note">${esc(b.note)}</div>`:''}</div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
-    return `${reqHTML}<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div><button class="btn primary wide" data-action="new-battle">＋ 対戦を記録</button>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint" style="margin-top:10px">まだ記録がありません。対戦したら相手を選んで記録しましょう。相手がOKすると確定します。</p>'}<p class="help">戦績に数えるのは、相手がOKした「確定」の対戦だけです。</p></div>`;
+    const reqHTML=reqs.length?`<div class="setting-card request-card"><div class="section-title">承認待ちの対戦 <span class="count">${reqs.length}</span></div>${reqs.map(b=>{const v=battleView(b);return `<div class="battle-row"><div><strong>${esc(fullName(b.reporter))}</strong> との対戦<div class="person-sub">あなたの${esc(RESULT_TEXT[v.result])} ・ ${esc(fmtDate(b.played_at))}</div></div><div class="battle-actions"><button class="tiny-btn joined" data-action="confirm-battle" data-id="${esc(b.id)}">OK</button><button class="tiny-btn" data-action="reject-battle" data-id="${esc(b.id)}">ちがう</button></div></div>`;}).join('')}</div>`:'';
+    const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
+    return `${reqHTML}<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div><button class="btn primary wide" data-action="new-battle">＋ 対戦を記録</button>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint" style="margin-top:10px">まだ記録がありません。</p>'}</div>`;
   }
   function areaAccountHTML(){
     if(!state.extras||state.mode!=='live')return '';
     const list=myAreas();
-    return `<div class="setting-card"><div class="section-title">出没エリア <span class="count">${list.length}/${AREA_MAX}</span></div>${list.map(a=>`<div class="battle-row"><div><strong>${esc(a.name)}</strong><div class="person-sub">${a.when_text?'よくいる：'+esc(a.when_text):'曜日・時間帯は未設定'}</div></div><div class="battle-actions"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図</button><button class="tiny-btn" data-action="edit-area" data-id="${esc(a.id)}">編集</button><button class="tiny-btn" data-action="delete-area" data-id="${esc(a.id)}">消す</button></div></div>`).join('')||'<p class="hint">よく行くお店や公園を、期限なしで地図に出しておけます。</p>'}${list.length<AREA_MAX?'<button class="btn outline wide" style="margin-top:10px" data-action="add-area-map">地図で場所を選んで追加</button>':''}<p class="help">お店・公園など公共の場所だけを登録してください。自宅や職場の近くは避けましょう。</p></div>`;
+    return `<div class="setting-card"><div class="section-title">出没エリア <span class="count">${list.length}/${AREA_MAX}</span></div>${list.map(a=>`<div class="battle-row"><div><strong>${esc(a.name)}</strong><div class="person-sub">${a.when_text?'よくいる：'+esc(a.when_text):'曜日・時間帯は未設定'}</div></div><div class="battle-actions"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図</button><button class="tiny-btn" data-action="edit-area" data-id="${esc(a.id)}">編集</button><button class="tiny-btn" data-action="delete-area" data-id="${esc(a.id)}">消す</button></div></div>`).join('')||'<p class="hint">よく行くお店や公園を地図に出しておけます。</p>'}${list.length<AREA_MAX?'<button class="btn outline wide" style="margin-top:10px" data-action="add-area-map">地図で場所を選んで追加</button>':''}</div>`;
   }
   function updateShareIndicator() {
     const el=$('shareStatus'); if(!el)return;
@@ -629,7 +628,7 @@
   const CHECKIN_CHOICES=[30,60,120,180,360];
   const minutesLabel=m=>m<60?`${m}分`:`${m/60}時間`;
   function checkinMinutes(){const v=Number($('checkinDuration')?.value);return CHECKIN_CHOICES.includes(v)?v:60;}
-  function updateCheckinNote(){const m=checkinMinutes();$('selectedNote').textContent=state.mode==='demo'?`「ここにいる」は選んだ地点を${minutesLabel(m)}、端末内に登録します。`:`「ここにいる」は選んだ地点を${minutesLabel(m)}、利用者に共有します。あとから停止できます。`;}
+  function updateCheckinNote(){return;const m=checkinMinutes();$('selectedNote').textContent=state.mode==='demo'?`「ここにいる」は選んだ地点を${minutesLabel(m)}、端末内に登録します。`:`「ここにいる」は選んだ地点を${minutesLabel(m)}、利用者に共有します。あとから停止できます。`;}
   async function registerHere() {
     const place=selectedPoint();if(!place)return;
     if(!logged())throw Error('ログインしてください');
@@ -827,7 +826,7 @@
   function renderBattleForm(){
     const d=state.battleDraft;if(!d)return;
     const box=$('battleOpponent');
-    if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeName">相手のニックネーム</label><input id="battleFreeName" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">まだ登録していない相手との記録は、自分だけが見られるメモになります（戦績には数えません）。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;}
+    if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeName">相手のニックネーム</label><input id="battleFreeName" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">自分だけのメモになります。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;}
     else if(d.opponent){box.innerHTML=`<div class="picked-opponent"><span class="avatar">${esc(initial(nameFor(d.opponent)))}</span><div><strong>${esc(fullName(d.opponent))}</strong>${profileBadges(d.opponent)}</div><button type="button" class="tiny-btn" data-action="pick-opponent" data-id="">変える</button></div>`;}
     else{
       const groups=battleCandidates();
@@ -837,14 +836,11 @@
     document.querySelectorAll('[data-action="battle-result"]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.value===d.result)));
   }
   function candidateHTML(groups){
-    return groups.map(g=>`<p class="candidate-title">${esc(g.title)}</p>${g.ids.map(id=>`<button type="button" class="candidate" data-action="pick-opponent" data-id="${esc(id)}"><span class="avatar">${esc(initial(nameFor(id)))}</span><span><strong>${esc(nameFor(id))}</strong><small>#${esc(tagFor(id)||'----')}${(()=>{const r=recordOf(id);return r.total?' ・ '+recordText(r):'';})()}</small></span></button>`).join('')}`).join('')||'<p class="hint">近くにいる人・同じ出没エリアの人がいません。ニックネームか #番号 で探してください。</p>';
+    return groups.map(g=>`<p class="candidate-title">${esc(g.title)}</p>${g.ids.map(id=>`<button type="button" class="candidate" data-action="pick-opponent" data-id="${esc(id)}"><span class="avatar">${esc(initial(nameFor(id)))}</span><span><strong>${esc(nameFor(id))}</strong><small>#${esc(tagFor(id)||'----')}${(()=>{const r=recordOf(id);return r.total?' ・ '+recordText(r):'';})()}</small></span></button>`).join('')}`).join('')||'<p class="hint">名前か #番号 で探してください。</p>';
   }
   function openBattle(opponent){
     if(!state.user)throw Error('ニックネームではじめると記録できます');
     state.battleDraft={opponent:opponent&&opponent!==selfId()?opponent:'',result:'',free:false,query:''};
-    $('battleMyScore').value='';$('battleTheirScore').value='';$('battleNote').value='';
-    const here=activePeople().find(p=>p.user_id===selfId()),area=here&&myAreas().concat(state.areas).find(a=>meters(a,here)<400);
-    $('battlePlace').value=area?area.name:'';
     renderBattleForm();openModal('battle');
   }
   async function saveBattle(){
@@ -853,9 +849,7 @@
     if(!d.free&&!d.opponent)throw Error('対戦相手を選んでください');
     if(d.free&&!d.freeName)throw Error('相手のニックネームを入れてください');
     if(!d.result)throw Error('勝ち・負け・引き分けを選んでください');
-    const num=id=>{const v=clean($(id).value);if(v==='')return null;const n=Number(v);if(!Number.isInteger(n)||n<0||n>99)throw Error('スコアは0〜99の数字で入れてください');return n;};
-    const my=num('battleMyScore'),their=num('battleTheirScore');
-    const record={reporter:selfId(),result:d.result,my_score:my,their_score:their,note:clean($('battleNote').value).slice(0,100),place:clean($('battlePlace').value).slice(0,60),
+    const record={reporter:selfId(),result:d.result,
       ...(d.free?{status:'memo',opponent:null,opponent_name:d.freeName.slice(0,32)}:{status:'pending',opponent:d.opponent,opponent_name:''})};
     const {error}=await state.sb.from('battles').insert(record);if(error)throw Error('記録できませんでした：'+error.message);
     closeModal('battle');state.battleDraft=null;await loadLive();

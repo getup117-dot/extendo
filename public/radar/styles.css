@@ -196,3 +196,23 @@ button{min-height:44px}
 .picked-opponent{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #96ddd1;border-radius:14px;padding:10px}
 .picked-opponent>div{flex:1;min-width:0}
 .has-alert{position:relative}.has-alert::after{content:"";position:absolute;top:6px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px #fff}
+
+/* スマホ調整（2026-11-20） */
+@media(max-width:800px){
+  .leaflet-bottom{z-index:600;bottom:var(--sheet-height)}
+  .leaflet-control-attribution{font-size:9px;opacity:.75}
+  body:not(.side-collapsed) .mapfloat{display:none}
+  body[data-tab="account"] .actionbar,body[data-tab="account"] .sheet-handle{display:none}
+  body[data-tab="account"] .side:not(.collapsed) .sidehead{padding-top:16px}
+  .selected-note{display:none}
+  .report-btn{border:0;background:none;color:#a0716a;font-weight:700;padding:8px 6px}
+  .statstrip{display:none}
+}
+.selected-note{display:none}
+.gps-label{display:none}
+@media(max-width:800px){
+  body[data-tab="account"]:not(.side-collapsed) .leaflet-bottom{display:none}
+  .mapfloat{align-items:flex-end}
+  .gps-btn{width:auto;display:flex;align-items:center;gap:6px;padding:0 16px;font-size:18px;background:var(--teal);color:#fff}
+  .gps-btn .gps-label{display:inline;font-size:14px;font-weight:800}
+}

@@ -47,7 +47,7 @@
       <div id="mapSearchResults" class="map-search-results" aria-live="polite" hidden></div>
     </div>
     <div class="map-top"><div class="map-keys"><button class="mapchip" data-action="show-people"><i class="person-key" aria-hidden="true"></i><span id="mapPeople">いまいる 0人</span></button><button class="mapchip" data-action="show-plans"><i class="event-key" aria-hidden="true"></i><span id="mapPlans">出没予定 0件</span></button><button class="mapchip" data-action="show-people" hidden><i class="area-key" aria-hidden="true"></i><span id="mapAreas">出没エリア 0件</span></button></div><div id="mapTypeBadge" class="mapchip">デモデータ</div></div>
-    <div class="mapfloat"><button class="roundbtn" data-action="go-gps" title="GPSで現在地へ" aria-label="GPSで現在地へ">⌖</button><button class="roundbtn" data-action="new-event" title="出没予定を登録" aria-label="出没予定を登録">＋</button></div>
+    <div class="mapfloat"><button class="roundbtn gps-btn" data-action="go-gps" aria-label="いまここにいる"><span aria-hidden="true">📍</span><span class="gps-label">ここにいる</span></button><button class="roundbtn" data-action="new-event" title="出没予定を登録" aria-label="出没予定を登録">＋</button></div>
     <div id="pickPrompt" class="location-picker" hidden><span id="pickText">地図をタップして場所を指定してください</span> <button data-action="cancel-pick" class="pick-cancel">キャンセル</button></div>
     <div id="mapLoadStatus" class="map-load-status" role="status" hidden></div>
     <section id="selectedPlace" class="selected-place" aria-label="選んだ場所" hidden>
@@ -85,10 +85,10 @@
     <div class="field"><label for="eventTitle">タイトル</label><input id="eventTitle" maxlength="60" required placeholder="例：秋葉原でフリーバトル"></div>
     <div class="grid2"><div class="field"><label for="eventDate">開始日</label><input id="eventDate" type="date" required></div><div class="field"><label for="eventStart">開始時刻</label><input id="eventStart" type="time" required></div></div>
     <div class="grid2"><div class="field"><label for="eventEndDate">終了日</label><input id="eventEndDate" type="date" required></div><div class="field"><label for="eventEnd">終了時刻</label><input id="eventEnd" type="time" required></div></div><div class="field"><label for="eventPlace">場所・施設名</label><input id="eventPlace" maxlength="100" required placeholder="秋葉原の○○店"></div>
-    <div class="field"><label for="placeQuery">地図上の位置（必須）</label><div class="searchline"><input id="placeQuery" placeholder="施設名・住所・緯度,経度・マップURL" autocomplete="off"><button type="button" class="btn subtle" data-action="search-place">検索</button></div><div id="placeResults" class="search-results"></div><button type="button" class="btn outline" data-action="pick-map">地図をタップして指定</button><div class="help" id="coordText">位置はまだ選ばれていません。地図タップや検索結果から選択してください。</div></div>
+    <div class="field"><label for="placeQuery">地図上の位置</label><div class="searchline"><input id="placeQuery" placeholder="施設名・住所・緯度,経度・マップURL" autocomplete="off"><button type="button" class="btn subtle" data-action="search-place">検索</button></div><div id="placeResults" class="search-results"></div><button type="button" class="btn outline" data-action="pick-map">地図をタップして指定</button><div class="help" id="coordText">位置が未選択です。</div></div>
     <div class="field"><label for="eventStadium">当日のスタジアム</label><select id="eventStadium"></select></div>
     <div class="field"><label for="eventDetail">ひとこと（任意）</label><textarea id="eventDetail" maxlength="300" placeholder="対戦歓迎、初心者OK、持ち物など"></textarea></div>
-    <div class="notice">出没予定は登録ユーザー全員に公開されます。自宅など個人を特定できる住所は登録しないでください。</div>
+    <div class="notice">誰でも見られます。自宅などの住所は入れないでください。</div>
     <button class="btn primary wide" type="submit" id="eventSave">予定を登録する</button>
   </form>
 </div></div>
@@ -101,14 +101,14 @@
   </div>
 </div></div>
 <div id="confirmOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modal"><div class="modal-head"><h2 id="confirmTitle">確認</h2><button class="xbtn" data-action="confirm-no" aria-label="閉じる">×</button></div><p id="confirmMessage" class="hint"></p><div class="confirm-actions"><button class="btn outline" data-action="confirm-no">キャンセル</button><button class="btn primary" data-action="confirm-yes" id="confirmYes">削除する</button></div></div></div>
-<div id="reportOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="modal"><div class="modal-head"><h2 id="reportTitle">通報する</h2><button class="xbtn" data-action="close-report" aria-label="閉じる">×</button></div><p class="hint">理由を選んでください。3人から通報されると自動で見えなくなります。</p><div class="report-reasons"><button class="btn outline wide" data-action="report-reason" data-reason="迷惑・いたずら">迷惑・いたずら</button><button class="btn outline wide" data-action="report-reason" data-reason="個人の住所・職場">個人の住所・職場</button><button class="btn outline wide" data-action="report-reason" data-reason="不適切な内容">不適切な内容</button><button class="btn outline wide" data-action="report-reason" data-reason="その他">その他</button></div></div></div>
+<div id="reportOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="modal"><div class="modal-head"><h2 id="reportTitle">通報する</h2><button class="xbtn" data-action="close-report" aria-label="閉じる">×</button></div><p class="hint">理由を選んでください。</p><div class="report-reasons"><button class="btn outline wide" data-action="report-reason" data-reason="迷惑・いたずら">迷惑・いたずら</button><button class="btn outline wide" data-action="report-reason" data-reason="個人の住所・職場">個人の住所・職場</button><button class="btn outline wide" data-action="report-reason" data-reason="不適切な内容">不適切な内容</button><button class="btn outline wide" data-action="report-reason" data-reason="その他">その他</button></div></div></div>
 <div id="areaOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="areaDialogTitle"><div class="modal">
   <div class="modal-head"><h2 id="areaDialogTitle">出没エリアに登録</h2><button class="xbtn" data-action="close-area" aria-label="閉じる">×</button></div>
   <form id="areaForm" class="form-col">
-    <p class="hint">よくいる場所を、期限なしで地図に出しておけます。<span id="areaCount"></span></p>
+    <p class="hint">よくいる場所を地図に出しておけます。<span id="areaCount"></span></p>
     <div class="field"><label for="areaName">場所の名前</label><input id="areaName" maxlength="60" required placeholder="例：○○店、○○公園"></div>
     <div class="field"><label for="areaWhen">よくいる曜日・時間帯（任意）</label><input id="areaWhen" maxlength="40" placeholder="例：土日の午後、平日の夜"></div>
-    <div class="notice">登録ユーザー全員と、見るだけの人にも表示されます。お店・公園など公共の場所だけにして、自宅や職場の近くは登録しないでください。</div>
+    <div class="notice">誰でも見られます。お店・公園など公共の場所だけにしてください。</div>
     <button class="btn primary wide" type="submit" id="areaSave">登録する</button>
   </form>
 </div></div>
@@ -116,12 +116,9 @@
   <div class="modal-head"><h2 id="battleDialogTitle">対戦を記録</h2><button class="xbtn" data-action="close-battle" aria-label="閉じる">×</button></div>
   <form id="battleForm" class="form-col">
     <div id="battleOpponent"></div>
-    <div class="field"><span class="field-label">結果（あなたから見て）</span><div class="result-buttons"><button type="button" class="result-btn r-win" data-action="battle-result" data-value="win">勝ち</button><button type="button" class="result-btn r-lose" data-action="battle-result" data-value="lose">負け</button><button type="button" class="result-btn r-draw" data-action="battle-result" data-value="draw">引き分け</button></div></div>
-    <div class="field"><span class="field-label">スコア（任意）</span><div class="score-line"><label class="sr-only" for="battleMyScore">あなたのポイント</label><input id="battleMyScore" type="number" inputmode="numeric" min="0" max="99" placeholder="あなた"><span>-</span><label class="sr-only" for="battleTheirScore">相手のポイント</label><input id="battleTheirScore" type="number" inputmode="numeric" min="0" max="99" placeholder="相手"></div></div>
-    <div class="field"><label for="battlePlace">場所（任意）</label><input id="battlePlace" maxlength="60" placeholder="例：○○店"></div>
-    <div class="field"><label for="battleNote">ひとこと（任意）</label><input id="battleNote" maxlength="100" placeholder="例：最後はエクストリームフィニッシュ"></div>
+    <div class="field"><span class="field-label">結果</span><div class="result-buttons"><button type="button" class="result-btn r-win" data-action="battle-result" data-value="win">勝ち</button><button type="button" class="result-btn r-lose" data-action="battle-result" data-value="lose">負け</button><button type="button" class="result-btn r-draw" data-action="battle-result" data-value="draw">引き分け</button></div></div>
     <button class="btn primary wide" type="submit">記録する</button>
-    <p class="help">相手のマイページに承認のお願いが届きます。相手がOKすると確定し、おたがいの戦績に入ります。</p>
+    <p class="help">相手がOKすると確定します。</p>
   </form>
 </div></div>
 <div class="toast" id="toast" role="status"></div>
