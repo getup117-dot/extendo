@@ -485,7 +485,7 @@
   function viewBanner(){return `<div class="notice view-notice">見るだけモードです。<button class="linklike" data-action="go-account">ニックネームではじめる</button></div>`;}
   function loginWall() {
     return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startNick">ニックネーム</label><input type="text" id="startNick" required maxlength="32" placeholder="例：しょうた" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>
-    <div class="setting-card form-col"><h2 class="login-heading">IDと合言葉で戻る</h2><form id="restoreForm" class="form-col"><div class="field"><label for="restoreId">ID（名前#番号）</label><input type="text" id="restoreId" required maxlength="40" placeholder="例：しょうた#1234" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="restoreWord">合言葉（ひらがな）</label><input type="text" id="restoreWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button type="button" class="linklike restore-hint-btn" data-action="show-hint">ヒントを見る</button><p id="restoreHint" class="help" hidden></p></div><button class="btn dark wide" type="submit">戻る</button></form></div>`;
+    <div class="setting-card form-col"><h2 class="login-heading">IDと合言葉で戻る</h2><form id="restoreForm" class="form-col"><div class="field"><label for="restoreId">ID（4ケタの番号）</label><input type="text" id="restoreId" required maxlength="6" inputmode="numeric" placeholder="例：1234" autocomplete="off"></div><div class="field"><label for="restoreWord">合言葉（ひらがな）</label><input type="text" id="restoreWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button type="button" class="linklike restore-hint-btn" data-action="show-hint">ヒントを見る</button><p id="restoreHint" class="help" hidden></p></div><button class="btn dark wide" type="submit">戻る</button></form></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -517,11 +517,11 @@
   const hasRecovery=()=>!!state.user&&!state.user.is_anonymous&&String(state.user.email||'').endsWith('@'+RECOVERY_DOMAIN);
   function recoveryHTML(){
     if(state.mode!=='live'||!state.user)return '';
-    const id=`${selfName()}#${tagFor(selfId())}`,done=hasRecovery(),open=!done||state.recoveryEdit;
+    const id=`#${tagFor(selfId())}`,done=hasRecovery(),open=!done||state.recoveryEdit;
     return `<div class="setting-card"><div class="section-title">引き継ぎ <span class="tag">${done?'設定済み':'未設定'}</span></div>
       <p class="recovery-id">ID：<b>${esc(id)}</b></p>
       ${open?`<form id="recoveryForm" class="form-col" style="margin-top:10px"><div class="field"><label for="recoveryWord">合言葉（ひらがな6〜12文字）</label><input type="text" id="recoveryWord" required minlength="6" maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="recoveryHint">ヒント（任意）</label><input type="text" id="recoveryHint" maxlength="30" autocomplete="off"></div><button class="btn dark wide" type="submit">${done?'合言葉を変更':'合言葉を設定'}</button></form>`:`<button class="btn outline wide" style="margin-top:10px" data-action="edit-recovery">合言葉を変更</button>`}
-      <p class="help" style="margin-top:8px">ブラウザのデータが消えても、IDと合言葉で戻れます。名前を変えるとIDも変わります。</p></div>`;
+      <p class="help" style="margin-top:8px">ブラウザのデータが消えても、IDと合言葉で戻れます。</p></div>`;
   }
   async function saveRecovery(){
     const w=toHira($('recoveryWord').value),hint=clean($('recoveryHint').value).slice(0,30);
@@ -535,9 +535,9 @@
     state.recoveryEdit=false;render();notify('合言葉を設定しました。IDと一緒に覚えておいてね');
   }
   async function findRecovery(){
-    const m=clean($('restoreId').value).normalize('NFKC').match(/^(.+?)\s*#\s*(\d{4})$/);if(!m)throw Error('IDは「名前#4ケタの番号」で入れてください');
+    const m=clean($('restoreId').value).normalize('NFKC').replace(/^#/,'').match(/^(\d{4})$/);if(!m)throw Error('IDは4ケタの番号で入れてください');
     if(!state.sb)throw Error('接続を確認してください');
-    const {data,error}=await state.sb.rpc('find_recovery',{p_name:m[1],p_tag:m[2]});if(error)throw Error('確認できませんでした。少し時間をおいて試してください');
+    const {data,error}=await state.sb.rpc('find_recovery',{p_tag:m[1]});if(error)throw Error('確認できませんでした。少し時間をおいて試してください');
     const rows=(data||[]).filter(r=>r.ready);if(!rows.length)throw Error('このIDでは合言葉が設定されていません');return rows;
   }
   async function showHint(){const rows=await findRecovery();const el=$('restoreHint');el.textContent=rows[0].hint?`ヒント：${rows[0].hint}`:'ヒントは設定されていません';el.hidden=false;}
