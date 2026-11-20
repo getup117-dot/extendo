@@ -373,3 +373,4 @@ body.radar-open .mapfloat{display:none}
 .mode-switch input:checked+span{background:#fff;color:#13303d;box-shadow:0 1px 4px #0002}.mode-switch input:focus-visible+span{outline:2px solid var(--teal)}
 @keyframes blipflash{0%{filter:none;transform:scale(1)}30%{filter:drop-shadow(0 0 10px #ff8a3d) brightness(1.4);transform:scale(1.12)}100%{filter:none;transform:scale(1)}}
 .blip-flash{animation:blipflash 1.4s ease-out 1}
+.has-count{position:relative}.has-count::after{content:attr(data-count);position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e8590c;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;box-shadow:0 0 0 2px #fff}

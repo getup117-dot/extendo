@@ -151,13 +151,13 @@
     let rank=0,prev=null;list.forEach((s,i)=>{if(s.rating!==prev){rank=i+1;prev=s.rating;}s.rank=rank;});return list;
   }
   function powerAccountHTML(){
-    if(!state.powerReady||state.mode!=='live'||!state.user)return '';
+    if(!state.powerReady||state.mode!=='live')return '';
     const s=powerOf(selfId()),pub=s&&s.calibrated;
-    const head=pub?`戦闘力 <b>${s.rating}</b>｜自己最高 ${s.best}${isResting(s)?' <span class="pill">休止中</span>':''}`:esc(progressText(s));
-    const all=rankList(),areas=myAreas(),area=areas.find(a=>a.id===state.rankArea);
+    const head=!state.user?'':pub?`戦闘力 <b>${s.rating}</b>｜自己最高 ${s.best}${isResting(s)?' <span class="pill">休止中</span>':''}`:esc(progressText(s));
+    const all=rankList(),areas=state.user?myAreas():[],area=areas.find(a=>a.id===state.rankArea);
     const list=area?all.filter(r=>state.areas.some(a=>a.user_id===r.user_id&&meters(a,area)<1500)):all;
     const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span><span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
-    return `<div class="setting-card"><div class="section-title">戦闘力</div><p class="power-head">${head}</p>
+    return `${head?`<div class="setting-card"><div class="section-title">あなたの戦闘力</div><p class="power-head">${head}</p></div>`:''}<div class="setting-card">
       <div class="rank-top"><strong>順位</strong>${areas.length?`<select id="rankArea" aria-label="順位の絞り込み"><option value="">全体</option>${areas.map(a=>`<option value="${esc(a.id)}"${a.id===state.rankArea?' selected':''}>${esc(a.name)}によくいる人</option>`).join('')}</select>`:''}</div>
       <div class="rank-list">${rows||'<p class="hint">まだ順位に載っている人はいません。</p>'}</div></div>`;
   }
@@ -451,9 +451,9 @@
     $('modeBadge').classList.toggle('live',state.mode==='live');
     $('mapTypeBadge').textContent=state.mode==='demo'?'架空のサンプルデータ':logged()?'登録ユーザーの情報':'見るだけモード';
     document.querySelectorAll('button[data-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.tab===state.tab);el.setAttribute('aria-current',el.dataset.tab===state.tab?'page':'false');});
-    $('panelTitle').textContent=state.tab==='now'?'いま、誰がいる？':state.tab==='plans'?'いつ、どこに集まる？':'マイページ';
-    $('panelDesc').textContent=state.tab==='now'?'近くのブレーダーを見つけよう。':state.tab==='plans'?'対戦の予定を立てて、集まろう。':'プロフィールと現在地共有の設定';
-    $('filterBar').hidden=state.tab==='account'||!viewing();
+    $('panelTitle').textContent=state.tab==='now'?'いま、誰がいる？':state.tab==='plans'?'いつ、どこに集まる？':state.tab==='battle'?'対戦':'マイページ';
+    $('panelDesc').textContent=state.tab==='now'?'近くのブレーダーを見つけよう。':state.tab==='plans'?'対戦の予定を立てて、集まろう。':state.tab==='battle'?'戦闘力と順位':'プロフィールと現在地共有の設定';
+    $('filterBar').hidden=state.tab==='account'||state.tab==='battle'||!viewing();
     $('planFilters').hidden=state.tab!=='plans';
     const query=state.listQueries[state.tab]||'';
     if($('listSearch').value!==query)$('listSearch').value=query;
@@ -461,11 +461,11 @@
     $('listSearch').placeholder=listLabel;
     $('listSearch').setAttribute('aria-label',listLabel);
     document.querySelectorAll('[data-filter]').forEach(el=>{el.classList.toggle('active',el.dataset.filter===state.filter);el.setAttribute('aria-pressed',String(el.dataset.filter===state.filter));});
-    $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():renderAccount());
+    $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():state.tab==='battle'?renderBattle():renderAccount());
     document.body.dataset.tab=state.tab;
     if(document.body.dataset.lastTab!==state.tab){document.body.dataset.lastTab=state.tab;document.body.classList.remove('scrolled-down');}
-    {const m=$('mainAction');if(state.tab==='now'){m.dataset.action='go-gps';m.textContent='📍 いまここにいる';m.className='btn teal wide';}else{m.dataset.action='new-event';m.textContent='＋ 出没予定を登録';m.className='btn primary wide';}}
-    document.querySelectorAll('[data-tab="account"]').forEach(el=>el.classList.toggle('has-alert',state.extras&&incomingRequests().length>0));
+    {const m=$('mainAction');if(state.tab==='now'){m.dataset.action='go-gps';m.textContent='📍 いまここにいる';m.className='btn teal wide';}else if(state.tab==='battle'){m.dataset.action='new-battle';m.textContent='＋ 対戦を記録';m.className='btn primary wide';}else{m.dataset.action='new-event';m.textContent='＋ 出没予定を登録';m.className='btn primary wide';}}
+    {const n=state.extras&&state.user?incomingRequests().length:0;document.querySelectorAll('[data-tab="battle"]').forEach(el=>{el.classList.toggle('has-count',n>0);el.dataset.count=n>9?'9+':String(n);});}
     restoreFields(saved); renderMap(); refreshInfo(); updateShareIndicator();
   }
   const REPORT_HIDE_AT = 3;
@@ -601,8 +601,6 @@
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
     const profile = state.profiles.find(person => person.id === selfId()) || {};
     return `${state.mode==='demo'?'<div class="notice demo-notice">試用版では、位置や予定はこのブラウザ内にだけ保存されます。ほかの人には共有されません。</div>':''}
-      ${powerAccountHTML()}
-      ${battleAccountHTML()}
       <div class="setting-card">
         <div class="section-title">プロフィール <span class="tag">${state.mode==='demo'?'試用版':'ログイン中'}</span></div>
         <form id="profileForm" class="form-col">
@@ -658,11 +656,17 @@
     throw Error('IDか合言葉がちがうみたい');
   }
   function battleAccountHTML(){
-    if(!state.extras||state.mode!=='live')return '';
+    if(!state.extras||state.mode!=='live'||!state.user)return '';
     const reqs=incomingRequests(), rec=recordOf(selfId()), list=myBattles().slice(0,30);
     const reqHTML=reqs.length?`<div class="setting-card request-card"><div class="section-title">承認待ちの対戦 <span class="count">${reqs.length}</span></div>${reqs.map(b=>{const v=battleView(b);return `<div class="battle-row"><div><strong>${esc(fullName(b.reporter))}</strong> との対戦<div class="person-sub">あなたの${esc(RESULT_TEXT[v.result])} ・ ${esc(fmtDate(b.played_at))}</div></div><div class="battle-actions"><button class="tiny-btn joined" data-action="confirm-battle" data-id="${esc(b.id)}">OK</button><button class="tiny-btn" data-action="reject-battle" data-id="${esc(b.id)}">ちがう</button></div></div>`;}).join('')}</div>`:'';
     const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}${(()=>{const r=state.powerResults.find(x=>x.battle_id===b.id);return r&&r.public_after?` ・ 戦闘力 ${r.before}→${r.after}`:'';})()}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()&&!(b.status==='confirmed'&&b.rated)?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
-    return `${reqHTML}<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div><button class="btn primary wide" data-action="new-battle">＋ 対戦を記録</button>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint" style="margin-top:10px">まだ記録がありません。</p>'}</div>`;
+    state._reqHTML=reqHTML;
+    return `<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint">まだ記録がありません。</p>'}</div>`;
+  }
+  function renderBattle(){
+    if(state.mode!=='live')return '<div class="empty">対戦はライブ版で使えます。</div>';
+    const records=battleAccountHTML(),req=state.user?(state._reqHTML||''):'';
+    return `${req}${powerAccountHTML()}${records}`;
   }
   function areaAccountHTML(){
     if(!state.extras||state.mode!=='live')return '';
@@ -1197,7 +1201,7 @@
   function noticeRequests(){
     if(!state.user)return;
     const ids=incomingRequests().map(b=>b.id);
-    if(state.knownRequests&&ids.some(id=>!state.knownRequests.includes(id)))notify('対戦の承認リクエストが届きました（マイページ）');
+    if(state.knownRequests&&ids.some(id=>!state.knownRequests.includes(id)))notify('対戦の承認リクエストが届きました（対戦タブ）');
     state.knownRequests=ids;
   }
   async function bumpAreas(){
