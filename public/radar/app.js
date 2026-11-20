@@ -387,7 +387,7 @@
     if($('mapAreas')){$('mapAreas').textContent=`出没エリア ${areas.length}件`;$('mapAreas').parentElement.hidden=!state.extras;}
     const L_=state.mapLayer||'';document.querySelectorAll('[data-action="map-layer"]').forEach(b=>{const on=b.dataset.layer===L_;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
     const show=k=>!L_||L_===k;
-    const data=JSON.stringify([people,events,areas,state.profiles,selfId(),state.battles.length,L_]);
+    const data=JSON.stringify([people,events,areas,state.profiles,selfId(),state.battles.map(b=>b.id+b.status).join(),state.power.map(p=>p.user_id+p.rating+p.best+p.calibrated).join(),state.slots.length,L_]);
     if (data===state.markerKey) return; state.markerKey=data;
     state.markers.forEach(m=>m.remove()); state.markers=[];
     (show('areas')?areas:[]).forEach(a=>{
