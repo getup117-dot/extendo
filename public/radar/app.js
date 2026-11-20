@@ -207,6 +207,20 @@
       state.map.on('click',e=>{if(Date.now()-lastTap<800)return;chooseMapPoint({lat:e.latlng.lat,lng:e.latlng.lng},false);});}
     state.mapReady=true;
   }
+  function radarScan(){
+    if(!state.mapReady||!state.selected||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    document.querySelector('.radar-scan')?.remove();
+    const wrap=document.querySelector('.map-wrap'),c=state.map.latLngToContainerPoint([state.selected.lat,state.selected.lng]);
+    const R=Math.round(Math.min(160,wrap.clientWidth*0.42)),T=1400,me=selfId(),hits=new Map();
+    const cands=activePeople().filter(p=>p.user_id!==me).map(p=>({id:p.user_id,lat:p.lat,lng:p.lng})).concat(state.extras?state.areas.filter(a=>a.user_id!==me&&C.validPoint(a)).map(a=>({id:a.user_id,lat:a.lat,lng:a.lng})):[]);
+    const el=document.createElement('div');el.className='radar-scan';el.style.cssText=`left:${c.x-R}px;top:${c.y-R}px;width:${R*2}px;height:${R*2}px`;
+    let blips='';
+    cands.forEach(p=>{const q=state.map.latLngToContainerPoint([p.lat,p.lng]),dx=q.x-c.x,dy=q.y-c.y;if(Math.hypot(dx,dy)>R*0.92)return;hits.set(p.id,1);
+      const ang=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;blips+=`<img class="scan-blip" src="assets/scan-blip.png" alt="" style="left:${R+dx}px;top:${R+dy}px;animation-delay:${Math.round(ang/360*T)}ms">`;});
+    el.innerHTML=`<img class="scan-bg" src="assets/scan-radar.png" alt=""><div class="scan-sweep"></div>${blips}`;
+    wrap.appendChild(el);
+    setTimeout(()=>{el.classList.add('done');setTimeout(()=>el.remove(),500);notify(hits.size?`近くに${hits.size}人いるよ`:'近くには誰もいないみたい');},T+250);
+  }
   function chooseMapPoint(place, move) {
     const forEvent=state.pickMode==='event', forArea=state.pickMode==='area';
     endPick();
@@ -604,6 +618,7 @@
         // Keep the selected pin in the unobscured portion of the map.
         if(move&&isMobile())state.map.panBy([0,$('selectedPlace').offsetHeight/2],{animate:false});
       });
+      setTimeout(radarScan,move?120:30);
     }
   }
   function closePlace() {
