@@ -87,7 +87,7 @@
     renderKey:'', sheetCollapsed:false, previousFocus:null, confirmResolve:null,
     lastPosition:0, lastPush:0, freshRequest:false, selected:null, selectedMarker:null,
     mapSearchRequest:0, mapHits:[], tileLoaded:0, tileErrors:0, selectedEventId:null,
-    areas:[], battles:[], traces:[], extras:false, battleDraft:null, seenBumped:false, knownRequests:null
+    areas:[], battles:[], traces:[], power:[], slots:[], powerResults:[], powerReady:false, rankArea:'', extras:false, battleDraft:null, seenBumped:false, knownRequests:null
   };
   const shares=C.createShareQueue();
   const selfId=()=>state.mode==='demo'?'demo-me':state.user?.id;
@@ -118,12 +118,81 @@
   const areaStale=a=>Date.now()-Date.parse(a.seen_at||a.created_at)>AREA_STALE_MS;
   const incomingRequests=()=>state.battles.filter(b=>b.status==='pending'&&b.opponent===selfId()&&Date.now()-Date.parse(b.created_at)<REQUEST_DAYS*86400000);
   const myBattles=()=>state.battles.filter(b=>b.reporter===selfId()||(b.opponent===selfId()&&b.status==='confirmed')).sort((a,b)=>b.played_at.localeCompare(a.played_at));
+  // ===== 戦闘力 =====
+  const POWER_DESC='戦闘力は、対戦結果から見た今の強さの目安。格上に勝つと大きく上がり、格上に負けても下がるのは少しです。';
+  const SAME_DAY_MSG='今日はこの相手との戦闘力対象戦を登録済みです。戦績には残ります';
+  const powerOf=id=>state.power.find(p=>p.user_id===id);
+  const pubPower=id=>{const s=powerOf(id);return s&&s.calibrated?s:null;};
+  const isResting=s=>!!s&&!!s.last_rated_at&&Date.now()-Date.parse(s.last_rated_at)>90*864e5;
+  const todayJST=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+  const slotToday=other=>state.slots.some(x=>x.day===todayJST()&&(x.a===other||x.b===other));
+  const winGain=(me,opp)=>Math.min(opp,Math.round(24*(1-1/(1+10**((opp-me)/400)))));
+  const progressText=s=>`測定中｜${Math.min(s?.games||0,5)}/5戦・対戦相手${Math.min(s?.opponents||0,3)}/3人`;
+  function powerShort(id){
+    if(!state.powerReady)return '';const s=pubPower(id);
+    return s?`戦闘力 ${s.rating}${isResting(s)?'・休止中':''}`:'戦闘力 測定中';
+  }
+  function chanceHTML(other){
+    if(!state.powerReady||!state.user||other===selfId())return '';
+    const me=pubPower(selfId()),op=pubPower(other);if(!me||!op||slotToday(other))return '';
+    const after=me.rating+winGain(me.rating,op.rating);
+    return `<div class="power-chance">勝てば <b>${after}</b>${after>(me.best||0)?' <span class="best-chance">自己最高更新のチャンス！</span>':''}</div>`;
+  }
+  function rivalHTML(other){
+    if(!state.extras||!state.user||other===selfId()||state.mode!=='live')return '';
+    const me=selfId();let w=0,l=0,d=0;
+    for(const b of state.battles){if(b.status!=='confirmed')continue;if(!((b.reporter===me&&b.opponent===other)||(b.reporter===other&&b.opponent===me)))continue;const r=battleView(b).result;if(r==='win')w++;else if(r==='lose')l++;else d++;}
+    if(!w&&!l&&!d)return '<div class="rival-line">まだ対戦していないブレーダー</div>';
+    const extra=l-w===1?' 次に勝てば五分！':(w===l&&w+l>0?' ここまで互角！':'');
+    return `<div class="rival-line">あなたは${w}勝${l}敗${d?d+'分':''}。<b>${extra.trim()}</b></div>`;
+  }
+  function rankList(){
+    const known=new Set(state.profiles.map(p=>p.id));
+    const list=state.power.filter(s=>s.calibrated&&!isResting(s)&&known.has(s.user_id)).sort((a,b)=>b.rating-a.rating);
+    let rank=0,prev=null;list.forEach((s,i)=>{if(s.rating!==prev){rank=i+1;prev=s.rating;}s.rank=rank;});return list;
+  }
+  function powerAccountHTML(){
+    if(!state.powerReady||state.mode!=='live'||!state.user)return '';
+    const s=powerOf(selfId()),pub=s&&s.calibrated;
+    const head=pub?`戦闘力 <b>${s.rating}</b>｜自己最高 ${s.best}${isResting(s)?' <span class="pill">休止中</span>':''}`:esc(progressText(s));
+    const all=rankList(),areas=myAreas(),area=areas.find(a=>a.id===state.rankArea);
+    const list=area?all.filter(r=>state.areas.some(a=>a.user_id===r.user_id&&meters(a,area)<1500)):all;
+    const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span><span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
+    return `<div class="setting-card"><div class="section-title">戦闘力</div><p class="power-head">${head}</p><p class="help" style="margin-top:6px">${esc(POWER_DESC)}</p>
+      <div class="rank-top"><strong>順位</strong>${areas.length?`<select id="rankArea" aria-label="順位の絞り込み"><option value="">全体</option>${areas.map(a=>`<option value="${esc(a.id)}"${a.id===state.rankArea?' selected':''}>${esc(a.name)}によくいる人</option>`).join('')}</select>`:''}</div>
+      <div class="rank-list">${rows||'<p class="hint">まだ順位に載っている人はいません。</p>'}</div></div>`;
+  }
+  // 対戦結果の演出（自分の分だけ・一度だけ）
+  const seenKey=()=>'beyradar-power-seen-'+selfId();
+  function checkPowerResults(){
+    if(!state.powerReady||!state.user)return;
+    const raw=storage.get(seenKey(),null),seen=new Set(Array.isArray(raw)?raw:[]);
+    const fresh=state.powerResults.filter(r=>!seen.has(r.battle_id)&&Date.now()-Date.parse(r.confirmed_at)<14*864e5);
+    state.powerResults.forEach(r=>seen.add(r.battle_id));storage.set(seenKey(),[...seen].slice(-500));
+    if(raw===null)return; // 初回は過去分を出さない
+    const me=powerOf(selfId());let revealed=false;
+    for(const r of fresh.slice().reverse()){
+      const name=nameFor(r.opponent);
+      if(r.cal_now){revealed=true;queuePower('測定完了',`あなたの戦闘力は <b class="power-big">${r.after}</b>！`);continue;}
+      if(r.won){
+        if(r.public_after)queuePower(r.upset?'格上撃破！':'勝利！',`戦闘力 ${r.before} → <b class="power-big">${r.after}</b>${r.new_best?'<div class="best-new">自己最高更新！</div>':''}`);
+        else queuePower('勝利！',`vs ${esc(name)}<div class="help">${esc(progressText(me))}</div>`);
+      }else{
+        queuePower(`今回は${esc(name)}さんの勝利`,`<details class="power-detail"><summary>対戦の詳細</summary>${r.public_after?`戦闘力 ${r.before} → ${r.after}（−${r.before-r.after}）`:esc(progressText(me))}</details>`);
+      }
+    }
+    if(me&&me.calibrated&&!me.reveal_seen){if(!revealed)queuePower('測定完了',`あなたの戦闘力は <b class="power-big">${me.best??me.rating}</b>！`);me.reveal_seen=true;state.sb.rpc('mark_power_reveal').then(()=>{},()=>{});}
+  }
+  const powerQueue=[];
+  function queuePower(title,body){powerQueue.push({title,body});if(!$('powerOverlay').classList.contains('open'))nextPower();}
+  function nextPower(){const q=powerQueue.shift();if(!q){closeModal('power');return;}$('powerTitle').innerHTML=q.title;$('powerBody').innerHTML=q.body;openModal('power');}
   function profileBadges(userId) {
     const profile = state.profiles.find(person => person.id === userId) || {};
     const stadium = STADIUM_OPTIONS[profile.stadium_status] || STADIUM_OPTIONS.unset;
     const rank = RANK_OPTIONS[profile.rank_level] || RANK_OPTIONS.unset;
     const rec=state.extras?recordOf(userId):{total:0};
-    return `<div class="profile-badges">${rec.total?`<span class="profile-badge record-badge">戦績 ${recordText(rec)}</span>`:''}${profile.battle_ready?'<span class="profile-badge ready-badge">対戦歓迎</span>':''}<span class="profile-badge stadium-badge">スタジアム · ${esc(stadium)}</span><span class="profile-badge rank-badge">ランク（仮） · ${esc(rank)}</span></div>`;
+    const pw=powerShort(userId);
+    return `<div class="profile-badges">${pw?`<span class="profile-badge power-badge">${esc(pw)}</span>`:''}${rec.total?`<span class="profile-badge record-badge">戦績 ${recordText(rec)}</span>`:''}${profile.battle_ready?'<span class="profile-badge ready-badge">対戦歓迎</span>':''}<span class="profile-badge stadium-badge">スタジアム · ${esc(stadium)}</span><span class="profile-badge rank-badge">ランク（仮） · ${esc(rank)}</span></div>`;
   }
   function profileOptions(options, selectedValue) {
     return Object.entries(options).map(([value, label]) =>
@@ -140,7 +209,7 @@
   const placeKey=p=>Number(p.lat).toFixed(5)+','+Number(p.lng).toFixed(5);
   const viewing=()=>logged()||(state.mode==='live'&&!!state.sb);
   const activePeople=()=>viewing()?state.positions.filter(p=>C.validShare(p)):[];
-  const activeEvents=()=>viewing()?state.events.filter(e=>Date.parse(e.ends_at)>Date.now()).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)):[];
+  const activeEvents=()=>viewing()?state.events.filter(e=>Date.parse(e.ends_at)>Date.now()&&matchVisible(e)).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)):[];
   const attendees=event=>[...new Set([event.user_id,...state.rsvps.filter(r=>r.event_id===event.id).map(r=>r.user_id)])];
   function notify(message) {
     $('toast').textContent=message; $('toast').classList.add('show');
@@ -238,7 +307,7 @@
     setTimeout(()=>{el.classList.add('done');setTimeout(()=>el.remove(),500);
       if(!showList){return;}
       const list=[...hits.values()].sort((a,b)=>a.d-b.d).slice(0,6),dist=d=>d>=1000?(d/1000).toFixed(1)+'km':Math.round(d/10)*10+'m';
-      $('radarList').innerHTML=list.length?list.map(h=>`<button class="radar-row" data-action="go-point" data-lat="${h.lat}" data-lng="${h.lng}"><span class="radar-dot${h.kind==='area'?' is-area':''}"></span><span class="radar-name">${esc(fullName(h.id))}</span><span class="radar-dist">${dist(h.d)}${h.kind==='area'?'・出没エリア':''}</span></button>`).join(''):'<p class="hint">近くには誰もいないみたい。地図を縮小してもう一度探してみて。</p>';
+      $('radarList').innerHTML=list.length?list.map(h=>`<button class="radar-row" data-action="go-point" data-lat="${h.lat}" data-lng="${h.lng}"><span class="radar-dot${h.kind==='area'?' is-area':''}"></span><span class="radar-name">${esc(fullName(h.id))}</span><span class="radar-dist">${dist(h.d)}${h.kind==='area'?'・出没エリア':''}${powerShort(h.id)?'・'+esc(powerShort(h.id)):''}</span></button>`).join(''):'<p class="hint">近くには誰もいないみたい。地図を縮小してもう一度探してみて。</p>';
       $('radarCount').textContent=list.length?`${hits.size}人`:'0人';
       $('radarResult').hidden=false;document.body.classList.add('radar-open');},reduce?0:T+250);
   }
@@ -325,7 +394,7 @@
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
       const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false}).addTo(state.map);
       const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}" aria-hidden="true">${esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
-      const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}`;
+      const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}`;
       labelMarker(m,label);
       const openA=()=>{if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng);};
       m.on('click',openA);circle.on('click',openA);
@@ -335,7 +404,7 @@
       if(!C.validPoint(p))return;
       const ready=!!state.profiles.find(profile=>profile.id===p.user_id)?.battle_ready;
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
-      const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>`;
+      const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}${rivalHTML(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>${chanceHTML(p.user_id)}`;
       const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready)).addTo(state.map);
       labelMarker(m,label);
       m.on('click',()=>{
@@ -451,21 +520,60 @@
       return [ev.title,ev.place_name,ev.details,nameFor(ev.user_id)].join(' ').toLowerCase().includes(q);
     });
   }
+  // ===== あと1人で開催 =====
+  const isMatch=e=>e.mode==='match';
+  const matchState=e=>e.cancelled_at?'cancelled':e.partner?'matched':Date.parse(e.starts_at)<=Date.now()?'closed':'open';
+  const involved=e=>e.user_id===selfId()||e.partner===selfId();
+  function matchVisible(e){
+    if(!isMatch(e))return true;const st=matchState(e),me=selfId();
+    if(st==='cancelled')return e.partner===me;
+    if(st==='closed')return e.user_id===me;
+    return true;
+  }
+  function shortWhen(e){const d=new Date(e.starts_at),days=(d-Date.now())/864e5,hm=timeText(d);return `${days>6?`${d.getMonth()+1}/${d.getDate()} `:''}${'日月火水木金土'[d.getDay()]}曜 ${hm}`;}
+  function matchLine(e){
+    const st=matchState(e),head=`${shortWhen(e)}｜${e.place_name}`;
+    if(st==='cancelled')return `<div class="match-line is-off">中止　${esc(head)}</div>`;
+    if(st==='matched'&&involved(e))return `<div class="match-line is-done">対戦成立！　${esc(head)}</div><div class="match-sub">相手：${esc(fullName(e.user_id===selfId()?e.partner:e.user_id))}</div>`;
+    if(st==='matched')return `<div class="match-line">${esc(head)}　<span class="pill">成立済み</span></div>`;
+    if(st==='closed')return `<div class="match-line is-off">${esc(head)}　締め切りました</div>`;
+    return `<div class="match-line">${esc(head)}　<b>あと1人で開催</b></div>${e.dropped_partner===selfId()?'<div class="match-sub">日時・場所が変わったため、前の約束は取り消されました</div>':''}${e.user_id===selfId()?'<div class="match-sub">相手を募集中</div>':''}`;
+  }
+  function matchActions(e){
+    const st=matchState(e),me=selfId(),id=esc(e.id);
+    if(e.user_id===me){
+      if(st==='open'||st==='matched')return `<button class="tiny-btn" data-action="edit-event" data-id="${id}">編集</button><button class="tiny-btn" data-action="cancel-match" data-id="${id}">募集を取り消す</button>`;
+      return `<button class="tiny-btn" data-action="delete-event" data-id="${id}">削除</button>`;
+    }
+    if(st==='open')return `<button class="tiny-btn joined" data-action="join-match" data-id="${id}">自分も行ける</button>`;
+    if(st==='matched'&&e.partner===me&&Date.parse(e.starts_at)>Date.now())return `<button class="tiny-btn" data-action="leave-match" data-id="${id}">辞退する</button>`;
+    return '';
+  }
+  async function joinMatch(id){const {error}=await state.sb.rpc('join_match',{event_id:id});await loadLive();if(error)throw Error(/成立/.test(error.message)?'この募集は成立しました':error.message);}
+  async function leaveMatch(id){if(!await askConfirm('辞退すると、この募集は再開されます。','辞退しますか？','辞退する'))return;const {error}=await state.sb.rpc('leave_match',{event_id:id});if(error)throw Error('辞退できませんでした');await loadLive();notify('辞退しました');}
+  async function cancelMatch(id){const e=state.events.find(x=>x.id===id);if(!await askConfirm(e?.partner?'成立している相手の画面には「中止」と表示されます。':'この募集を終了します。','募集を取り消しますか？','取り消す'))return;const {error}=await state.sb.rpc('cancel_match',{event_id:id});if(error)throw Error('取り消せませんでした');await loadLive();notify('募集を取り消しました');}
+  function checkMatches(){
+    if(!state.user)return;const key='beyradar-match-seen-'+selfId(),seen=new Set(storage.get(key,[])||[]);
+    const fresh=state.events.filter(e=>isMatch(e)&&e.partner&&!e.cancelled_at&&involved(e)&&!seen.has(e.id+e.matched_at));
+    if(!fresh.length)return;fresh.forEach(e=>seen.add(e.id+e.matched_at));storage.set(key,[...seen].slice(-200));
+    const e=fresh[0];notify(`対戦成立！　${shortWhen(e)}｜${e.place_name}`);
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)document.querySelectorAll('.radar-btn,.search-logo').forEach(el=>{el.classList.remove('blip-flash');void el.offsetWidth;el.classList.add('blip-flash');setTimeout(()=>el.classList.remove('blip-flash'),1600);});
+  }
   function renderPlans() {
     const events = filteredEvents();
     const cards = events.map(event => {
       const mine = event.user_id === selfId();
       const joined = state.rsvps.some(rsvp => rsvp.event_id === event.id && rsvp.user_id === selfId());
-      const status = Date.parse(event.starts_at) <= Date.now() ? '開催中' : mine ? '自分の予定' : '出没予定';
-      const actions = mine
+      const status = isMatch(event) ? ({open:'募集中',matched:'成立',cancelled:'中止',closed:'締め切り'})[matchState(event)] : Date.parse(event.starts_at) <= Date.now() ? '開催中' : mine ? '自分の予定' : '出没予定';
+      const actions = isMatch(event) ? matchActions(event) : mine
         ? `<button class="tiny-btn" data-action="edit-event" data-id="${esc(event.id)}">編集</button><button class="tiny-btn" data-action="delete-event" data-id="${esc(event.id)}">削除</button>`
         : `<button class="tiny-btn ${joined ? 'joined' : ''}" data-action="rsvp" data-id="${esc(event.id)}">${joined ? '✓ 参加予定' : '参加する'}</button>`;
       return `<article class="card event-card">
         <div class="event-top">
           <div class="event-copy">
             <div class="card-headline">${esc(event.title)}</div>
-            <div class="card-detail">${esc(eventTimeRange(event))}</div>
-            <div class="card-detail">⌖ ${esc(event.place_name)}</div>
+            ${isMatch(event)?matchLine(event):`<div class="card-detail">${esc(eventTimeRange(event))}</div>
+            <div class="card-detail">⌖ ${esc(event.place_name)}</div>`}
           </div>
           <span class="pill plan">${status}</span>
         </div>
@@ -473,7 +581,7 @@
         ${event.details ? `<p class="card-note">${esc(event.details)}</p>` : ''}
         <div class="host-profile"><p class="event-owner">主催：${esc(nameFor(event.user_id))}</p>${profileBadges(event.user_id)}</div>
         <div class="event-foot">
-          <div class="event-owner">参加 ${attendees(event).length}人</div>
+          <div class="event-owner">${isMatch(event)?(matchState(event)==='open'&&!mine?'押すと対戦予定が成立します':'相手がいれば行く'):`参加 ${attendees(event).length}人`}</div>
           <div class="event-actions"><button class="tiny-btn" data-action="go-event" data-id="${esc(event.id)}">地図</button>${actions}${reportTools('event', event.id, event.user_id)}</div>
         </div>
         ${participantInfo(event)}
@@ -491,6 +599,7 @@
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
     const profile = state.profiles.find(person => person.id === selfId()) || {};
     return `${state.mode==='demo'?'<div class="notice demo-notice">試用版では、位置や予定はこのブラウザ内にだけ保存されます。ほかの人には共有されません。</div>':''}
+      ${powerAccountHTML()}
       ${battleAccountHTML()}
       <div class="setting-card">
         <div class="section-title">プロフィール <span class="tag">${state.mode==='demo'?'試用版':'ログイン中'}</span></div>
@@ -550,7 +659,7 @@
     if(!state.extras||state.mode!=='live')return '';
     const reqs=incomingRequests(), rec=recordOf(selfId()), list=myBattles().slice(0,30);
     const reqHTML=reqs.length?`<div class="setting-card request-card"><div class="section-title">承認待ちの対戦 <span class="count">${reqs.length}</span></div>${reqs.map(b=>{const v=battleView(b);return `<div class="battle-row"><div><strong>${esc(fullName(b.reporter))}</strong> との対戦<div class="person-sub">あなたの${esc(RESULT_TEXT[v.result])} ・ ${esc(fmtDate(b.played_at))}</div></div><div class="battle-actions"><button class="tiny-btn joined" data-action="confirm-battle" data-id="${esc(b.id)}">OK</button><button class="tiny-btn" data-action="reject-battle" data-id="${esc(b.id)}">ちがう</button></div></div>`;}).join('')}</div>`:'';
-    const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
+    const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}${(()=>{const r=state.powerResults.find(x=>x.battle_id===b.id);return r&&r.public_after?` ・ 戦闘力 ${r.before}→${r.after}`:'';})()}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()&&!(b.status==='confirmed'&&b.rated)?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
     return `${reqHTML}<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div><button class="btn primary wide" data-action="new-battle">＋ 対戦を記録</button>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint" style="margin-top:10px">まだ記録がありません。</p>'}</div>`;
   }
   function areaAccountHTML(){
@@ -599,19 +708,20 @@
   function resolveConfirm(value) { closeModal('confirm');state.confirmResolve?.(value);state.confirmResolve=null; }
   function defaultDraft() { const d=new Date();d.setDate(d.getDate()+1);return {id:'',title:'',date:dateYMD(d),endDate:dateYMD(d),start:'18:00',end:'20:00',place:'',details:'',lat:null,lng:null}; }
   function gatherDraft() {
-    state.draft={...state.draft,id:$('editId').value,title:$('eventTitle').value,date:$('eventDate').value,endDate:$('eventEndDate').value,start:$('eventStart').value,end:$('eventEnd').value,place:$('eventPlace').value,details:$('eventDetail').value,stadiumPlan:$('eventStadium').value,lat:state.chosen?.lat??null,lng:state.chosen?.lng??null};
+    state.draft={...state.draft,id:$('editId').value,title:$('eventTitle').value,date:$('eventDate').value,endDate:$('eventEndDate').value,start:$('eventStart').value,end:$('eventEnd').value,place:$('eventPlace').value,details:$('eventDetail').value,stadiumPlan:$('eventStadium').value,mode:document.querySelector('input[name="eventMode"]:checked')?.value||'go',lat:state.chosen?.lat??null,lng:state.chosen?.lng??null};
   }
   function restoreEvent() {
     const d=state.draft;
     for(const [id,key] of Object.entries({editId:'id',eventTitle:'title',eventDate:'date',eventEndDate:'endDate',eventStart:'start',eventEnd:'end',eventPlace:'place',eventDetail:'details'}))$(id).value=d[key]||'';
     $('eventStadium').value=d.stadiumPlan||'unset';
+    {const m=d.mode==='match'?'match':'go';document.querySelectorAll('input[name="eventMode"]').forEach(r=>r.checked=r.value===m);}
     state.chosen=C.validPoint(d)?{lat:Number(d.lat),lng:Number(d.lng)}:null;
     $('eventDialogTitle').textContent=d.id?'出没予定を編集':'出没予定を登録';$('eventSave').textContent=d.id?'変更を保存':'予定を登録する';
     updateCoords();openModal('event');
   }
   function newEvent(event) {
     if(!logged()){state.tab='account';render();notify('予定の登録にはログインしてください');return;}
-    if(event){const start=new Date(event.starts_at),end=new Date(event.ends_at);state.draft={id:event.id,title:event.title,date:dateYMD(start),endDate:dateYMD(end),start:timeText(start),end:timeText(end),place:event.place_name,autoPlace:event.auto_place??event.place_name,stadiumPlan:event.stadium_plan,details:event.details,...{lat:event.lat,lng:event.lng}};}
+    if(event){const start=new Date(event.starts_at),end=new Date(event.ends_at);state.draft={id:event.id,title:event.title,date:dateYMD(start),endDate:dateYMD(end),start:timeText(start),end:timeText(end),place:event.place_name,autoPlace:event.auto_place??event.place_name,stadiumPlan:event.stadium_plan,mode:event.mode||'go',details:event.details,...{lat:event.lat,lng:event.lng}};}
     else state.draft=defaultDraft();
     $('placeQuery').value='';$('placeResults').innerHTML='';restoreEvent();
   }
@@ -620,7 +730,10 @@
   }
   function updateCoords() { const p=state.chosen;$('coordText').textContent=p?`選択済み：緯度 ${p.lat.toFixed(5)}／経度 ${p.lng.toFixed(5)}`:'地図上の位置を選んでください。'; }
   async function saveEvent() {
-    gatherDraft();const draft=state.draft, record={...C.eventRecord(draft,selfId()),stadium_plan:draft.stadiumPlan||'unset',auto_place:draft.autoPlace||''};
+    gatherDraft();const draft=state.draft, record={...C.eventRecord(draft,selfId()),stadium_plan:draft.stadiumPlan||'unset',auto_place:draft.autoPlace||'',...(state.mode==='live'&&(draft.mode==='match'||(draft.id&&state.events.find(ev=>ev.id===draft.id)?.mode))?{mode:draft.mode==='match'?'match':'go'}:{})};
+    {const old=draft.id&&state.events.find(ev=>ev.id===draft.id);
+      if(old&&old.partner&&!old.cancelled_at&&(old.starts_at!==record.starts_at&&Date.parse(old.starts_at)!==Date.parse(record.starts_at)||Date.parse(old.ends_at)!==Date.parse(record.ends_at)||old.lat!==record.lat||old.lng!==record.lng||old.place_name!==record.place_name||(old.mode||'go')!==record.mode)
+        &&!await askConfirm('日時・場所を変えると、成立している約束は取り消して募集し直します。','約束を取り消して変更しますか？','変更する'))return;}
     if(draft.id&&!state.events.some(ev=>ev.id===draft.id&&ev.user_id===selfId()))throw Error('自分の予定のみ編集できます');
     if(state.mode==='demo') {
       await updateDemo(latest=>{
@@ -683,7 +796,14 @@
     action.dataset.id=event.id;
     action.dataset.action=mine?'edit-event':'rsvp';
     action.textContent=mine?'予定を編集':joined?'参加を取り消す':'参加する';
-    action.classList.toggle('is-joined',joined);
+    action.classList.toggle('is-joined',joined);action.hidden=false;action.disabled=false;
+    if(isMatch(event)){const st=matchState(event);
+      $('mapEventStatus').textContent=({open:'あと1人で開催',matched:involved(event)?'対戦成立！':'成立済み',cancelled:'中止',closed:'締め切り'})[st];
+      $('mapEventCount').innerHTML=st==='open'&&!mine?'押すと対戦予定が成立します':st==='matched'&&involved(event)?'相手：'+esc(fullName(mine?event.partner:event.user_id)):mine&&st==='open'?'相手を募集中':'';
+      if(mine){action.dataset.action=st==='open'||st==='matched'?'edit-event':'delete-event';action.textContent=st==='open'||st==='matched'?'予定を編集':'削除';}
+      else if(st==='open'){action.dataset.action='join-match';action.textContent='自分も行ける';}
+      else if(st==='matched'&&event.partner===selfId()){action.dataset.action='leave-match';action.textContent='辞退する';}
+      else action.hidden=true;}
   }
   function openMapEvent(event) {
     closePlace();
@@ -999,12 +1119,13 @@
     if(!d.result)throw Error('勝ち・負け・引き分けを選んでください');
     const record={reporter:selfId(),result:d.result,
       ...(d.free?{status:'memo',opponent:null,opponent_name:d.freeName.slice(0,32)}:{status:'pending',opponent:d.opponent,opponent_name:''})};
-    const {error}=await state.sb.from('battles').insert(record);if(error)throw Error('記録できませんでした：'+error.message);
+    const {data:ins,error}=await state.sb.from('battles').insert(record).select('*').single();if(error)throw Error('記録できませんでした：'+error.message);
     closeModal('battle');state.battleDraft=null;await loadLive();
+    if(!d.free&&state.powerReady&&d.result!=='draw'&&ins&&ins.rate_slot===false){notify(SAME_DAY_MSG);return;}
     notify(d.free?'メモとして記録しました':`記録しました。${nameFor(d.opponent)}さんがOKすると確定します`);
   }
   async function confirmBattle(id){
-    const {error}=await state.sb.rpc('confirm_battle',{battle_id:id});if(error)throw Error('承認できませんでした');await loadLive();notify('対戦を確定しました');
+    const {error}=await state.sb.rpc('confirm_battle',{battle_id:id});if(error)throw Error('承認できませんでした');await loadLive();if(!$('powerOverlay').classList.contains('open'))notify('対戦を確定しました');
   }
   async function removeBattle(id,reject){
     const b=state.battles.find(x=>x.id===id);if(!b)return;
@@ -1058,8 +1179,12 @@
     if(client!==state.sb||userId!==selfId()||request!==state.request)return;
     state.extras=!extra.some(r=>r.error);
     [state.areas,state.battles]=state.extras?extra.map(r=>r.data||[]):[[],[]];
+    {const qs=[client.from('power_stats').select('*').limit(3000)];
+      if(state.user)qs.push(client.from('power_slots').select('*').gte('day',new Date(Date.now()+9*3600e3-864e5).toISOString().slice(0,10)),client.rpc('my_power_results'));
+      const pr=await Promise.all(qs);state.powerReady=state.extras&&!pr[0].error;
+      state.power=state.powerReady?pr[0].data||[]:[];state.slots=pr[1]&&!pr[1].error?pr[1].data||[]:[];state.powerResults=pr[2]&&!pr[2].error?pr[2].data||[]:[];}
     {const tr=await client.from('traces').select('user_id,lat,lng,seen_at').gt('seen_at',new Date(Date.now()-7*864e5).toISOString()).order('seen_at',{ascending:false}).limit(3000);state.traces=tr.error?[]:(tr.data||[]);}
-    setStatus();noticeRequests();render();bumpAreas();
+    setStatus();noticeRequests();render();bumpAreas();checkPowerResults();checkMatches();
   }
   function noticeRequests(){
     if(!state.user)return;
@@ -1082,7 +1207,7 @@
   async function openRealtime(client) {
     if(client!==state.sb)return;
     await client.removeAllChannels();if(client!==state.sb)return;state.channelSeq=(state.channelSeq||0)+1;let channel=client.channel('beybe-radar-'+state.channelSeq+'-'+Date.now().toString(36));
-    for(const table of state.user?['positions','events','rsvps','profiles','reports','areas','battles']:['positions','events','rsvps','profiles','areas','battles'])channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleLoad);
+    for(const table of state.user?['positions','events','rsvps','profiles','reports','areas','battles','power_stats']:['positions','events','rsvps','profiles','areas','battles','power_stats'])channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleLoad);
     state.channel=channel;
     channel.subscribe(status=>{if(client!==state.sb||channel!==state.channel)return;state.connected=status==='SUBSCRIBED';if(status==='SUBSCRIBED'&&/接続し直しています/.test($('connectionStatus')?.textContent||''))setStatus();if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setStatus('接続し直しています。定期更新で情報を確認中です。');});
     clearInterval(state.refreshTimer);state.refreshTimer=setInterval(()=>loadLive().catch(()=>{}),30000);
@@ -1131,7 +1256,7 @@
       if(t.dataset.tab){closePlace();endPick();$('mapSearchResults').hidden=true;state.tab=t.dataset.tab;setSheet(isMobile()&&state.tab==='now');render();return;}
       if(t.dataset.filter){state.filter=t.dataset.filter;render();return;}
       const action=t.dataset.action,id=t.dataset.id;
-      if(!logged()&&/^(new-event|event-here|register-here|manual-share|start-share|rsvp|report|report-reason|edit-event|delete-event|pick-map|save-spot|area-here|add-area-map|edit-area|delete-area|new-battle|confirm-battle|reject-battle|delete-battle)$/.test(action)){closePlace();endPick();state.tab='account';setSheet(isMobile());render();notify('登録や参加は、ニックネームではじめると使えます');return;}
+      if(!logged()&&/^(new-event|event-here|register-here|manual-share|start-share|rsvp|report|report-reason|edit-event|delete-event|pick-map|save-spot|area-here|add-area-map|edit-area|delete-area|new-battle|join-match|leave-match|cancel-match|confirm-battle|reject-battle|delete-battle)$/.test(action)){closePlace();endPick();state.tab='account';setSheet(isMobile());render();notify('登録や参加は、ニックネームではじめると使えます');return;}
       if(action==='confirm-no'){resolveConfirm(false);return;}if(action==='confirm-yes'){resolveConfirm(true);return;}
       await runBusy(t,async()=>{
         if(action==='new-event')newEvent();
@@ -1153,6 +1278,10 @@
         else if(action==='battle-free'){if(state.battleDraft){state.battleDraft.free=!state.battleDraft.free;state.battleDraft.opponent='';renderBattleForm();}}
         else if(action==='battle-result'){if(state.battleDraft){state.battleDraft.result=t.dataset.value;renderBattleForm();}}
         else if(action==='confirm-battle')await confirmBattle(id);
+        else if(action==='power-next')nextPower();
+        else if(action==='join-match')await joinMatch(id);
+        else if(action==='leave-match')await leaveMatch(id);
+        else if(action==='cancel-match')await cancelMatch(id);
         else if(action==='reject-battle')await removeBattle(id,true);
         else if(action==='delete-battle')await removeBattle(id,false);
         else if(action==='save-spot')saveSelected();
@@ -1200,12 +1329,13 @@
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
     $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
     $('checkinDuration').addEventListener('change',updateCheckinNote);
+    document.addEventListener('change',e=>{if(e.target.id==='rankArea'){state.rankArea=e.target.value;render();}});
     $('mapSearch').addEventListener('input',()=>{clearTimeout(state.suggestTimer);const q=clean($('mapSearch').value);if(q.length<2){++state.mapSearchRequest;if(!q)showSavedResults();else $('mapSearchResults').hidden=true;return;}state.suggestTimer=setTimeout(suggestMap,450);});
     document.addEventListener('pointerdown',e=>{if(!$('mapSearchPanel').contains(e.target))$('mapSearchResults').hidden=true;});
     $('selectedLabel').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedLabel').value)||state.selected.name;});
     $('placeQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBusy(document.querySelector('[data-action="search-place"]'),searchPlace);}});
     $('eventDate').addEventListener('change',()=>{if($('eventEndDate').value<$('eventDate').value)$('eventEndDate').value=$('eventDate').value;});
-    for(const name of ['event','settings','confirm','report','area','battle'])$(name+'Overlay').addEventListener('click',e=>{if(e.target!==$(name+'Overlay'))return;if(name==='confirm')resolveConfirm(false);else closeModal(name);});
+    for(const name of ['event','settings','confirm','report','area','battle','power'])$(name+'Overlay').addEventListener('click',e=>{if(e.target!==$(name+'Overlay'))return;if(name==='confirm')resolveConfirm(false);else closeModal(name);});
     document.addEventListener('keydown',e=>{
       const open=[...document.querySelectorAll('.modaloverlay.open')].pop();
       if(e.key==='Escape'){if(state.confirmResolve)resolveConfirm(false);else if(open)open.classList.remove('open');else if(state.pickMode)cancelPick();else if(!$('mapSearchResults').hidden)$('mapSearchResults').hidden=true;else closePlace();}

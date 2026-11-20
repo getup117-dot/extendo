@@ -357,3 +357,19 @@ body.radar-open .mapfloat{display:none}
 
 .recovery-id{font-size:15px;color:#3c4043}.recovery-id b{font-size:17px;color:#1f1f1f;user-select:all}
 .restore-hint-btn{align-self:flex-start;margin-top:4px}
+.power-badge{background:#13303d!important;color:#7ff0d9!important;font-weight:800}
+.power-chance{margin-top:8px;font-size:14px;color:#3c4043}.power-chance b{font-size:18px;color:#13303d}.best-chance{display:inline-block;margin-left:4px;color:#e8590c;font-weight:800;font-size:13px}
+.power-head{font-size:15px;color:#3c4043}.power-head b{font-size:22px;color:#13303d}
+.rank-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 6px}.rank-top select{max-width:62%;font-size:13px;padding:6px 8px}
+.rank-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-top:1px solid #edf1ef;font-size:15px}.rank-row.is-me{background:#eefaf6}
+.rank-no{min-width:58px;font-weight:800;color:#5f6368;font-size:13px}.rank-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rank-power{font-weight:900;font-size:17px;color:#13303d}
+.power-modal{text-align:center}.power-modal h2{font-size:22px;margin:6px 0 12px}.power-body{font-size:16px;line-height:1.7;margin-bottom:18px;color:#3c4043}.power-big{font-size:34px;color:#13303d}
+.best-new{margin-top:6px;color:#e8590c;font-weight:900}.power-detail{text-align:left;font-size:14px;margin-top:4px}.power-detail summary{color:#5f6368;cursor:pointer}
+.rival-line{margin-top:8px;font-size:14px;color:#3c4043}.rival-line b{color:#e8590c}
+.match-line{font-size:15px;font-weight:700;color:#1f1f1f;margin-top:6px}.match-line b{color:#e8590c}.match-line.is-done{color:#0b7d6e;font-size:16px}.match-line.is-off{color:#80868b}
+.match-sub{font-size:13px;color:#5f6368;margin-top:3px}.match-hint{font-size:11px;color:#5f6368;margin-right:4px;align-self:center}
+.field-label{font-size:12px;font-weight:800;color:#415b64}.mode-switch{display:flex;gap:6px;background:#eef1f0;border-radius:14px;padding:4px}
+.mode-switch label{flex:1}.mode-switch input{position:absolute;opacity:0;pointer-events:none}.mode-switch span{display:block;text-align:center;padding:10px 6px;border-radius:11px;font-size:14px;font-weight:700;color:#5f6368}
+.mode-switch input:checked+span{background:#fff;color:#13303d;box-shadow:0 1px 4px #0002}.mode-switch input:focus-visible+span{outline:2px solid var(--teal)}
+@keyframes blipflash{0%{filter:none;transform:scale(1)}30%{filter:drop-shadow(0 0 10px #ff8a3d) brightness(1.4);transform:scale(1.12)}100%{filter:none;transform:scale(1)}}
+.blip-flash{animation:blipflash 1.4s ease-out 1}
