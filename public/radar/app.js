@@ -42,9 +42,9 @@
         {id:'demo-me',display_name:'あなた',stadium_status:'unset',rank_level:'unset'}
       ],
       positions: [
-        {user_id:'sample1',lat:35.6998,lng:139.7709,precision:'approx'},
-        {user_id:'sample2',lat:35.697,lng:139.7021,precision:'approx'},
-        {user_id:'sample3',lat:35.662,lng:139.6654,precision:'approx'}
+        {user_id:'sample1',lat:35.6998,lng:139.7709,precision:'exact'},
+        {user_id:'sample2',lat:35.697,lng:139.7021,precision:'exact'},
+        {user_id:'sample3',lat:35.662,lng:139.6654,precision:'exact'}
       ].map(p=>({...p,updated_at:iso(),expires_at:new Date(Date.now()+3600000).toISOString()})),
       events: [
         {id:'sample-event-today-'+dateYMD(new Date()),user_id:'sample2',title:'初心者歓迎のフリーバトル',place_name:'新宿駅東口周辺（架空の会場）',lat:35.6914,lng:139.7018,starts_at:at(0,18),ends_at:at(0,24),stadium_plan:'store',details:'初対戦の方も気軽にどうぞ。※試用版の架空の予定です。'},
@@ -421,7 +421,7 @@
         </form>
       </div>
       <div class="setting-card"><div class="toggle-line"><strong>現在地の共有</strong><span class="pill" id="sharePill">${sharing?'共有中':'OFF'}</span></div><div class="separator"></div>
-      ${sharing?`<div class="share-active" id="shareStatus"></div><button class="btn outline wide" style="margin-top:12px" data-action="stop-share">${state.stopFailed?'公開停止をもう一度試す':'位置共有を停止する'}</button>`:`<div class="grid2 share-settings"><div class="field"><label for="shareDuration">共有する時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><div class="field"><label for="sharePrecision">位置の精度</label><select id="sharePrecision"><option value="approx">概略（約500m）</option><option value="exact">詳細位置</option></select></div></div><button class="btn teal wide" data-action="start-share">GPSで現在地を共有</button><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button>`}
+      ${sharing?`<div class="share-active" id="shareStatus"></div><button class="btn outline wide" style="margin-top:12px" data-action="stop-share">${state.stopFailed?'公開停止をもう一度試す':'位置共有を停止する'}</button>`:`<div class="field share-settings"><label for="shareDuration">共有する時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><button class="btn teal wide" data-action="start-share">GPSで現在地を共有</button><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button>`}
       </div>
       ${areaAccountHTML()}
       <div class="setting-card"><strong>保存した場所</strong><div class="saved-places">${savedSpots().map((p,i)=>`<button class="saved-place" data-action="open-saved" data-index="${i}"><span>☆</span><span>${esc(p.name)}</span><span>地図</span></button>`).join('')||'<p class="hint">まだありません。</p>'}</div></div>
@@ -706,7 +706,7 @@
   function pickEvent() { gatherDraft();if(!state.mapReady){notify('地図が利用できません。検索または緯度,経度で指定してください');return;}closePlace();closeModal('event');state.pickMode='event';$('pickPrompt').hidden=false;$('pickText').textContent='予定を登録する地点をタップ';setSheet(true); }
   function endPick() { state.pickMode=null;$('pickPrompt').hidden=true; }
   function cancelPick() { const was=state.pickMode;endPick();if(was==='event')restoreEvent();else{if(was==='area')state.tab='account';setSheet(false);render();} }
-  function shareSettings() { return {minutes:Number($('shareDuration')?.value||60),privacy:$('sharePrecision')?.value||'approx'}; }
+  function shareSettings() { return {minutes:Number($('shareDuration')?.value||60),privacy:'exact'}; }
   function clearWatch() { if(state.geowatch!==null){navigator.geolocation?.clearWatch(state.geowatch);state.geowatch=null;}state.freshRequest=false; }
   async function publishLocation(point, measuredAt, token) {
     const share=state.share;if(!share||!shares.current(token)||share.token!==token||Date.now()>=share.until)return false;
