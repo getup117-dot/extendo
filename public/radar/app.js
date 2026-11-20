@@ -236,7 +236,7 @@
     const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(!reduce)wrap.appendChild(el);
     setTimeout(()=>{el.classList.add('done');setTimeout(()=>el.remove(),500);
-      if(!showList){if(state.selected&&state.selected===pt){$('selectedNearby').textContent=hits.size?`近くに${hits.size}人いるよ`:'近くには誰もいないみたい';$('selectedNearby').classList.toggle('is-hit',hits.size>0);$('selectedNearby').hidden=false;updateOverlaySizes();}return;}
+      if(!showList){return;}
       const list=[...hits.values()].sort((a,b)=>a.d-b.d).slice(0,6),dist=d=>d>=1000?(d/1000).toFixed(1)+'km':Math.round(d/10)*10+'m';
       $('radarList').innerHTML=list.length?list.map(h=>`<button class="radar-row" data-action="go-point" data-lat="${h.lat}" data-lng="${h.lng}"><span class="radar-dot${h.kind==='area'?' is-area':''}"></span><span class="radar-name">${esc(fullName(h.id))}</span><span class="radar-dist">${dist(h.d)}${h.kind==='area'?'・出没エリア':''}</span></button>`).join(''):'<p class="hint">近くには誰もいないみたい。地図を縮小してもう一度探してみて。</p>';
       $('radarCount').textContent=list.length?`${hits.size}人`:'0人';
@@ -1128,6 +1128,7 @@
         else if(action==='go-point'){hideRadar();mapGo(+t.dataset.lat,+t.dataset.lng);}
         else if(action==='radar-here')radarHere();
         else if(action==='my-location')goMyLocation();
+        else if(action==='open-place'){$('selectedPlace').classList.remove('is-peek');setTimeout(pinIntoView,60);updateOverlaySizes();}
         else if(action==='toggle-place'){$('selectedPlace').classList.toggle('is-peek');setTimeout(pinIntoView,60);}
         else if(action==='close-radar')hideRadar();
         else if(action==='go-person'){const p=activePeople().find(p=>p.user_id===id);if(p)mapGo(p.lat,p.lng);}
