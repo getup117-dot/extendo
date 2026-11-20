@@ -196,15 +196,28 @@
     tiles.on('tileload',()=>{state.tileLoaded++;$('mapLoadStatus').hidden=true;});
     tiles.on('tileerror',()=>{if(++state.tileErrors>=4&&!state.tileLoaded){$('mapLoadStatus').textContent='地図を読み込めません。インターネット接続を確認してください。';$('mapLoadStatus').hidden=false;}});
     L.control.zoom({position:'topright'}).addTo(state.map);
-    // スマホで指が少しずれてもタップとして扱う（地図のドラッグ扱いでピンが刺さらないのを防ぐ）
-    {const box=state.map.getContainer();let tap=null,lastTap=0;
-      box.addEventListener('pointerdown',e=>{if(tap&&e.pointerId!==tap.id){tap.multi=true;return;}tap={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),multi:!e.isPrimary};});
-      box.addEventListener('pointercancel',()=>{tap=null;});
-      box.addEventListener('pointerup',e=>{const s=tap;if(!s||e.pointerId!==s.id)return;tap=null;
-        if(s.multi||Math.hypot(e.clientX-s.x,e.clientY-s.y)>14||Date.now()-s.t>700)return;
-        if(e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup'))return;
-        lastTap=Date.now();const ll=state.map.mouseEventToLatLng(e);chooseMapPoint({lat:ll.lat,lng:ll.lng},false);});
-      state.map.on('click',e=>{if(Date.now()-lastTap<800)return;chooseMapPoint({lat:e.latlng.lat,lng:e.latlng.lng},false);});}
+    // スマホ：タップでは何もしない／ダブルタップで拡大／長押しでピン（地図アプリと同じ操作）
+    {const box=state.map.getContainer();let t=null,lastTouch=0,prev=null,noDbl=0;
+      const onUI=e=>e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup');
+      const pin=e=>{const ll=state.map.mouseEventToLatLng(e);chooseMapPoint({lat:ll.lat,lng:ll.lng},false);};
+      box.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;
+        if(t){clearTimeout(t.timer);t.multi=true;return;}
+        if(onUI(e))return;
+        t={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),multi:!e.isPrimary};
+        const ev={clientX:e.clientX,clientY:e.clientY};
+        t.timer=setTimeout(()=>{if(!t||t.multi)return;t.held=true;navigator.vibrate?.(15);pin(ev);},500);});
+      box.addEventListener('pointermove',e=>{if(t&&e.pointerId===t.id&&Math.hypot(e.clientX-t.x,e.clientY-t.y)>10){clearTimeout(t.timer);t.moved=true;}});
+      const end=e=>{const s=t;if(!s||e.pointerId!==s.id)return;clearTimeout(s.timer);t=null;lastTouch=Date.now();
+        if(e.type!=='pointerup'||s.multi||s.moved||s.held||Date.now()-s.t>450)return;
+        if(state.pickMode){pin(e);return;}
+        const now=Date.now();
+        if(prev&&now-prev.t<320&&Math.hypot(e.clientX-prev.x,e.clientY-prev.y)<40){clearTimeout(prev.timer);prev=null;noDbl=now;
+          state.map.setZoomAround(state.map.mouseEventToContainerPoint(e),state.map.getZoom()+1);return;}
+        prev={t:now,x:e.clientX,y:e.clientY,timer:setTimeout(()=>{prev=null;if(state.selected)closePlace();},330)};};
+      box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
+      box.addEventListener('dblclick',e=>{if(Date.now()-noDbl<700)e.stopPropagation();},true);
+      box.addEventListener('contextmenu',e=>{if(Date.now()-lastTouch<1500||e.pointerType==='touch')e.preventDefault();},true);
+      state.map.on('click',e=>{if(Date.now()-lastTouch<800)return;chooseMapPoint({lat:e.latlng.lat,lng:e.latlng.lng},false);});}
     state.mapReady=true;
   }
   function radarScan(){
@@ -684,7 +697,7 @@
       const data=await response.json();if(!Array.isArray(data))throw Error('検索結果を取得できません');
       const places=data.filter(p=>C.validPoint({lat:p.lat,lng:p.lon})).map(p=>({lat:Number(p.lat),lng:Number(p.lon),name:clean(p.name)||clean(p.display_name).split(',')[0],address:clean(p.display_name)}));
       state.searchCache[q]=places;return mergePlaces(local,places);
-    }catch(error){if(local.length)return local;throw Error(error.name==='AbortError'?'検索に時間がかかっています。地図をタップしても登録できます':'検索できませんでした。地図をタップしても登録できます');}
+    }catch(error){if(local.length)return local;throw Error(error.name==='AbortError'?'検索に時間がかかっています。地図を長押しでも選べます':'検索できませんでした。地図を長押しでも選べます');}
     finally{clearTimeout(timer);}
   }
   function mergePlaces(first,second) {
@@ -699,14 +712,14 @@
     closePlace();showMapTab();area.hidden=false;area.innerHTML='<p class="search-message">場所を検索しています…</p>';
     try{
       const places=await lookupPlaces(q);if(request!==state.mapSearchRequest)return;state.mapHits=places;
-      area.innerHTML=places.length?placeResultsHTML(places,'select-map-place'):'<p class="search-message">見つかりませんでした。住所で検索するか、地図をタップしてください。</p>';
+      area.innerHTML=places.length?placeResultsHTML(places,'select-map-place'):'<p class="search-message">見つかりませんでした。地図を長押しでも選べます。</p>';
     }catch(error){if(request===state.mapSearchRequest)area.innerHTML=`<p class="search-message">${esc(error.message)}</p>`;}
     $('mapSearch').blur();
   }
   function showSavedResults() {
     if(clean($('mapSearch').value))return;
     state.mapHits=savedSpots().slice(0,8);const area=$('mapSearchResults');area.hidden=false;
-    area.innerHTML=state.mapHits.length?'<p class="search-caption">保存した場所</p>'+placeResultsHTML(state.mapHits,'select-map-place'):'<p class="search-message">駅名・施設名・住所を検索できます。地図をタップして場所を選ぶこともできます。</p>';
+    area.innerHTML=state.mapHits.length?'<p class="search-caption">保存した場所</p>'+placeResultsHTML(state.mapHits,'select-map-place'):'<p class="search-message">駅名・施設名・住所で探せます。地図を長押しでも選べます。</p>';
   }
   function locateMe() {
     if(!navigator.geolocation||!window.isSecureContext){notify('この開き方ではGPSを使えません。場所検索か地図タップで登録できます');return;}
