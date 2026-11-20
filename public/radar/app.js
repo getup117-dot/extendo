@@ -127,16 +127,16 @@
   const todayJST=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
   const slotToday=other=>state.slots.some(x=>x.day===todayJST()&&(x.a===other||x.b===other));
   const winGain=(me,opp)=>Math.min(opp,Math.round(24*(1-1/(1+10**((opp-me)/400)))));
-  const progressText=s=>`測定中｜${Math.min(s?.games||0,5)}/5戦・対戦相手${Math.min(s?.opponents||0,3)}/3人`;
+  const powerVal=id=>powerOf(id)?.rating??1500;
   function powerShort(id){
-    if(!state.powerReady)return '';const s=pubPower(id);
-    return s?`戦闘力 ${s.rating}${isResting(s)?'・休止中':''}`:'戦闘力 測定中';
+    if(!state.powerReady)return '';const s=powerOf(id);
+    return `戦闘力 ${powerVal(id)}${isResting(s)?'・休止中':''}`;
   }
   function chanceHTML(other){
     if(!state.powerReady||!state.user||other===selfId())return '';
-    const me=pubPower(selfId()),op=pubPower(other);if(!me||!op||slotToday(other))return '';
-    const after=me.rating+winGain(me.rating,op.rating);
-    return `<div class="power-chance">勝てば <b>${after}</b>${after>(me.best||0)?' <span class="best-chance">自己最高更新のチャンス！</span>':''}</div>`;
+    if(slotToday(other))return '';
+    const mine=powerVal(selfId()),best=powerOf(selfId())?.best??null,after=mine+winGain(mine,powerVal(other));
+    return `<div class="power-chance">勝てば <b>${after}</b>${best!=null&&after>best?' <span class="best-chance">自己最高更新のチャンス！</span>':''}</div>`;
   }
   function rivalHTML(other){
     if(!state.extras||!state.user||other===selfId()||state.mode!=='live')return '';
@@ -152,8 +152,8 @@
   }
   function powerAccountHTML(){
     if(!state.powerReady||state.mode!=='live')return '';
-    const s=powerOf(selfId()),pub=s&&s.calibrated;
-    const head=!state.user?'':pub?`戦闘力 <b>${s.rating}</b>｜自己最高 ${s.best}${isResting(s)?' <span class="pill">休止中</span>':''}`:esc(progressText(s));
+    const s=powerOf(selfId());
+    const head=!state.user?'':`戦闘力 <b>${powerVal(selfId())}</b>${s?.best!=null?`｜自己最高 ${s.best}`:''}${isResting(s)?' <span class="pill">休止中</span>':''}`;
     const all=rankList(),areas=state.user?myAreas():[],area=areas.find(a=>a.id===state.rankArea);
     const list=area?all.filter(r=>state.areas.some(a=>a.user_id===r.user_id&&meters(a,area)<1500)):all;
     const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span><span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
@@ -169,18 +169,11 @@
     const fresh=state.powerResults.filter(r=>!seen.has(r.battle_id)&&Date.now()-Date.parse(r.confirmed_at)<14*864e5);
     state.powerResults.forEach(r=>seen.add(r.battle_id));storage.set(seenKey(),[...seen].slice(-500));
     if(raw===null)return; // 初回は過去分を出さない
-    const me=powerOf(selfId());let revealed=false;
     for(const r of fresh.slice().reverse()){
       const name=nameFor(r.opponent);
-      if(r.cal_now){revealed=true;queuePower('測定完了',`あなたの戦闘力は <b class="power-big">${r.after}</b>！`);continue;}
-      if(r.won){
-        if(r.public_after)queuePower(r.upset?'格上撃破！':'勝利！',`戦闘力 ${r.before} → <b class="power-big">${r.after}</b>${r.new_best?'<div class="best-new">自己最高更新！</div>':''}`);
-        else queuePower('勝利！',`vs ${esc(name)}<div class="help">${esc(progressText(me))}</div>`);
-      }else{
-        queuePower(`今回は${esc(name)}さんの勝利`,`<details class="power-detail"><summary>対戦の詳細</summary>${r.public_after?`戦闘力 ${r.before} → ${r.after}（−${r.before-r.after}）`:esc(progressText(me))}</details>`);
-      }
+      if(r.won)queuePower(r.upset?'格上撃破！':'勝利！',`戦闘力 ${r.before} → <b class="power-big">${r.after}</b>${r.new_best?'<div class="best-new">自己最高更新！</div>':''}`);
+      else queuePower(`今回は${esc(name)}さんの勝利`,`<details class="power-detail"><summary>対戦の詳細</summary>戦闘力 ${r.before} → ${r.after}（−${r.before-r.after}）</details>`);
     }
-    if(me&&me.calibrated&&!me.reveal_seen){if(!revealed)queuePower('測定完了',`あなたの戦闘力は <b class="power-big">${me.best??me.rating}</b>！`);me.reveal_seen=true;state.sb.rpc('mark_power_reveal').then(()=>{},()=>{});}
   }
   const powerQueue=[];
   function queuePower(title,body){powerQueue.push({title,body});if(!$('powerOverlay').classList.contains('open'))nextPower();}
@@ -659,7 +652,7 @@
     if(!state.extras||state.mode!=='live'||!state.user)return '';
     const reqs=incomingRequests(), rec=recordOf(selfId()), list=myBattles().slice(0,30);
     const reqHTML=reqs.length?`<div class="setting-card request-card"><div class="section-title">承認待ちの対戦 <span class="count">${reqs.length}</span></div>${reqs.map(b=>{const v=battleView(b);return `<div class="battle-row"><div><strong>${esc(fullName(b.reporter))}</strong> との対戦<div class="person-sub">あなたの${esc(RESULT_TEXT[v.result])} ・ ${esc(fmtDate(b.played_at))}</div></div><div class="battle-actions"><button class="tiny-btn joined" data-action="confirm-battle" data-id="${esc(b.id)}">OK</button><button class="tiny-btn" data-action="reject-battle" data-id="${esc(b.id)}">ちがう</button></div></div>`;}).join('')}</div>`:'';
-    const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}${(()=>{const r=state.powerResults.find(x=>x.battle_id===b.id);return r&&r.public_after?` ・ 戦闘力 ${r.before}→${r.after}`:'';})()}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()&&!(b.status==='confirmed'&&b.rated)?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
+    const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}${(()=>{const r=state.powerResults.find(x=>x.battle_id===b.id);return r?` ・ 戦闘力 ${r.before}→${r.after}`:'';})()}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()&&!(b.status==='confirmed'&&b.rated)?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
     state._reqHTML=reqHTML;
     return `<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint">まだ記録がありません。</p>'}</div>`;
   }
