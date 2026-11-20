@@ -282,3 +282,23 @@ button{min-height:44px}
 .radar-dist{font-size:13px;color:var(--muted);white-space:nowrap}
 .side{will-change:transform}
 body.radar-open .mapfloat{display:none}
+
+/* 指定した地点カード（Googleマップ風：まずピンと場所、上にスワイプで登録） */
+.place-card{padding:6px 18px 16px;border-radius:22px;transition:transform .2s}
+.place-grab{display:block;width:100%;min-height:22px;border:0;background:none;position:relative;padding:0}
+.place-grab:before{content:"";position:absolute;left:calc(50% - 20px);top:6px;width:40px;height:5px;border-radius:5px;background:#c9d3d0}
+.place-head{display:flex;align-items:center;gap:8px}
+.place-card .place-head input{flex:1;font-size:22px;font-weight:700;color:#1f1f1f;padding:2px 0;min-height:40px;border:0!important;margin:0!important;background:transparent}
+.place-card .place-head .xbtn{border-radius:50%;background:#eef1f0;color:#3c4043;font-size:22px;margin-right:-4px}
+.place-card .selected-detail{font-size:15px;color:#5f6368;line-height:1.45;margin-top:2px;-webkit-line-clamp:2}
+.place-more{margin-top:12px}
+.place-card.is-peek .place-more{display:none}
+.place-card .checkin-duration label{font-size:14px;color:#3c4043;font-weight:700}
+.place-card .selected-actions .btn{font-size:15px;border-radius:24px;min-height:48px}
+.place-card .area-btn{border-radius:24px;font-size:15px}
+.place-card .save-spot{font-size:15px}
+.selected-pin{width:34px;height:34px;border:0;background:#ea4335;box-shadow:0 3px 8px #0006;position:relative;animation:pinDrop .28s ease-out}
+.selected-pin:after{content:"";position:absolute;left:11px;top:11px;width:12px;height:12px;border-radius:50%;background:#8a1c13}
+@keyframes pinDrop{from{transform:translateY(-24px) rotate(-45deg);opacity:0}to{transform:rotate(-45deg);opacity:1}}
+@media(max-width:800px){.place-card{left:8px;right:8px;bottom:8px;padding:4px 18px 14px}.place-card .selected-note{display:none}}
+.selected-place.place-card #selectedLabel{border:0;padding:2px 0;margin:0;min-height:40px;font-size:22px;font-weight:700;color:#1f1f1f;box-shadow:none}

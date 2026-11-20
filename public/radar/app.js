@@ -241,6 +241,7 @@
       $('radarCount').textContent=list.length?`${hits.size}人`:'0人';
       $('radarResult').hidden=false;document.body.classList.add('radar-open');},reduce?0:T+250);
   }
+  function pinIntoView(){if(!state.selected||!state.mapReady)return;const pt=state.map.latLngToContainerPoint([state.selected.lat,state.selected.lng]),limit=state.map.getSize().y-$('selectedPlace').offsetHeight-60;if(pt.y>limit)state.map.panBy([0,pt.y-limit],{animate:true});}
   function hideRadar(){$('radarResult').hidden=true;document.body.classList.remove('radar-open');}
   function radarHere(){
     if(!state.mapReady)return;closePlace();if(isMobile())setSheet(true);
@@ -625,10 +626,12 @@
   function selectPlace(place, move=true) {
     if(!C.validPoint(place))return;
     closePlace();
-    state.selected={lat:Number(place.lat),lng:Number(place.lng),name:clean(place.name)||'地図で選んだ場所',address:clean(place.address)};
+    state.selected={lat:Number(place.lat),lng:Number(place.lng),name:clean(place.name)||'指定した地点',address:clean(place.address)};$('selectedPlace').classList.add('is-peek');
     showMapTab();$('mapSearch').blur();$('mapSearchResults').hidden=true;
     $('selectedLabel').value=state.selected.name;
-    $('selectedDetail').textContent=state.selected.address||`緯度 ${state.selected.lat.toFixed(5)} ・ 経度 ${state.selected.lng.toFixed(5)}`;
+    $('selectedDetail').textContent=state.selected.address||`${state.selected.lat.toFixed(5)}, ${state.selected.lng.toFixed(5)}`;
+    if(!state.selected.address&&config.searchUrl){const sel=state.selected,u=config.searchUrl.replace(/search\/?$/,'reverse')+`?format=jsonv2&zoom=17&accept-language=ja&lat=${sel.lat}&lon=${sel.lng}`;
+      fetch(u).then(r=>r.ok?r.json():null).then(j=>{if(!j||state.selected!==sel)return;const a=j.address||{};const txt=[a.city||a.town||a.village||'',a.suburb||a.quarter||a.neighbourhood||'',a.road||''].filter(Boolean).join(' ')||j.display_name;if(txt){sel.address=txt;$('selectedDetail').textContent=txt+(j.name?`（${j.name}付近）`:'');}}).catch(()=>{});}
     $('selectedPlace').hidden=false;document.body.classList.add('place-selected');
     {const saved=Number(storage.get(CHECKIN_KEY,60));if(CHECKIN_CHOICES.includes(saved))$('checkinDuration').value=String(saved);}
     updateCheckinNote();
@@ -636,12 +639,13 @@
     $('areaHereButton').hidden=!(state.extras&&state.mode==='live');
     if(state.mapReady){
       state.selectedMarker?.remove();
-      state.selectedMarker=L.marker([state.selected.lat,state.selected.lng],{icon:L.divIcon({className:'selected-marker',html:'<span class="selected-pin"></span>',iconSize:[32,40],iconAnchor:[16,34]})}).addTo(state.map);
+      state.selectedMarker=L.marker([state.selected.lat,state.selected.lng],{icon:L.divIcon({className:'selected-marker',html:'<span class="selected-pin"></span>',iconSize:[34,44],iconAnchor:[17,41]})}).addTo(state.map);
       if(move)state.map.setView([state.selected.lat,state.selected.lng],16);
       requestAnimationFrame(()=>{
         updateOverlaySizes();
         // Keep the selected pin in the unobscured portion of the map.
         if(move&&isMobile())state.map.panBy([0,$('selectedPlace').offsetHeight/2],{animate:false});
+        if(!move)pinIntoView();
       });
       setTimeout(()=>radarScan(state.selected,false),move?120:30);
     }
@@ -1056,6 +1060,7 @@
         else if(action==='go-event'){const p=activeEvents().find(ev=>ev.id===id);if(p&&state.mapReady)openMapEvent(p);else notify('地図を読み込めませんでした');}
         else if(action==='go-point'){hideRadar();mapGo(+t.dataset.lat,+t.dataset.lng);}
         else if(action==='radar-here')radarHere();
+        else if(action==='toggle-place'){$('selectedPlace').classList.toggle('is-peek');setTimeout(pinIntoView,60);}
         else if(action==='close-radar')hideRadar();
         else if(action==='go-person'){const p=activePeople().find(p=>p.user_id===id);if(p)mapGo(p.lat,p.lng);}
         else if(action==='edit-event'){const p=state.events.find(ev=>ev.id===id&&ev.user_id===selfId());if(p)newEvent(p);}
@@ -1125,6 +1130,12 @@
     window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
     document.addEventListener('focusin',e=>{if(!isMobile()||!isTyping(e.target))return;updateViewport();setTimeout(()=>{window.scrollTo(0,0);e.target.scrollIntoView({block:'center'});},350);});
     document.addEventListener('focusout',()=>setTimeout(updateViewport,120));
+    {const card=$('selectedPlace');let g=null;
+      card.addEventListener('touchstart',e=>{if(e.target.closest('input,select,textarea'))return;g={y:e.touches[0].clientY,dy:0};},{passive:true});
+      card.addEventListener('touchmove',e=>{if(!g)return;g.dy=e.touches[0].clientY-g.y;if(Math.abs(g.dy)>8){e.preventDefault();card.style.transition='none';card.style.transform=`translateY(${Math.max(card.classList.contains('is-peek')?-40:0,g.dy)}px)`;}},{passive:false});
+      card.addEventListener('touchend',e=>{if(!g)return;const dy=g.dy;g=null;card.style.transition='';card.style.transform='';
+        if(dy<-30){card.classList.remove('is-peek');setTimeout(pinIntoView,60);}else if(dy>50){if(card.classList.contains('is-peek'))closePlace();else card.classList.add('is-peek');}
+        else if(Math.abs(dy)<6&&card.classList.contains('is-peek')&&!e.target.closest('button,input,select')){card.classList.remove('is-peek');setTimeout(pinIntoView,60);}});}
     {const side=$('sidePanel'),sc=$('panelContent');let g=null;
       side.addEventListener('touchstart',e=>{if(!isMobile()||e.touches.length>1)return;const onHandle=!!e.target.closest('.sheet-handle');
         if(!onHandle&&e.target.closest('input,select,textarea'))return;g={y:e.touches[0].clientY,x:e.touches[0].clientX,onHandle,top:sc.scrollTop<=0,drag:false,dy:0};},{passive:true});
