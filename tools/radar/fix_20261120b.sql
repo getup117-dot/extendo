@@ -1,11 +1,7 @@
 -- Beybe Radar バグ修正（2026-11-20 GPTチェック分）
 -- Supabase の SQL Editor で1回実行（何度実行しても大丈夫）
 
--- 通報で非表示になった人は「気配」にも出さない
-grant execute on function public.is_hidden(text, text) to anon;
-drop policy if exists "traces_read_recent" on public.traces;
-create policy "traces_read_recent" on public.traces for select to anon, authenticated
-  using (seen_at > now() - interval '7 days' and not public.is_hidden('user', user_id::text));
+-- 気配（traces）は schema_traces.sql 側で非表示の人を除く形にした
 
 -- 戦闘力：初回の同時承認で行き詰まらないよう、いつも同じ順番で行を作る
 create or replace function public.power_apply(bid uuid) returns void

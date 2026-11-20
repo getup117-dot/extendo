@@ -10,8 +10,9 @@ create table if not exists public.traces (
 create index if not exists traces_seen_idx on public.traces(seen_at);
 alter table public.traces enable row level security;
 drop policy if exists "traces_read_recent" on public.traces;
+grant execute on function public.is_hidden(text, text) to anon;
 create policy "traces_read_recent" on public.traces for select to anon, authenticated
-  using (seen_at > now() - interval '7 days');
+  using (seen_at > now() - interval '7 days' and not public.is_hidden('user', user_id::text));
 drop policy if exists "traces_delete_admin" on public.traces;
 create policy "traces_delete_admin" on public.traces for delete to authenticated using (public.is_admin());
 grant select on public.traces to anon, authenticated;
