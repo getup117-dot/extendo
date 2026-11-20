@@ -6,6 +6,6 @@ window.BEYSPOT_CONFIG = Object.freeze({
   supabasePublicKey: 'sb_publishable_PXoCtb7nHew3_bnfU1kNMA_k9DrpmVS',
   // 住所検索は小規模な動作確認向け。多数ユーザーでの運用前に配信先を変更してください。
   searchUrl: 'https://nominatim.openstreetmap.org/search',
-  tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  tileAttribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  tileUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  tileAttribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 });

@@ -191,14 +191,14 @@
     if (!window.L) { $('mapFallback').classList.add('show'); return; }
     state.map=L.map('map',{zoomControl:false}).setView(TOKYO,12);
     const tiles=L.tileLayer(config.tileUrl||'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:config.tileAttribution||'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19
+      attribution:config.tileAttribution||'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',subdomains:'abcd',maxZoom:20,detectRetina:false
     }).addTo(state.map);
     tiles.on('tileload',()=>{state.tileLoaded++;$('mapLoadStatus').hidden=true;});
     tiles.on('tileerror',()=>{if(++state.tileErrors>=4&&!state.tileLoaded){$('mapLoadStatus').textContent='地図を読み込めません。インターネット接続を確認してください。';$('mapLoadStatus').hidden=false;}});
     L.control.zoom({position:'topright'}).addTo(state.map);
     // スマホ：タップでは何もしない／ダブルタップで拡大／長押しでピン（地図アプリと同じ操作）
     {const box=state.map.getContainer();let t=null,lastTouch=0,prev=null,noDbl=0;
-      const onUI=e=>e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup');
+      const onUI=e=>e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup,.leaflet-interactive');
       const pin=e=>{const ll=state.map.mouseEventToLatLng(e);chooseMapPoint({lat:ll.lat,lng:ll.lng},false);};
       box.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;
         if(t){clearTimeout(t.timer);t.multi=true;return;}
@@ -213,7 +213,7 @@
         const now=Date.now();
         if(prev&&now-prev.t<320&&Math.hypot(e.clientX-prev.x,e.clientY-prev.y)<40){clearTimeout(prev.timer);prev=null;noDbl=now;
           state.map.setZoomAround(state.map.mouseEventToContainerPoint(e),state.map.getZoom()+1);return;}
-        prev={t:now,x:e.clientX,y:e.clientY,timer:setTimeout(()=>{prev=null;if(state.selected)closePlace();},330)};};
+        prev={t:now,x:e.clientX,y:e.clientY,timer:setTimeout(()=>{prev=null;if(state.selected||!$('mapInfo').hidden)closePlace();},330)};};
       box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
       box.addEventListener('dblclick',e=>{if(Date.now()-noDbl<700)e.stopPropagation();},true);
       box.addEventListener('contextmenu',e=>{if(Date.now()-lastTouch<1500||e.pointerType==='touch')e.preventDefault();},true);
@@ -235,7 +235,7 @@
     const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(!reduce)wrap.appendChild(el);
     setTimeout(()=>{el.classList.add('done');setTimeout(()=>el.remove(),500);
-      if(!showList){notify(hits.size?`近くに${hits.size}人いるよ`:'近くには誰もいないみたい');return;}
+      if(!showList){if(state.selected&&state.selected===pt){$('selectedNearby').textContent=hits.size?`近くに${hits.size}人いるよ`:'近くには誰もいないみたい';$('selectedNearby').classList.toggle('is-hit',hits.size>0);$('selectedNearby').hidden=false;updateOverlaySizes();}return;}
       const list=[...hits.values()].sort((a,b)=>a.d-b.d).slice(0,6),dist=d=>d>=1000?(d/1000).toFixed(1)+'km':Math.round(d/10)*10+'m';
       $('radarList').innerHTML=list.length?list.map(h=>`<button class="radar-row" data-action="go-point" data-lat="${h.lat}" data-lng="${h.lng}"><span class="radar-dot${h.kind==='area'?' is-area':''}"></span><span class="radar-name">${esc(fullName(h.id))}</span><span class="radar-dist">${dist(h.d)}${h.kind==='area'?'・出没エリア':''}</span></button>`).join(''):'<p class="hint">近くには誰もいないみたい。地図を縮小してもう一度探してみて。</p>';
       $('radarCount').textContent=list.length?`${hits.size}人`:'0人';
@@ -315,33 +315,35 @@
     if (!state.mapReady) return;
     const areas=state.extras?state.areas.filter(C.validPoint):[];
     if($('mapAreas')){$('mapAreas').textContent=`出没エリア ${areas.length}件`;$('mapAreas').parentElement.hidden=!state.extras;}
-    const data=JSON.stringify([people,events,areas,state.profiles,selfId(),state.battles.length]);
+    const L_=state.mapLayer||'';document.querySelectorAll('[data-action="map-layer"]').forEach(b=>{const on=b.dataset.layer===L_;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
+    const show=k=>!L_||L_===k;
+    const data=JSON.stringify([people,events,areas,state.profiles,selfId(),state.battles.length,L_]);
     if (data===state.markerKey) return; state.markerKey=data;
     state.markers.forEach(m=>m.remove()); state.markers=[];
-    areas.forEach(a=>{
+    (show('areas')?areas:[]).forEach(a=>{
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
-      const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true}).addTo(state.map);
+      const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false}).addTo(state.map);
       const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}" aria-hidden="true">${esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
       const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}`;
-      m.bindPopup(pop);circle.bindPopup(pop);labelMarker(m,label);
-      m.on('click',()=>{closePlace();if(state.pickMode){m.closePopup();chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);}});
+      labelMarker(m,label);
+      const openA=()=>{if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng);};
+      m.on('click',openA);circle.on('click',openA);
       state.markers.push(circle,m);
     });
-    people.forEach(p=>{
+    (show('now')?people:[]).forEach(p=>{
       if(!C.validPoint(p))return;
       const ready=!!state.profiles.find(profile=>profile.id===p.user_id)?.battle_ready;
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
-      const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready)).addTo(state.map)
-        .bindPopup(`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>`);
+      const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>`;
+      const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready)).addTo(state.map);
       labelMarker(m,label);
       m.on('click',()=>{
-        closePlace();
-        if(state.pickMode){m.closePopup();chooseMapPoint(p,false);}
-        else if(isMobile())setSheet(true);
+        if(state.pickMode){chooseMapPoint(p,false);return;}
+        if(isMobile())setSheet(true);showInfo(pop,p.lat,p.lng);
       });
       state.markers.push(m);
     });
-    events.forEach(ev=>{
+    (show('plans')?events:[]).forEach(ev=>{
       if(!C.validPoint(ev))return;
       const label='出没予定：'+ev.title;
       const m=L.marker([ev.lat,ev.lng],markerOptions('event',label)).addTo(state.map);
@@ -669,7 +671,7 @@
     $('selectedDetail').textContent=state.selected.address||`${state.selected.lat.toFixed(5)}, ${state.selected.lng.toFixed(5)}`;
     if(!state.selected.address&&config.searchUrl){const sel=state.selected,u=config.searchUrl.replace(/search\/?$/,'reverse')+`?format=jsonv2&zoom=17&accept-language=ja&lat=${sel.lat}&lon=${sel.lng}`;
       fetch(u).then(r=>r.ok?r.json():null).then(j=>{if(!j||state.selected!==sel)return;const a=j.address||{};const txt=[a.city||a.town||a.village||'',a.suburb||a.quarter||a.neighbourhood||'',a.road||''].filter(Boolean).join(' ')||j.display_name;if(txt){sel.address=txt;$('selectedDetail').textContent=txt+(j.name?`（${j.name}付近）`:'');}}).catch(()=>{});}
-    $('selectedPlace').hidden=false;document.body.classList.add('place-selected');
+    $('selectedNearby').hidden=true;$('selectedPlace').hidden=false;document.body.classList.add('place-selected');
     {const saved=Number(storage.get(CHECKIN_KEY,60));if(CHECKIN_CHOICES.includes(saved))$('checkinDuration').value=String(saved);}
     updateCheckinNote();
     updateSavedButton();
@@ -687,10 +689,15 @@
       setTimeout(()=>radarScan(state.selected,false),move?120:30);
     }
   }
+  function showInfo(html,lat,lng){
+    closePlace();hideRadar();endPick();
+    $('mapInfoBody').innerHTML=html;$('mapInfo').hidden=false;document.body.classList.add('place-selected');
+    requestAnimationFrame(()=>{updateOverlaySizes();if(state.mapReady&&lat!=null){const pt=state.map.latLngToContainerPoint([lat,lng]),limit=state.map.getSize().y-$('mapInfo').offsetHeight-60;if(pt.y>limit)state.map.panBy([0,pt.y-limit],{animate:true});}});
+  }
   function closePlace() {
     state.selectedMarker?.remove();state.selectedMarker=null;state.selected=null;
     state.selectedEventId=null;
-    $('selectedPlace').hidden=true;$('mapEvent').hidden=true;
+    $('selectedPlace').hidden=true;$('mapEvent').hidden=true;$('mapInfo').hidden=true;
     document.body.classList.remove('place-selected');updateOverlaySizes();
   }
   function updateSavedButton() {
@@ -728,7 +735,7 @@
     state.draft={...state.draft,place:place.name,autoPlace:place.name,lat:place.lat,lng:place.lng};closePlace();restoreEvent();
   }
   function updateOverlaySizes() {
-    const activeCard=$('mapEvent').hidden?$('selectedPlace'):$('mapEvent');
+    const activeCard=!$('mapInfo').hidden?$('mapInfo'):$('mapEvent').hidden?$('selectedPlace'):$('mapEvent');
     document.documentElement.style.setProperty('--place-height',activeCard.hidden?'0px':activeCard.offsetHeight+'px');
     document.documentElement.style.setProperty('--sheet-height',$('sidePanel').offsetHeight+'px');
   }
@@ -1072,6 +1079,7 @@
         else if(action==='close-event'){closeModal('event');endPick();state.draft=null;}
         else if(action==='pick-map')pickEvent();else if(action==='cancel-pick')cancelPick();
         else if(action==='toggle-sheet')setSheet(!state.sheetCollapsed);
+        else if(action==='map-layer'){const k=t.dataset.layer;state.mapLayer=state.mapLayer===k?'':k;closePlace();renderMap();}
         else if(action==='show-people'||action==='show-plans'){closePlace();endPick();state.tab=action==='show-people'?'now':'plans';setSheet(false);render();}
         else if(action==='close-place')closePlace();
         else if(action==='area-here'){const p=selectedPoint();if(p)openArea(p);}

@@ -325,3 +325,30 @@ body.radar-open .mapfloat{display:none}
 .locate-btn{width:58px;height:58px;min-height:58px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 10px #0003}
 .locate-dot{width:22px;height:22px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 7px #1a73e82e}
 @media(max-width:800px){body[data-tab="now"] .actionbar{display:none}}
+
+/* UI見直し（2026-11-20）：ロゴ帯なし・検索欄が最上段・絞り込みチップ・下から出る詳細カード */
+.mode-badge.live{display:none}
+.search-logo{width:30px;height:30px;border-radius:50%;flex:none;margin-right:8px}
+.map-keys{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;max-width:100%;padding:2px}
+.map-keys::-webkit-scrollbar{display:none}
+.map-keys .mapchip{flex:none;border-radius:20px;box-shadow:0 1px 4px #0003;background:#fff}
+.map-keys .mapchip.active{background:#e8f0fe;color:#1967d2;box-shadow:0 0 0 1.5px #1a73e8 inset,0 1px 4px #0003}
+.map-info{padding:12px 16px 16px}
+.map-info-head{display:flex;gap:10px;align-items:flex-start}
+.map-info-body{flex:1;min-width:0;font-size:15px;line-height:1.5;color:#3c4043}
+.map-info-body .popup-title{font-size:20px;font-weight:700;color:#1f1f1f;margin-bottom:4px}
+.map-info-body .popup-muted{color:#5f6368;font-size:13px}
+.map-info-body .profile-badges{margin:6px 0}
+.map-info .xbtn{border-radius:50%;background:#eef1f0;color:#3c4043;font-size:22px;flex:none}
+.selected-nearby{margin:6px 0 0;font-size:14px;font-weight:700;color:#5f6368;display:flex;align-items:center;gap:7px}
+.selected-nearby:before{content:"";width:10px;height:10px;border-radius:50%;background:#b8c3c0}
+.selected-nearby.is-hit{color:#137f3a}.selected-nearby.is-hit:before{background:#9bd31c}
+@media(max-width:800px){
+  body{--header-height:0px}
+  .header{display:none}
+  .map-search{top:calc(env(safe-area-inset-top,0px) + 10px)}
+  .map-top{top:calc(env(safe-area-inset-top,0px) + 70px);left:0;right:0;padding:0 12px}
+  .location-picker{top:calc(env(safe-area-inset-top,0px) + 120px)}
+  .map-load-status{top:calc(env(safe-area-inset-top,0px) + 120px)}
+  .map-info{left:8px;right:8px;bottom:8px;max-width:none;z-index:820}
+}

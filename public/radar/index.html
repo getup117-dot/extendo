@@ -17,9 +17,9 @@
 <meta name="twitter:card" content="summary_large_image">
 <title>Beybe Radar（ベイブレーダー）｜出没マップ</title>
 <link rel="preconnect" href="https://unpkg.com">
-<link rel="preconnect" href="https://tile.openstreetmap.org">
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="styles.css?v=202611201601">
+<link rel="stylesheet" href="styles.css?v=202611201700">
 </head>
 <body>
 <header class="header">
@@ -40,13 +40,13 @@
     <div id="map" class="map"></div><div id="mapFallback" class="mapfallback"><div>地図を読み込めませんでした。<br>インターネット接続を確認してください。<br>予定リストなどはそのまま操作できます。</div></div>
     <div class="map-search" id="mapSearchPanel">
       <form id="mapSearchForm" class="map-search-form" role="search" aria-label="地図の場所を検索">
-        <span class="search-symbol" aria-hidden="true">⌕</span>
+        <img class="search-logo" src="assets/radar-button.png" alt="" aria-hidden="true">
         <input id="mapSearch" type="search" placeholder="場所・住所を検索" aria-label="地図の場所・住所を検索" enterkeyhint="search" autocomplete="off">
         <button class="search-submit" id="mapSearchSubmit" type="submit">検索</button>
       </form>
       <div id="mapSearchResults" class="map-search-results" aria-live="polite" hidden></div>
     </div>
-    <div class="map-top"><div class="map-keys"><button class="mapchip" data-action="show-people"><i class="person-key" aria-hidden="true"></i><span id="mapPeople">いまいる 0人</span></button><button class="mapchip" data-action="show-plans"><i class="event-key" aria-hidden="true"></i><span id="mapPlans">出没予定 0件</span></button><button class="mapchip" data-action="show-people" hidden><i class="area-key" aria-hidden="true"></i><span id="mapAreas">出没エリア 0件</span></button></div><div id="mapTypeBadge" class="mapchip">デモデータ</div></div>
+    <div class="map-top"><div class="map-keys"><button class="mapchip" data-action="map-layer" data-layer="now" aria-pressed="false"><i class="person-key" aria-hidden="true"></i><span id="mapPeople">いまいる 0人</span></button><button class="mapchip" data-action="map-layer" data-layer="plans" aria-pressed="false"><i class="event-key" aria-hidden="true"></i><span id="mapPlans">出没予定 0件</span></button><button class="mapchip" data-action="map-layer" data-layer="areas" aria-pressed="false" hidden><i class="area-key" aria-hidden="true"></i><span id="mapAreas">出没エリア 0件</span></button></div><div id="mapTypeBadge" class="mapchip">デモデータ</div></div>
     <div class="mapfloat"><button class="roundbtn radar-btn" data-action="radar-here" aria-label="レーダーで探す"><img src="assets/radar-button.png" alt="" aria-hidden="true"></button><button class="roundbtn locate-btn" data-action="my-location" aria-label="現在地へ"><span class="locate-dot" aria-hidden="true"></span></button></div>
     <div id="pickPrompt" class="location-picker" hidden><span id="pickText">地図をタップして場所を指定してください</span> <button data-action="cancel-pick" class="pick-cancel">キャンセル</button></div>
     <div id="mapLoadStatus" class="map-load-status" role="status" hidden></div>
@@ -54,6 +54,7 @@
       <button class="place-grab" data-action="toggle-place" aria-label="登録メニューを開く"></button>
       <div class="place-head"><label class="sr-only" for="selectedLabel">選んだ場所の名前</label><input id="selectedLabel" maxlength="100" placeholder="指定した地点" autocomplete="off"><button class="xbtn" data-action="close-place" aria-label="閉じる">×</button></div>
       <p id="selectedDetail" class="selected-detail"></p>
+      <p id="selectedNearby" class="selected-nearby" hidden></p>
       <div class="place-more">
         <div class="checkin-duration"><label for="checkinDuration">「ここにいる」の時間</label><select id="checkinDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="180">3時間</option><option value="360">6時間</option></select></div>
         <div class="selected-actions"><button class="btn teal" data-action="register-here">ここにいる</button><button class="btn primary" data-action="event-here">出没予定を登録</button></div>
@@ -61,6 +62,9 @@
         <button id="saveSpotButton" class="save-spot" data-action="save-spot">☆ この場所を保存</button>
         <p class="selected-note" id="selectedNote"></p>
       </div>
+    </section>
+    <section id="mapInfo" class="selected-place map-info" aria-label="詳細" hidden>
+      <div class="map-info-head"><div id="mapInfoBody" class="map-info-body"></div><button class="xbtn" data-action="close-place" aria-label="閉じる">×</button></div>
     </section>
     <section id="radarResult" class="selected-place radar-result" aria-label="レーダーの結果" hidden>
       <div class="selected-top"><span class="selected-tag">近くのブレーダー <b id="radarCount"></b></span><button class="xbtn" data-action="close-radar" aria-label="閉じる">×</button></div>
@@ -131,6 +135,6 @@
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/supabase.min.js"></script>
 <script src="config.js"></script>
-<script src="core.js?v=202611201601"></script>
-<script src="app.js?v=202611201601"></script>
+<script src="core.js?v=202611201700"></script>
+<script src="app.js?v=202611201700"></script>
 </body></html>
