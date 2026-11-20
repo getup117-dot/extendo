@@ -1111,7 +1111,7 @@
     document.addEventListener('focusin',e=>{if(!isMobile()||!isTyping(e.target))return;updateViewport();setTimeout(()=>{window.scrollTo(0,0);e.target.scrollIntoView({block:'center'});},350);});
     document.addEventListener('focusout',()=>setTimeout(updateViewport,120));
     {let last=0;const sc=$('panelContent');sc.addEventListener('scroll',()=>{if(!isMobile())return;const y=sc.scrollTop,d=y-last;last=y;
-      const hide=y>40&&d>0?true:(y<10||d<-8)?false:null;if(hide===null||document.body.classList.contains('scrolled-down')===hide)return;
+      const hide=y>8?true:y<=2?false:null;if(hide===null||document.body.classList.contains('scrolled-down')===hide)return;
       document.body.classList.toggle('scrolled-down',hide);setTimeout(updateViewport,0);},{passive:true});}
     if(window.ResizeObserver){const observer=new ResizeObserver(updateOverlaySizes);observer.observe($('sidePanel'));observer.observe($('selectedPlace'));observer.observe($('mapEvent'));}
     updateViewport();
