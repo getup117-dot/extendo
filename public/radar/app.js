@@ -260,17 +260,18 @@
     L.control.zoom({position:'topright'}).addTo(state.map);
     // スマホ：タップでは何もしない／ダブルタップで拡大／長押しでピン（地図アプリと同じ操作）
     {const box=state.map.getContainer();let t=null,lastTouch=0,prev=null,noDbl=0;
-      const onUI=e=>e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup,.leaflet-interactive');
+      const onUI=e=>e.target.closest('.leaflet-marker-icon,.leaflet-control,.leaflet-popup,.leaflet-interactive:not(.area-circle)');
       const pin=e=>{const ll=state.map.mouseEventToLatLng(e);chooseMapPoint({lat:ll.lat,lng:ll.lng},false);};
       box.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;
         if(t){clearTimeout(t.timer);t.multi=true;return;}
         if(onUI(e))return;
-        t={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),multi:!e.isPrimary};
+        t={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),multi:!e.isPrimary,onArea:!!e.target.closest('.area-circle')};
         const ev={clientX:e.clientX,clientY:e.clientY};
-        t.timer=setTimeout(()=>{if(!t||t.multi)return;t.held=true;navigator.vibrate?.(15);pin(ev);},500);});
+        t.timer=setTimeout(()=>{if(!t||t.multi)return;t.held=true;state.heldAt=Date.now();navigator.vibrate?.(15);pin(ev);},500);});
       box.addEventListener('pointermove',e=>{if(t&&e.pointerId===t.id&&Math.hypot(e.clientX-t.x,e.clientY-t.y)>10){clearTimeout(t.timer);t.moved=true;}});
       const end=e=>{const s=t;if(!s||e.pointerId!==s.id)return;clearTimeout(s.timer);t=null;lastTouch=Date.now();
         if(e.type!=='pointerup'||s.multi||s.moved||s.held||Date.now()-s.t>450)return;
+        if(s.onArea)return;
         if(state.pickMode){pin(e);return;}
         const now=Date.now();
         if(prev&&now-prev.t<320&&Math.hypot(e.clientX-prev.x,e.clientY-prev.y)<40){clearTimeout(prev.timer);prev=null;noDbl=now;
@@ -391,11 +392,11 @@
     state.markers.forEach(m=>m.remove()); state.markers=[];state.popByKey={};
     (show('areas')?areas:[]).forEach(a=>{
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
-      const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false}).addTo(state.map);
+      const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false,className:'area-circle'}).addTo(state.map);
       const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}" aria-hidden="true">${esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
       const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}`;
       labelMarker(m,label);
-      const openA=()=>{if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
+      const openA=()=>{if(Date.now()-(state.heldAt||0)<900)return;if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
       m.on('click',openA);circle.on('click',openA);
       state.markers.push(circle,m);
     });
