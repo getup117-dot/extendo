@@ -210,7 +210,7 @@
   const viewing=()=>logged()||(state.mode==='live'&&!!state.sb);
   const activePeople=()=>viewing()?state.positions.filter(p=>C.validShare(p)):[];
   const activeEvents=()=>viewing()?state.events.filter(e=>Date.parse(e.ends_at)>Date.now()&&matchVisible(e)).sort((a,b)=>a.starts_at.localeCompare(b.starts_at)):[];
-  const attendees=event=>[...new Set([event.user_id,...state.rsvps.filter(r=>r.event_id===event.id).map(r=>r.user_id)])];
+  const attendees=event=>[...new Set([event.user_id,...(event.mode==='match'&&event.partner&&!event.cancelled_at?[event.partner]:[]),...state.rsvps.filter(r=>r.event_id===event.id).map(r=>r.user_id)])];
   function notify(message) {
     $('toast').textContent=message; $('toast').classList.add('show');
     clearTimeout(state.toastTimer); state.toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);
@@ -389,14 +389,14 @@
     const show=k=>!L_||L_===k;
     const data=JSON.stringify([people,events,areas,state.profiles,selfId(),state.battles.map(b=>b.id+b.status).join(),state.power.map(p=>p.user_id+p.rating+p.best+p.calibrated).join(),state.slots.length,L_]);
     if (data===state.markerKey) return; state.markerKey=data;
-    state.markers.forEach(m=>m.remove()); state.markers=[];
+    state.markers.forEach(m=>m.remove()); state.markers=[];state.popByKey={};
     (show('areas')?areas:[]).forEach(a=>{
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
       const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false}).addTo(state.map);
       const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}" aria-hidden="true">${esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
       const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}`;
       labelMarker(m,label);
-      const openA=()=>{if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng);};
+      const openA=()=>{if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
       m.on('click',openA);circle.on('click',openA);
       state.markers.push(circle,m);
     });
@@ -405,11 +405,12 @@
       const ready=!!state.profiles.find(profile=>profile.id===p.user_id)?.battle_ready;
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
       const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}${rivalHTML(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>${chanceHTML(p.user_id)}`;
+      state.popByKey['p'+p.user_id]=pop;
       const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready)).addTo(state.map);
       labelMarker(m,label);
       m.on('click',()=>{
         if(state.pickMode){chooseMapPoint(p,false);return;}
-        if(isMobile())setSheet(true);showInfo(pop,p.lat,p.lng);
+        if(isMobile())setSheet(true);showInfo(pop,p.lat,p.lng,'p'+p.user_id);
       });
       state.markers.push(m);
     });
@@ -428,14 +429,16 @@
   function preserveFields() {
     const panel=$('panelContent'), key=state.mode+':'+(selfId()||'')+':'+state.tab+':'+(state.profiles.some(p=>p.id===selfId())?'p':'-');
     if (state.renderKey!==key) { state.renderKey=key; panel.scrollTop=0; return null; }
-    const fields=[...panel.querySelectorAll('input,select,textarea')].map(el=>({id:el.id,value:el.value}));
+    const fields=[...panel.querySelectorAll('input,select,textarea')].map(el=>({id:el.id,value:el.value,checked:el.checked}));
+    const hint=$('restoreHint');const hintSaved=hint&&!hint.hidden?hint.textContent:'';
     const active=panel.contains(document.activeElement)?document.activeElement:null;
     const expandedParticipants = [...panel.querySelectorAll('[data-event-participants][open]')].map(detail => detail.dataset.eventParticipants);
-    return {fields,active:active?.id,start:active?.selectionStart,end:active?.selectionEnd,scroll:panel.scrollTop,expandedParticipants};
+    return {fields,hintSaved,active:active?.id,start:active?.selectionStart,end:active?.selectionEnd,scroll:panel.scrollTop,expandedParticipants};
   }
   function restoreFields(saved) {
     if(!saved)return;
-    saved.fields.forEach(({id,value})=>{if($(id))$(id).value=value;});
+    saved.fields.forEach(({id,value,checked})=>{const el=$(id);if(!el)return;if(el.type==='checkbox'||el.type==='radio')el.checked=checked;else el.value=value;});
+    if(saved.hintSaved&&$('restoreHint')){$('restoreHint').textContent=saved.hintSaved;$('restoreHint').hidden=false;}
     $('panelContent').querySelectorAll('[data-event-participants]').forEach(detail => {
       detail.open = saved.expandedParticipants.includes(detail.dataset.eventParticipants);
     });
@@ -464,7 +467,7 @@
     if(document.body.dataset.lastTab!==state.tab){document.body.dataset.lastTab=state.tab;document.body.classList.remove('scrolled-down');}
     {const m=$('mainAction');if(state.tab==='now'){m.dataset.action='go-gps';m.textContent='📍 いまここにいる';m.className='btn teal wide';}else{m.dataset.action='new-event';m.textContent='＋ 出没予定を登録';m.className='btn primary wide';}}
     document.querySelectorAll('[data-tab="account"]').forEach(el=>el.classList.toggle('has-alert',state.extras&&incomingRequests().length>0));
-    restoreFields(saved); renderMap(); updateShareIndicator();
+    restoreFields(saved); renderMap(); refreshInfo(); updateShareIndicator();
   }
   const REPORT_HIDE_AT = 3;
   const isAdmin = () => state.mode === 'live' && !!state.profiles.find(p => p.id === selfId())?.is_admin;
@@ -802,7 +805,7 @@
       $('mapEventCount').innerHTML=st==='open'&&!mine?'押すと対戦予定が成立します':st==='matched'&&involved(event)?'相手：'+esc(fullName(mine?event.partner:event.user_id)):mine&&st==='open'?'相手を募集中':'';
       if(mine){action.dataset.action=st==='open'||st==='matched'?'edit-event':'delete-event';action.textContent=st==='open'||st==='matched'?'予定を編集':'削除';}
       else if(st==='open'){action.dataset.action='join-match';action.textContent='自分も行ける';}
-      else if(st==='matched'&&event.partner===selfId()){action.dataset.action='leave-match';action.textContent='辞退する';}
+      else if(st==='matched'&&event.partner===selfId()&&Date.parse(event.starts_at)>Date.now()){action.dataset.action='leave-match';action.textContent='辞退する';}
       else action.hidden=true;}
   }
   function openMapEvent(event) {
@@ -848,14 +851,20 @@
       setTimeout(()=>radarScan(state.selected,false),move?120:30);
     }
   }
-  function showInfo(html,lat,lng){
-    closePlace();hideRadar();endPick();
+  function refreshInfo(){
+    if($('mapInfo').hidden||!state.infoKey||!state.popByKey)return;
+    const html=state.popByKey[state.infoKey];
+    if(html===undefined){$('mapInfo').hidden=true;state.infoKey=null;document.body.classList.remove('place-selected');updateOverlaySizes();return;}
+    if($('mapInfoBody').innerHTML!==html)$('mapInfoBody').innerHTML=html;
+  }
+  function showInfo(html,lat,lng,key=null){
+    closePlace();hideRadar();endPick();state.infoKey=key;
     $('mapInfoBody').innerHTML=html;$('mapInfo').hidden=false;document.body.classList.add('place-selected');
     requestAnimationFrame(()=>{updateOverlaySizes();if(state.mapReady&&lat!=null){const pt=state.map.latLngToContainerPoint([lat,lng]),limit=state.map.getSize().y-$('mapInfo').offsetHeight-60;if(pt.y>limit)state.map.panBy([0,pt.y-limit],{animate:true});}});
   }
   function closePlace() {
     state.selectedMarker?.remove();state.selectedMarker=null;state.selected=null;
-    state.selectedEventId=null;
+    state.selectedEventId=null;state.infoKey=null;
     $('selectedPlace').hidden=true;$('mapEvent').hidden=true;$('mapInfo').hidden=true;
     document.body.classList.remove('place-selected');updateOverlaySizes();
   }
@@ -1094,7 +1103,7 @@
   function renderBattleForm(){
     const d=state.battleDraft;if(!d)return;
     const box=$('battleOpponent');
-    if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeNick">相手のニックネーム</label><input autocomplete="off" id="battleFreeNick" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">自分だけのメモになります。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;}
+    if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeNick">相手のニックネーム</label><input autocomplete="off" id="battleFreeNick" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">自分だけのメモになります。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;$('battleFreeNick').addEventListener('input',e=>{d.freeName=e.target.value;});}
     else if(d.opponent){box.innerHTML=`<div class="picked-opponent"><span class="avatar">${esc(initial(nameFor(d.opponent)))}</span><div><strong>${esc(fullName(d.opponent))}</strong>${profileBadges(d.opponent)}</div><button type="button" class="tiny-btn" data-action="pick-opponent" data-id="">変える</button></div>`;}
     else{
       const groups=battleCandidates();
@@ -1181,9 +1190,9 @@
     [state.areas,state.battles]=state.extras?extra.map(r=>r.data||[]):[[],[]];
     {const qs=[client.from('power_stats').select('*').limit(3000)];
       if(state.user)qs.push(client.from('power_slots').select('*').gte('day',new Date(Date.now()+9*3600e3-864e5).toISOString().slice(0,10)),client.rpc('my_power_results'));
-      const pr=await Promise.all(qs);state.powerReady=state.extras&&!pr[0].error;
+      const pr=await Promise.all(qs);if(client!==state.sb||userId!==selfId()||request!==state.request)return;state.powerReady=state.extras&&!pr[0].error;
       state.power=state.powerReady?pr[0].data||[]:[];state.slots=pr[1]&&!pr[1].error?pr[1].data||[]:[];state.powerResults=pr[2]&&!pr[2].error?pr[2].data||[]:[];}
-    {const tr=await client.from('traces').select('user_id,lat,lng,seen_at').gt('seen_at',new Date(Date.now()-7*864e5).toISOString()).order('seen_at',{ascending:false}).limit(3000);state.traces=tr.error?[]:(tr.data||[]);}
+    {const tr=await client.from('traces').select('user_id,lat,lng,seen_at').gt('seen_at',new Date(Date.now()-7*864e5).toISOString()).order('seen_at',{ascending:false}).limit(3000);if(client!==state.sb||userId!==selfId()||request!==state.request)return;state.traces=tr.error?[]:(tr.data||[]);}
     setStatus();noticeRequests();render();bumpAreas();checkPowerResults();checkMatches();
   }
   function noticeRequests(){
