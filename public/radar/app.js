@@ -328,7 +328,7 @@
       : `<button class="tiny-btn report-btn" data-action="report" data-type="${type}" data-id="${esc(id)}">通報</button>`;
     if (!isAdmin()) return mine;
     const n = reportCount(type, id);
-    return `${n ? `<span class="report-badge">⚠ 通報${n}件${n >= REPORT_HIDE_AT ? '・非表示中' : ''}</span>` : ''}${mine}<button class="tiny-btn report-btn" data-action="admin-delete-${type}" data-id="${esc(id)}">管理者として消す</button>`;
+    return `${n ? `<span class="report-badge">⚠ 通報${n}件${n >= REPORT_HIDE_AT ? '・非表示中' : ''}</span>` : ''}${mine}<button class="tiny-btn report-btn" data-action="admin-delete-${type}" data-id="${esc(id)}">管理削除</button>`;
   }
   function renderNow() {
     const people = activePeople().filter(person => nameFor(person.user_id).toLowerCase().includes(state.listQueries.now.toLowerCase()));

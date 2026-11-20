@@ -230,3 +230,25 @@ button{min-height:44px}
   body.scrolled-down{--header-height:0px}
   body.scrolled-down .header,body.scrolled-down .sidehead{display:none}
 }
+
+/* 縦の余白を詰める（2026-11-20） */
+@media(max-width:800px){
+  .side:not(.collapsed){height:calc(var(--app-height) - var(--header-height) - var(--nav-height) - 72px)!important}
+  body:not(.side-collapsed) .map-search,body:not(.side-collapsed) .map-top,body:not(.side-collapsed) .leaflet-bottom{display:none}
+  .sidehead{display:none}
+  .sheet-handle{flex:0 0 22px;min-height:22px;font-size:0;padding:0}
+  .sheet-handle:before{top:9px}
+  .side.collapsed .sheet-handle{font-size:12px;padding-top:16px}
+  .filter-bar{padding:2px 14px 6px}
+  .filter-bar input{padding:8px 12px;min-height:40px}
+  .filter-options{padding-top:6px}.filter{min-height:36px;padding:6px 4px}
+  body.scrolled-down .filter-bar{display:none}
+  .section-title{margin:6px 1px 8px}
+  .card{padding:12px 13px;margin-bottom:8px}
+  .card-detail{margin-top:4px}.event-stadium{margin:5px 0}.card-note{margin-top:5px}
+  .event-foot{margin-top:8px;padding-top:8px;align-items:center;flex-wrap:nowrap}
+  .event-actions{max-width:none;flex:1;align-items:center}
+  .tiny-btn{min-height:38px;padding:6px 10px}
+  .report-btn{min-height:38px;padding:6px 4px}
+  .actionbar{padding:7px 14px 8px}.actionbar .btn{min-height:44px}
+}
