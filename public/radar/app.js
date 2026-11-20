@@ -1067,6 +1067,7 @@
     window.addEventListener('pagehide',clearWatch);
     window.addEventListener('pageshow',e=>{if(e.persisted){state.share=null;render();}});
   }
+  const isTyping=el=>!!el&&(el.tagName==='TEXTAREA'||el.tagName==='SELECT'||(el.tagName==='INPUT'&&!['checkbox','radio','button','submit'].includes(el.type)));
   async function boot() {
     $('eventStadium').innerHTML=profileOptions(EVENT_STADIUM,'unset');
     attachEvents();sourceDemo();initMap();render();await updateDemo(()=>{});
@@ -1074,10 +1075,12 @@
     const updateViewport=()=>{
       document.documentElement.style.setProperty('--app-height',(window.visualViewport?.height||window.innerHeight)+'px');
       const active=document.activeElement;
-      document.body.classList.toggle('keyboard-open',!!active&&['INPUT','TEXTAREA'].includes(active.tagName)&&(window.visualViewport?.height||window.innerHeight)<window.innerHeight-100);
+      document.body.classList.toggle('keyboard-open',isMobile()&&isTyping(document.activeElement));
       updateOverlaySizes();state.map?.invalidateSize({pan:false});
     };
     window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
+    document.addEventListener('focusin',e=>{if(!isMobile()||!isTyping(e.target))return;updateViewport();setTimeout(()=>{window.scrollTo(0,0);e.target.scrollIntoView({block:'center'});},350);});
+    document.addEventListener('focusout',()=>setTimeout(updateViewport,120));
     if(window.ResizeObserver){const observer=new ResizeObserver(updateOverlaySizes);observer.observe($('sidePanel'));observer.observe($('selectedPlace'));observer.observe($('mapEvent'));}
     updateViewport();
     // Live wiring is optional during the hands-on preview.

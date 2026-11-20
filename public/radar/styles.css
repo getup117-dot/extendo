@@ -216,3 +216,11 @@ button{min-height:44px}
   .gps-btn{width:auto;display:flex;align-items:center;gap:6px;padding:0 16px;font-size:18px;background:var(--teal);color:#fff}
   .gps-btn .gps-label{display:inline;font-size:14px;font-weight:800}
 }
+
+/* 入力中はロゴ・下メニュー・見出しを隠して入力欄を広く */
+@media(max-width:800px){
+  body.keyboard-open{--header-height:0px;--nav-height:0px}
+  body.keyboard-open .header,body.keyboard-open .mobile-nav,body.keyboard-open .sidehead,body.keyboard-open .sheet-handle,body.keyboard-open .actionbar,body.keyboard-open .map-top,body.keyboard-open .mapfloat{display:none!important}
+  body.keyboard-open .side:not(.collapsed){height:var(--app-height)!important;border-radius:0}
+  body.keyboard-open .scroll{padding-top:10px;padding-bottom:40vh}
+}
