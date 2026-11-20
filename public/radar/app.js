@@ -740,35 +740,50 @@
     document.documentElement.style.setProperty('--place-height',activeCard.hidden?'0px':activeCard.offsetHeight+'px');
     document.documentElement.style.setProperty('--sheet-height',$('sidePanel').offsetHeight+'px');
   }
-  async function lookupPlaces(query) {
+  // 場所検索：国土地理院（住所）＋Photon（店名・施設、入力途中の候補OK）＋Nominatim（確定時のみ）
+  const JP_BBOX='122,24,154,46';
+  const isAddressy=q=>/[0-9０-９一二三四五六七八九十]+(丁目|番地?|号)|[都道府県市区町村]/.test(q);
+  async function getJSON(url,ms=8000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(url,{headers:{Accept:'application/json'},signal:c.signal});if(!r.ok)throw Error('http '+r.status);return await r.json();}finally{clearTimeout(t);}}
+  async function searchGSI(q){
+    const data=await getJSON('https://msearch.gsi.go.jp/address-search/AddressSearch?q='+encodeURIComponent(q));
+    return (Array.isArray(data)?data:[]).slice(0,5).map(f=>({lat:Number(f.geometry?.coordinates?.[1]),lng:Number(f.geometry?.coordinates?.[0]),name:clean(f.properties?.title),address:clean(f.properties?.title)})).filter(C.validPoint);
+  }
+  async function searchPhoton(q){
+    const u=new URL('https://photon.komoot.io/api/');u.searchParams.set('q',q);u.searchParams.set('limit','6');u.searchParams.set('bbox',JP_BBOX);
+    if(state.mapReady){const c=state.map.getCenter();u.searchParams.set('lat',c.lat.toFixed(4));u.searchParams.set('lon',c.lng.toFixed(4));}
+    const data=await getJSON(u);
+    return (data?.features||[]).map(f=>{const pr=f.properties||{},addr=[pr.state,pr.city,pr.district,pr.locality,pr.street,pr.housenumber].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' ');
+      return {lat:Number(f.geometry?.coordinates?.[1]),lng:Number(f.geometry?.coordinates?.[0]),name:clean(pr.name)||clean(addr)||q,address:clean(addr)};}).filter(C.validPoint);
+  }
+  async function searchNominatim(q){
+    const wait=1100-(Date.now()-state.searchAt);if(wait>0)await new Promise(r=>setTimeout(r,wait));state.searchAt=Date.now();
+    const url=new URL(config.searchUrl||'https://nominatim.openstreetmap.org/search');
+    for(const [key,value] of Object.entries({format:'jsonv2',limit:'6','accept-language':'ja',countrycodes:'jp',q}))url.searchParams.set(key,value);
+    const data=await getJSON(url,12000);
+    return (Array.isArray(data)?data:[]).filter(p=>C.validPoint({lat:p.lat,lng:p.lon})).map(p=>({lat:Number(p.lat),lng:Number(p.lon),name:clean(p.name)||clean(p.display_name).split(',')[0],address:clean(p.display_name)}));
+  }
+  async function lookupPlaces(query,typing=false) {
     const q=clean(query);if(!q)throw Error('場所名や住所を入力してください');
     const direct=C.coordsFromMapUrl(q);
     if(direct)return [{...direct,name:'指定した地点',address:`緯度 ${direct.lat.toFixed(5)} ・ 経度 ${direct.lng.toFixed(5)}`}];
     if(/^https?:\/\//i.test(q))throw Error('短縮URLは展開できません。場所名・住所・緯度,経度で検索できます');
     const local=savedSpots().filter(p=>(p.name+' '+p.address).toLowerCase().includes(q.toLowerCase()));
-    if(state.searchCache[q])return mergePlaces(local,state.searchCache[q]);
-    if(Date.now()-state.searchAt<1100)throw Error('少し待ってからもう一度検索してください');
-    state.searchAt=Date.now();
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
-    try{
-      const url=new URL(config.searchUrl||'https://nominatim.openstreetmap.org/search');
-      for(const [key,value] of Object.entries({format:'jsonv2',limit:'6','accept-language':'ja',countrycodes:'jp',q}))url.searchParams.set(key,value);
-      const response=await fetch(url,{headers:{Accept:'application/json'},signal:controller.signal});
-      if(!response.ok)throw Error('場所の検索サービスに接続できません');
-      const data=await response.json();if(!Array.isArray(data))throw Error('検索結果を取得できません');
-      const places=data.filter(p=>C.validPoint({lat:p.lat,lng:p.lon})).map(p=>({lat:Number(p.lat),lng:Number(p.lon),name:clean(p.name)||clean(p.display_name).split(',')[0],address:clean(p.display_name)}));
-      state.searchCache[q]=places;return mergePlaces(local,places);
-    }catch(error){if(local.length)return local;throw Error(error.name==='AbortError'?'検索に時間がかかっています。地図を長押しでも選べます':'検索できませんでした。地図を長押しでも選べます');}
-    finally{clearTimeout(timer);}
+    const key=(typing?'t:':'e:')+q;
+    if(state.searchCache[key])return mergePlaces(local,state.searchCache[key]);
+    const jobs=[searchGSI(q),searchPhoton(q)];if(!typing)jobs.push(searchNominatim(q));
+    const [gsi,photon,nomi]=(await Promise.allSettled(jobs)).map(r=>r.status==='fulfilled'?r.value:[]);
+    if(!gsi.length&&!photon.length&&!(nomi||[]).length&&(await Promise.allSettled(jobs)).every(r=>r.status==='rejected')){if(local.length)return local;throw Error('検索できませんでした。地図を長押しでも選べます');}
+    const places=isAddressy(q)?[...gsi,...photon,...(nomi||[])]:[...photon,...(nomi||[]),...gsi];
+    const merged=mergePlaces([],places);state.searchCache[key]=merged;return mergePlaces(local,merged);
   }
   function mergePlaces(first,second) {
-    const seen=new Set();return [...first,...second].filter(p=>{const key=placeKey(p);if(seen.has(key))return false;seen.add(key);return true;}).slice(0,8);
+    const seen=new Set();return [...first,...second].filter(p=>{const key=Number(p.lat).toFixed(3)+','+Number(p.lng).toFixed(3)+'|'+p.name;if(seen.has(key))return false;seen.add(key);return true;}).slice(0,8);
   }
   function placeResultsHTML(places,action) {
     return places.map((p,i)=>`<button type="button" class="place-result" data-action="${action}" data-index="${i}"><span class="place-result-icon" aria-hidden="true">⌖</span><span><strong>${esc(p.name)}</strong><small>${esc(p.address)}</small></span></button>`).join('');
   }
   async function searchMap() {
-    const request=++state.mapSearchRequest,area=$('mapSearchResults');
+    clearTimeout(state.suggestTimer);const request=++state.mapSearchRequest,area=$('mapSearchResults');
     const q=clean($('mapSearch').value);if(!q){showSavedResults();return;}
     closePlace();showMapTab();area.hidden=false;area.innerHTML='<p class="search-message">場所を検索しています…</p>';
     try{
@@ -776,6 +791,11 @@
       area.innerHTML=places.length?placeResultsHTML(places,'select-map-place'):'<p class="search-message">見つかりませんでした。地図を長押しでも選べます。</p>';
     }catch(error){if(request===state.mapSearchRequest)area.innerHTML=`<p class="search-message">${esc(error.message)}</p>`;}
     $('mapSearch').blur();
+  }
+  async function suggestMap(){
+    const request=++state.mapSearchRequest,area=$('mapSearchResults'),q=clean($('mapSearch').value);if(q.length<2)return;
+    try{const places=await lookupPlaces(q,true);if(request!==state.mapSearchRequest)return;state.mapHits=places;
+      area.hidden=false;area.innerHTML=places.length?placeResultsHTML(places,'select-map-place'):'<p class="search-message">候補がありません。「検索」で詳しく探せます。</p>';}catch(_){}
   }
   function showSavedResults() {
     if(clean($('mapSearch').value))return;
@@ -1139,7 +1159,7 @@
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
     $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
     $('checkinDuration').addEventListener('change',updateCheckinNote);
-    $('mapSearch').addEventListener('input',()=>{++state.mapSearchRequest;$('mapSearchResults').hidden=true;});
+    $('mapSearch').addEventListener('input',()=>{clearTimeout(state.suggestTimer);const q=clean($('mapSearch').value);if(q.length<2){++state.mapSearchRequest;if(!q)showSavedResults();else $('mapSearchResults').hidden=true;return;}state.suggestTimer=setTimeout(suggestMap,450);});
     document.addEventListener('pointerdown',e=>{if(!$('mapSearchPanel').contains(e.target))$('mapSearchResults').hidden=true;});
     $('selectedLabel').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedLabel').value)||state.selected.name;});
     $('placeQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBusy(document.querySelector('[data-action="search-place"]'),searchPlace);}});
