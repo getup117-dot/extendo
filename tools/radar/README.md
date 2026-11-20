@@ -13,3 +13,7 @@
 - 旧「ベイ出没マップ」（/bey/）はRadarの本番接続後に置きかえ
 - （同日変更）招待制はやめて全員公開に。ログインはニックネーム入力＋Supabaseの匿名ログイン（Allow anonymous sign-ins をON）。メールは予備（画面からは外した）。Xログインは見送り
 - Supabase プロジェクト：beybe-radar（ref ulnuwlvayctgvifnacwt、Tokyo）。X の Callback URL は https://ulnuwlvayctgvifnacwt.supabase.co/auth/v1/callback
+
+追加（2026-11-20）
+- 出没エリア（期限なし・1人3か所・よくいる曜日時間帯つき・30日更新がないと薄く表示）、対戦記録（相手がOKで確定。未登録の相手はメモ）、名前の後ろの#4ケタ番号
+- DB：`schema_areas_battles.sql` を SQL Editor で実行。未実行のあいだは、これらの機能だけ画面から隠れる（ほかは今まで通り動く）

@@ -164,3 +164,35 @@ button{min-height:44px}
 .agree input{margin-top:3px}
 
 .checkin-duration{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.checkin-duration label{font-size:12px;font-weight:800;color:#415b64;white-space:nowrap}.checkin-duration select{flex:1;width:auto;padding:8px 10px;font-size:16px;min-height:40px}
+
+/* 出没エリア・対戦記録（2026-11-20） */
+.area-key{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px dashed #7a5cff;background:#7a5cff22}
+.area-dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#7a5cff;color:#fff;font-size:13px;font-weight:900;border:3px solid #fff;box-shadow:0 2px 8px #2a1d6a55}
+.area-dot.is-mine{background:#152a34}.area-dot.is-stale{opacity:.45}
+.area-btn{margin-top:8px;background:#efeaff;color:#4b35b8;border:1px solid #d6ccff}
+.area-avatar{background:#ece6ff;color:#5b43d6}.area-pill{background:#efeaff;color:#5b43d6}
+.area-card.is-stale{opacity:.6}
+.name-tag,.my-tag{font-size:12px;font-weight:700;color:var(--muted);margin-left:3px}
+.record-badge{background:#fff0e7!important;color:#c6633b!important}
+.battle-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:11px 0;border-top:1px solid #edf1ef}
+.battle-row:first-of-type{border-top:0}.battle-list{margin-top:10px}
+.battle-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}
+.request-card{border:2px solid var(--coral)}
+.result-chip{display:inline-block;font-size:11px;font-weight:900;border-radius:6px;padding:2px 7px;color:#fff;background:#8aa0a8}
+.result-chip.r-win{background:var(--coral)}.result-chip.r-lose{background:#4f6c78}
+.status-pending{background:#fff4d6;color:#99700c}.status-memo{background:#eef1f0;color:#6a7f86}
+.result-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.result-btn{border:1px solid #cfdbd9;background:#fff;border-radius:12px;font-weight:900;font-size:15px;color:var(--ink)}
+.result-btn[aria-pressed="true"].r-win{background:var(--coral);border-color:var(--coral);color:#fff}
+.result-btn[aria-pressed="true"].r-lose{background:#4f6c78;border-color:#4f6c78;color:#fff}
+.result-btn[aria-pressed="true"].r-draw{background:#8aa0a8;border-color:#8aa0a8;color:#fff}
+.field-label{font-size:14px;font-weight:800;color:#415b64}
+.score-line{display:flex;align-items:center;gap:10px}.score-line input{text-align:center;font-size:18px}
+.candidate-list{max-height:260px;overflow:auto;margin-top:4px}
+.candidate-title{font-size:11px;font-weight:900;color:var(--teal);letter-spacing:.08em;margin:10px 0 4px}
+.candidate{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid #e2e8e7;border-radius:12px;padding:8px 10px;margin-bottom:6px}
+.candidate .avatar{width:34px;height:34px;font-size:15px;border-radius:11px}
+.candidate small{display:block;color:var(--muted);font-size:12px}
+.picked-opponent{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #96ddd1;border-radius:14px;padding:10px}
+.picked-opponent>div{flex:1;min-width:0}
+.has-alert{position:relative}.has-alert::after{content:"";position:absolute;top:6px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px #fff}
