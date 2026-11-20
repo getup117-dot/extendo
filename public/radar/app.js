@@ -624,7 +624,7 @@
   }
   const RECOVERY_DOMAIN='users.beybe-radar.app';
   const toHira=v=>clean(v).normalize('NFKC').replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s/g,'');
-  const recoveryPass=w=>'bey-'+w;
+  const recoveryPass=w=>w.length>=6?'bey-'+w:'bey-'+w+'-beyradar';
   const recoveryEmail=id=>`u-${id}@${RECOVERY_DOMAIN}`;
   const hasRecovery=()=>!!state.user&&!state.user.is_anonymous&&String(state.user.email||'').endsWith('@'+RECOVERY_DOMAIN);
   function recoveryHTML(){
@@ -632,12 +632,12 @@
     const id=`#${tagFor(selfId())}`,done=hasRecovery(),open=!done||state.recoveryEdit;
     return `<div class="setting-card"><div class="section-title">引き継ぎ <span class="tag">${done?'設定済み':'未設定'}</span></div>
       <p class="recovery-id">ID：<b>${esc(id)}</b></p>
-      ${open?`<form id="recoveryForm" class="form-col" style="margin-top:10px"><div class="field"><label for="recoveryWord">合言葉（ひらがな6〜12文字）</label><input type="text" id="recoveryWord" required minlength="6" maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="recoveryHint">ヒント（任意）</label><input type="text" id="recoveryHint" maxlength="30" autocomplete="off"></div><button class="btn dark wide" type="submit">${done?'合言葉を変更':'合言葉を設定'}</button></form>`:`<button class="btn outline wide" style="margin-top:10px" data-action="edit-recovery">合言葉を変更</button>`}
+      ${open?`<form id="recoveryForm" class="form-col" style="margin-top:10px"><div class="field"><label for="recoveryWord">合言葉（ひらがな）</label><input type="text" id="recoveryWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="recoveryHint">ヒント（任意）</label><input type="text" id="recoveryHint" maxlength="30" autocomplete="off"></div><button class="btn dark wide" type="submit">${done?'合言葉を変更':'合言葉を設定'}</button></form>`:`<button class="btn outline wide" style="margin-top:10px" data-action="edit-recovery">合言葉を変更</button>`}
       <p class="help" style="margin-top:8px">ブラウザのデータが消えても、IDと合言葉で戻れます。</p></div>`;
   }
   async function saveRecovery(){
     const w=toHira($('recoveryWord').value),hint=clean($('recoveryHint').value).slice(0,30);
-    if(!/^[\u3041-\u3096ー]{6,12}$/.test(w))throw Error('合言葉はひらがな6〜12文字にしてください');
+    if(!/^[\u3041-\u3096ー]{1,12}$/.test(w))throw Error('合言葉はひらがなで入れてください');
     if(hint&&toHira(hint).includes(w))throw Error('ヒントに合言葉そのものは入れないでください');
     const sb=state.sb;
     if(!hasRecovery()){const {error}=await sb.auth.updateUser({email:recoveryEmail(selfId())});if(error)throw Error('設定できませんでした（'+error.message+'）');}
