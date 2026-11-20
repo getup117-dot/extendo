@@ -143,8 +143,7 @@
     const me=selfId();let w=0,l=0,d=0;
     for(const b of state.battles){if(b.status!=='confirmed')continue;if(!((b.reporter===me&&b.opponent===other)||(b.reporter===other&&b.opponent===me)))continue;const r=battleView(b).result;if(r==='win')w++;else if(r==='lose')l++;else d++;}
     if(!w&&!l&&!d)return '<div class="rival-line">まだ対戦していないブレーダー</div>';
-    const extra=l-w===1?' 次に勝てば五分！':(w===l&&w+l>0?' ここまで互角！':'');
-    return `<div class="rival-line">あなたは${w}勝${l}敗${d?d+'分':''}。<b>${extra.trim()}</b></div>`;
+    return `<div class="rival-line">あなたは${w}勝${l}敗${d?d+'分':''}</div>`;
   }
   function rankList(){
     const known=new Set(state.profiles.map(p=>p.id));
@@ -158,7 +157,7 @@
     const all=rankList(),areas=myAreas(),area=areas.find(a=>a.id===state.rankArea);
     const list=area?all.filter(r=>state.areas.some(a=>a.user_id===r.user_id&&meters(a,area)<1500)):all;
     const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span><span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
-    return `<div class="setting-card"><div class="section-title">戦闘力</div><p class="power-head">${head}</p><p class="help" style="margin-top:6px">${esc(POWER_DESC)}</p>
+    return `<div class="setting-card"><div class="section-title">戦闘力</div><p class="power-head">${head}</p>
       <div class="rank-top"><strong>順位</strong>${areas.length?`<select id="rankArea" aria-label="順位の絞り込み"><option value="">全体</option>${areas.map(a=>`<option value="${esc(a.id)}"${a.id===state.rankArea?' selected':''}>${esc(a.name)}によくいる人</option>`).join('')}</select>`:''}</div>
       <div class="rank-list">${rows||'<p class="hint">まだ順位に載っている人はいません。</p>'}</div></div>`;
   }
@@ -584,7 +583,7 @@
         ${event.details ? `<p class="card-note">${esc(event.details)}</p>` : ''}
         <div class="host-profile"><p class="event-owner">主催：${esc(nameFor(event.user_id))}</p>${profileBadges(event.user_id)}</div>
         <div class="event-foot">
-          <div class="event-owner">${isMatch(event)?(matchState(event)==='open'&&!mine?'押すと対戦予定が成立します':'相手がいれば行く'):`参加 ${attendees(event).length}人`}</div>
+          <div class="event-owner">${isMatch(event)?'相手がいれば行く':`参加 ${attendees(event).length}人`}</div>
           <div class="event-actions"><button class="tiny-btn" data-action="go-event" data-id="${esc(event.id)}">地図</button>${actions}${reportTools('event', event.id, event.user_id)}</div>
         </div>
         ${participantInfo(event)}
@@ -633,7 +632,7 @@
     return `<div class="setting-card"><div class="section-title">引き継ぎ <span class="tag">${done?'設定済み':'未設定'}</span></div>
       <p class="recovery-id">ID：<b>${esc(id)}</b></p>
       ${open?`<form id="recoveryForm" class="form-col" style="margin-top:10px"><div class="field"><label for="recoveryWord">合言葉（ひらがな）</label><input type="text" id="recoveryWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="recoveryHint">ヒント（任意）</label><input type="text" id="recoveryHint" maxlength="30" autocomplete="off"></div><button class="btn dark wide" type="submit">${done?'合言葉を変更':'合言葉を設定'}</button></form>`:`<button class="btn outline wide" style="margin-top:10px" data-action="edit-recovery">合言葉を変更</button>`}
-      <p class="help" style="margin-top:8px">ブラウザのデータが消えても、IDと合言葉で戻れます。</p></div>`;
+</div>`;
   }
   async function saveRecovery(){
     const w=toHira($('recoveryWord').value),hint=clean($('recoveryHint').value).slice(0,30);
@@ -802,7 +801,7 @@
     action.classList.toggle('is-joined',joined);action.hidden=false;action.disabled=false;
     if(isMatch(event)){const st=matchState(event);
       $('mapEventStatus').textContent=({open:'あと1人で開催',matched:involved(event)?'対戦成立！':'成立済み',cancelled:'中止',closed:'締め切り'})[st];
-      $('mapEventCount').innerHTML=st==='open'&&!mine?'押すと対戦予定が成立します':st==='matched'&&involved(event)?'相手：'+esc(fullName(mine?event.partner:event.user_id)):mine&&st==='open'?'相手を募集中':'';
+      $('mapEventCount').innerHTML=st==='matched'&&involved(event)?'相手：'+esc(fullName(mine?event.partner:event.user_id)):mine&&st==='open'?'相手を募集中':'';
       if(mine){action.dataset.action=st==='open'||st==='matched'?'edit-event':'delete-event';action.textContent=st==='open'||st==='matched'?'予定を編集':'削除';}
       else if(st==='open'){action.dataset.action='join-match';action.textContent='自分も行ける';}
       else if(st==='matched'&&event.partner===selfId()&&Date.parse(event.starts_at)>Date.now()){action.dataset.action='leave-match';action.textContent='辞退する';}
