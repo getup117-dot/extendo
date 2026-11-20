@@ -220,19 +220,31 @@
       state.map.on('click',e=>{if(Date.now()-lastTouch<800)return;chooseMapPoint({lat:e.latlng.lat,lng:e.latlng.lng},false);});}
     state.mapReady=true;
   }
-  function radarScan(){
-    if(!state.mapReady||!state.selected||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    document.querySelector('.radar-scan')?.remove();
-    const wrap=document.querySelector('.map-wrap'),c=state.map.latLngToContainerPoint([state.selected.lat,state.selected.lng]);
+  function radarScan(pt,showList){
+    if(!state.mapReady||!pt)return;
+    document.querySelector('.radar-scan')?.remove();hideRadar();
+    const wrap=document.querySelector('.map-wrap'),c=state.map.latLngToContainerPoint([pt.lat,pt.lng]);
     const R=Math.round(Math.min(160,wrap.clientWidth*0.42)),T=1400,me=selfId(),hits=new Map();
-    const cands=activePeople().filter(p=>p.user_id!==me).map(p=>({id:p.user_id,lat:p.lat,lng:p.lng})).concat(state.extras?state.areas.filter(a=>a.user_id!==me&&C.validPoint(a)).map(a=>({id:a.user_id,lat:a.lat,lng:a.lng})):[]);
+    const cands=activePeople().filter(p=>p.user_id!==me).map(p=>({id:p.user_id,lat:p.lat,lng:p.lng,kind:'now'})).concat(state.extras?state.areas.filter(a=>a.user_id!==me&&C.validPoint(a)).map(a=>({id:a.user_id,lat:a.lat,lng:a.lng,kind:'area',place:a.name})):[]);
     const el=document.createElement('div');el.className='radar-scan';el.style.cssText=`left:${c.x-R}px;top:${c.y-R}px;width:${R*2}px;height:${R*2}px`;
     let blips='';
-    cands.forEach(p=>{const q=state.map.latLngToContainerPoint([p.lat,p.lng]),dx=q.x-c.x,dy=q.y-c.y;if(Math.hypot(dx,dy)>R*0.92)return;hits.set(p.id,1);
+    cands.forEach(p=>{const q=state.map.latLngToContainerPoint([p.lat,p.lng]),dx=q.x-c.x,dy=q.y-c.y;if(Math.hypot(dx,dy)>R*0.92)return;
+      const d=meters(pt,p),old=hits.get(p.id);if(!old||d<old.d)hits.set(p.id,{...p,d});
       const ang=(Math.atan2(dx,-dy)*180/Math.PI+360)%360;blips+=`<img class="scan-blip" src="assets/scan-blip.png" alt="" style="left:${R+dx}px;top:${R+dy}px;animation-delay:${Math.round(ang/360*T)}ms">`;});
-    el.innerHTML=`<img class="scan-bg" src="assets/scan-radar.png" alt=""><div class="scan-sweep"></div>${blips}`;
-    wrap.appendChild(el);
-    setTimeout(()=>{el.classList.add('done');setTimeout(()=>el.remove(),500);notify(hits.size?`近くに${hits.size}人いるよ`:'近くには誰もいないみたい');},T+250);
+    el.innerHTML=`<img class="scan-bg" src="assets/scan-radar.jpg" alt=""><div class="scan-sweep"></div>${blips}`;
+    const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!reduce)wrap.appendChild(el);
+    setTimeout(()=>{el.classList.add('done');setTimeout(()=>el.remove(),500);
+      if(!showList){notify(hits.size?`近くに${hits.size}人いるよ`:'近くには誰もいないみたい');return;}
+      const list=[...hits.values()].sort((a,b)=>a.d-b.d).slice(0,6),dist=d=>d>=1000?(d/1000).toFixed(1)+'km':Math.round(d/10)*10+'m';
+      $('radarList').innerHTML=list.length?list.map(h=>`<button class="radar-row" data-action="go-point" data-lat="${h.lat}" data-lng="${h.lng}"><span class="radar-dot${h.kind==='area'?' is-area':''}"></span><span class="radar-name">${esc(fullName(h.id))}</span><span class="radar-dist">${dist(h.d)}${h.kind==='area'?'・出没エリア':''}</span></button>`).join(''):'<p class="hint">近くには誰もいないみたい。地図を縮小してもう一度探してみて。</p>';
+      $('radarCount').textContent=list.length?`${hits.size}人`:'0人';
+      $('radarResult').hidden=false;document.body.classList.add('radar-open');},reduce?0:T+250);
+  }
+  function hideRadar(){$('radarResult').hidden=true;document.body.classList.remove('radar-open');}
+  function radarHere(){
+    if(!state.mapReady)return;closePlace();if(isMobile())setSheet(true);
+    setTimeout(()=>{const ll=state.map.getCenter();radarScan({lat:ll.lat,lng:ll.lng},true);},isMobile()?260:0);
   }
   function chooseMapPoint(place, move) {
     const forEvent=state.pickMode==='event', forArea=state.pickMode==='area';
@@ -631,7 +643,7 @@
         // Keep the selected pin in the unobscured portion of the map.
         if(move&&isMobile())state.map.panBy([0,$('selectedPlace').offsetHeight/2],{animate:false});
       });
-      setTimeout(radarScan,move?120:30);
+      setTimeout(()=>radarScan(state.selected,false),move?120:30);
     }
   }
   function closePlace() {
@@ -1042,6 +1054,9 @@
         else if(action==='search-place')await searchPlace();
         else if(action==='select-event-place'){const p=state.lastHits[Number(t.dataset.index)];if(p&&C.validPoint(p)){state.chosen={lat:Number(p.lat),lng:Number(p.lng)};$('eventPlace').value=venueName($('eventPlace').value,p.name);state.draft.autoPlace=p.name;updateCoords();$('placeResults').innerHTML='';if(state.mapReady)state.map.setView([state.chosen.lat,state.chosen.lng],15);}}
         else if(action==='go-event'){const p=activeEvents().find(ev=>ev.id===id);if(p&&state.mapReady)openMapEvent(p);else notify('地図を読み込めませんでした');}
+        else if(action==='go-point'){hideRadar();mapGo(+t.dataset.lat,+t.dataset.lng);}
+        else if(action==='radar-here')radarHere();
+        else if(action==='close-radar')hideRadar();
         else if(action==='go-person'){const p=activePeople().find(p=>p.user_id===id);if(p)mapGo(p.lat,p.lng);}
         else if(action==='edit-event'){const p=state.events.find(ev=>ev.id===id&&ev.user_id===selfId());if(p)newEvent(p);}
         else if(action==='report'){state.pendingReport={type:t.dataset.type,id};openModal('report');}
@@ -1110,8 +1125,19 @@
     window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
     document.addEventListener('focusin',e=>{if(!isMobile()||!isTyping(e.target))return;updateViewport();setTimeout(()=>{window.scrollTo(0,0);e.target.scrollIntoView({block:'center'});},350);});
     document.addEventListener('focusout',()=>setTimeout(updateViewport,120));
+    {const side=$('sidePanel'),sc=$('panelContent');let g=null;
+      side.addEventListener('touchstart',e=>{if(!isMobile()||e.touches.length>1)return;const onHandle=!!e.target.closest('.sheet-handle');
+        if(!onHandle&&e.target.closest('input,select,textarea'))return;g={y:e.touches[0].clientY,x:e.touches[0].clientX,onHandle,top:sc.scrollTop<=0,drag:false,dy:0};},{passive:true});
+      side.addEventListener('touchmove',e=>{if(!g)return;const dy=e.touches[0].clientY-g.y,dx=e.touches[0].clientX-g.x;
+        if(!g.drag){if(Math.abs(dy)<8||Math.abs(dx)>Math.abs(dy))return;
+          if(g.top&&dy>0&&sc.scrollTop<=0&&document.body.classList.contains('scrolled-down')){document.body.classList.remove('scrolled-down');setTimeout(()=>window.dispatchEvent(new Event('resize')),0);g=null;return;}
+          if(g.onHandle||state.sheetCollapsed||(g.top&&dy>0&&sc.scrollTop<=0))g.drag=true;else{g=null;return;}}
+        e.preventDefault();g.dy=dy;side.style.transition='none';side.style.transform=`translateY(${state.sheetCollapsed?Math.min(0,dy):Math.max(0,dy)}px)`;},{passive:false});
+      const done=()=>{if(!g)return;const {drag,dy}=g;g=null;side.style.transition='';side.style.transform='';if(!drag)return;
+        if(!state.sheetCollapsed&&dy>60)setSheet(true);else if(state.sheetCollapsed&&dy<-40)setSheet(false);};
+      side.addEventListener('touchend',done);side.addEventListener('touchcancel',done);}
     {let last=0;const sc=$('panelContent');sc.addEventListener('scroll',()=>{if(!isMobile())return;const y=sc.scrollTop,d=y-last;last=y;
-      const hide=y>8?true:y<=2?false:null;if(hide===null||document.body.classList.contains('scrolled-down')===hide)return;
+      const room=sc.scrollHeight-sc.clientHeight;const hide=y>8&&room>140?true:y<=2?false:null;if(hide===null||document.body.classList.contains('scrolled-down')===hide)return;
       document.body.classList.toggle('scrolled-down',hide);setTimeout(updateViewport,0);},{passive:true});}
     if(window.ResizeObserver){const observer=new ResizeObserver(updateOverlaySizes);observer.observe($('sidePanel'));observer.observe($('selectedPlace'));observer.observe($('mapEvent'));}
     updateViewport();

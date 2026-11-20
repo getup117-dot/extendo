@@ -254,9 +254,9 @@ button{min-height:44px}
 }
 
 /* ピンを刺したときのレーダー演出（1回転） */
-.radar-scan{position:absolute;z-index:640;pointer-events:none;border-radius:50%;animation:scanIn .2s ease-out;transition:opacity .45s}
+.radar-scan{position:absolute;z-index:810;pointer-events:none;border-radius:50%;animation:scanIn .2s ease-out;transition:opacity .45s}
 .radar-scan.done{opacity:0}
-.radar-scan .scan-bg{position:absolute;inset:0;width:100%;height:100%;opacity:.92}
+.radar-scan .scan-bg{position:absolute;inset:0;width:100%;height:100%;border-radius:50%}
 .scan-sweep{position:absolute;inset:3%;border-radius:50%;background:conic-gradient(from 0deg,rgba(197,252,68,0) 0deg,rgba(197,252,68,0) 270deg,rgba(197,252,68,.45) 360deg);animation:scanSpin 1.4s linear forwards}
 .scan-blip{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;opacity:0;animation:blipIn .35s ease-out forwards}
 @keyframes scanSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
@@ -270,3 +270,15 @@ button{min-height:44px}
   .side:not(.collapsed){height:calc(var(--app-height) - var(--header-height) - var(--nav-height) - 28px)!important}
   body.keyboard-open .side:not(.collapsed){height:var(--app-height)!important}
 }
+
+/* レーダーで探すボタンと結果 */
+.radar-btn{padding:0;overflow:hidden;background:#0d2630}.radar-btn img{width:100%;height:100%;display:block;border-radius:50%;transform:scale(.86)}
+.radar-result{max-height:min(46%,330px);display:flex;flex-direction:column}
+.radar-list{overflow:auto;margin-top:4px}
+.radar-row{display:flex;align-items:center;gap:10px;width:100%;border:0;border-top:1px solid var(--line);background:none;text-align:left;padding:8px 2px;min-height:46px;font-size:15px;color:var(--ink)}
+.radar-row:first-child{border-top:0}
+.radar-dot{width:12px;height:12px;border-radius:50%;background:#ff7a1a;flex:none}.radar-dot.is-area{background:#7a5cff}
+.radar-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.radar-dist{font-size:13px;color:var(--muted);white-space:nowrap}
+.side{will-change:transform}
+body.radar-open .mapfloat{display:none}
