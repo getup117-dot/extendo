@@ -354,3 +354,6 @@ body.radar-open .mapfloat{display:none}
   .map-load-status{top:calc(env(safe-area-inset-top,0px) + 120px)}
   .map-info{left:8px;right:8px;bottom:8px;max-width:none;z-index:820}
 }
+
+.recovery-id{font-size:15px;color:#3c4043}.recovery-id b{font-size:17px;color:#1f1f1f;user-select:all}
+.restore-hint-btn{align-self:flex-start;margin-top:4px}

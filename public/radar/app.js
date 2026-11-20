@@ -484,7 +484,8 @@
   }
   function viewBanner(){return `<div class="notice view-notice">見るだけモードです。<button class="linklike" data-action="go-account">ニックネームではじめる</button></div>`;}
   function loginWall() {
-    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startNick">ニックネーム</label><input type="text" id="startNick" required maxlength="32" placeholder="例：しょうた" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>`;
+    return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startNick">ニックネーム</label><input type="text" id="startNick" required maxlength="32" placeholder="例：しょうた" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><label class="agree"><input type="checkbox" id="startAgree" required> 18歳以上で、公園など公共の場所で会うことに同意します</label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>
+    <div class="setting-card form-col"><h2 class="login-heading">IDと合言葉で戻る</h2><form id="restoreForm" class="form-col"><div class="field"><label for="restoreId">ID（名前#番号）</label><input type="text" id="restoreId" required maxlength="40" placeholder="例：しょうた#1234" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="restoreWord">合言葉（ひらがな）</label><input type="text" id="restoreWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button type="button" class="linklike restore-hint-btn" data-action="show-hint">ヒントを見る</button><p id="restoreHint" class="help" hidden></p></div><button class="btn dark wide" type="submit">戻る</button></form></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -504,9 +505,46 @@
       <div class="setting-card"><div class="toggle-line"><strong>現在地の共有</strong><span class="pill" id="sharePill">${sharing?'共有中':'OFF'}</span></div><div class="separator"></div>
       ${sharing?`<div class="share-active" id="shareStatus"></div><button class="btn outline wide" style="margin-top:12px" data-action="stop-share">${state.stopFailed?'公開停止をもう一度試す':'位置共有を停止する'}</button>`:`<div class="field share-settings"><label for="shareDuration">共有する時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><button class="btn teal wide" data-action="start-share">GPSで現在地を共有</button><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button>`}
       </div>
+      ${recoveryHTML()}
       ${areaAccountHTML()}
       <div class="setting-card"><strong>保存した場所</strong><div class="saved-places">${savedSpots().map((p,i)=>`<button class="saved-place" data-action="open-saved" data-index="${i}"><span>☆</span><span>${esc(p.name)}</span><span>地図</span></button>`).join('')||'<p class="hint">まだありません。</p>'}</div></div>
       ${state.mode==='demo'?'<button class="btn outline wide" data-action="reset-demo">試用データを最初に戻す</button>':'<button class="btn outline wide" data-action="logout">ログアウト</button>'}`;
+  }
+  const RECOVERY_DOMAIN='users.beybe-radar.app';
+  const toHira=v=>clean(v).normalize('NFKC').replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s/g,'');
+  const recoveryPass=w=>'bey-'+w;
+  const recoveryEmail=id=>`u-${id}@${RECOVERY_DOMAIN}`;
+  const hasRecovery=()=>!!state.user&&!state.user.is_anonymous&&String(state.user.email||'').endsWith('@'+RECOVERY_DOMAIN);
+  function recoveryHTML(){
+    if(state.mode!=='live'||!state.user)return '';
+    const id=`${selfName()}#${tagFor(selfId())}`,done=hasRecovery(),open=!done||state.recoveryEdit;
+    return `<div class="setting-card"><div class="section-title">引き継ぎ <span class="tag">${done?'設定済み':'未設定'}</span></div>
+      <p class="recovery-id">ID：<b>${esc(id)}</b></p>
+      ${open?`<form id="recoveryForm" class="form-col" style="margin-top:10px"><div class="field"><label for="recoveryWord">合言葉（ひらがな6〜12文字）</label><input type="text" id="recoveryWord" required minlength="6" maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="recoveryHint">ヒント（任意）</label><input type="text" id="recoveryHint" maxlength="30" autocomplete="off"></div><button class="btn dark wide" type="submit">${done?'合言葉を変更':'合言葉を設定'}</button></form>`:`<button class="btn outline wide" style="margin-top:10px" data-action="edit-recovery">合言葉を変更</button>`}
+      <p class="help" style="margin-top:8px">ブラウザのデータが消えても、IDと合言葉で戻れます。名前を変えるとIDも変わります。</p></div>`;
+  }
+  async function saveRecovery(){
+    const w=toHira($('recoveryWord').value),hint=clean($('recoveryHint').value).slice(0,30);
+    if(!/^[\u3041-\u3096ー]{6,12}$/.test(w))throw Error('合言葉はひらがな6〜12文字にしてください');
+    if(hint&&toHira(hint).includes(w))throw Error('ヒントに合言葉そのものは入れないでください');
+    const sb=state.sb;
+    if(!hasRecovery()){const {error}=await sb.auth.updateUser({email:recoveryEmail(selfId())});if(error)throw Error('設定できませんでした（'+error.message+'）');}
+    const {data,error}=await sb.auth.updateUser({password:recoveryPass(w)});if(error)throw Error('設定できませんでした（'+error.message+'）');
+    if(data?.user)state.user=data.user;
+    const r=await sb.rpc('set_recovery_hint',{p_hint:hint});if(r.error)throw Error('ヒントを保存できませんでした');
+    state.recoveryEdit=false;render();notify('合言葉を設定しました。IDと一緒に覚えておいてね');
+  }
+  async function findRecovery(){
+    const m=clean($('restoreId').value).normalize('NFKC').match(/^(.+?)\s*#\s*(\d{4})$/);if(!m)throw Error('IDは「名前#4ケタの番号」で入れてください');
+    if(!state.sb)throw Error('接続を確認してください');
+    const {data,error}=await state.sb.rpc('find_recovery',{p_name:m[1],p_tag:m[2]});if(error)throw Error('確認できませんでした。少し時間をおいて試してください');
+    const rows=(data||[]).filter(r=>r.ready);if(!rows.length)throw Error('このIDでは合言葉が設定されていません');return rows;
+  }
+  async function showHint(){const rows=await findRecovery();const el=$('restoreHint');el.textContent=rows[0].hint?`ヒント：${rows[0].hint}`:'ヒントは設定されていません';el.hidden=false;}
+  async function restoreAccount(){
+    const rows=await findRecovery(),w=toHira($('restoreWord').value);
+    for(const r of rows){const {error}=await state.sb.auth.signInWithPassword({email:recoveryEmail(r.user_id),password:recoveryPass(w)});if(!error){notify('おかえりなさい！');return;}}
+    throw Error('IDか合言葉がちがうみたい');
   }
   function battleAccountHTML(){
     if(!state.extras||state.mode!=='live')return '';
@@ -1143,7 +1181,9 @@
         else if(action==='start-share')startGps();else if(action==='manual-share')manualShare();else if(action==='stop-share')await stopShare();
         else if(action==='center-map')mapGo(...TOKYO);
         else if(action==='go-gps')locateMe();
-        else if(action==='logout'){if(state.user?.is_anonymous&&!(await askConfirm('ニックネームで始めた場合、ログアウトすると同じアカウントには戻れません。予定や参加情報も自分では編集できなくなります。','ログアウトしますか？','ログアウトする')))return;await logout();}
+        else if(action==='logout'){if(state.user?.is_anonymous&&!(await askConfirm('合言葉が未設定のため、ログアウトすると同じアカウントには戻れません。先にマイページの「引き継ぎ」で合言葉を設定するのがおすすめです。','ログアウトしますか？','ログアウトする')))return;await logout();}
+        else if(action==='edit-recovery'){state.recoveryEdit=true;render();}
+        else if(action==='show-hint'){await showHint();}
         else if(action==='reset-demo'){if(await askConfirm('プロフィール・現在地・予定・参加情報を初期化します。保存した場所は残ります。','試用データをリセット','リセットする')){await stopShare(true);state.renderKey='';await updateDemo(latest=>Object.assign(latest,seedDemo()));notify('最初の状態に戻しました');}}
         else if(action==='settings'){$('sbUrl').value=config.supabaseUrl||savedConnection?.url||'';$('sbKey').value=config.supabasePublicKey||savedConnection?.key||'';openModal('settings');}
         else if(action==='close-settings')closeModal('settings');else if(action==='use-demo')await switchDemo();
@@ -1151,9 +1191,9 @@
       });
     });
     document.addEventListener('submit',e=>{
-      if(!['mapSearchForm','eventForm','profileForm','loginForm','startForm','areaForm','battleForm'].includes(e.target.id))return;e.preventDefault();
+      if(!['mapSearchForm','eventForm','profileForm','loginForm','startForm','areaForm','battleForm','recoveryForm','restoreForm'].includes(e.target.id))return;e.preventDefault();
       runBusy(e.submitter,async()=>{
-        if(e.target.id==='areaForm')await saveArea();else if(e.target.id==='battleForm')await saveBattle();else if(e.target.id==='startForm')await startAnon();else if(e.target.id==='mapSearchForm')await searchMap();else if(e.target.id==='eventForm')await saveEvent();else if(e.target.id==='profileForm')await setProfile();
+        if(e.target.id==='recoveryForm')await saveRecovery();else if(e.target.id==='restoreForm')await restoreAccount();else if(e.target.id==='areaForm')await saveArea();else if(e.target.id==='battleForm')await saveBattle();else if(e.target.id==='startForm')await startAnon();else if(e.target.id==='mapSearchForm')await searchMap();else if(e.target.id==='eventForm')await saveEvent();else if(e.target.id==='profileForm')await setProfile();
         else{const email=clean($('loginEmail').value);if(!state.sb)throw Error('接続を確認してください');const redirect=location.protocol.startsWith('http')?location.origin+location.pathname:undefined;const {error}=await state.sb.auth.signInWithOtp({email,options:redirect?{emailRedirectTo:redirect}:{}});if(error)throw error;notify('ログインメールを送りました。受信箱を確認してください');}
       });
     });
