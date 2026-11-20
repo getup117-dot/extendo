@@ -191,10 +191,10 @@
     if (!window.L) { $('mapFallback').classList.add('show'); return; }
     state.map=L.map('map',{zoomControl:false}).setView(TOKYO,12);
     const tiles=L.tileLayer(config.tileUrl||'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:config.tileAttribution||'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',subdomains:'abcd',maxZoom:20,detectRetina:false
+      attribution:config.tileAttribution||'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxNativeZoom:18,maxZoom:20
     }).addTo(state.map);
     tiles.on('tileload',()=>{state.tileLoaded++;$('mapLoadStatus').hidden=true;});
-    tiles.on('tileerror',()=>{if(++state.tileErrors>=4&&!state.tileLoaded){$('mapLoadStatus').textContent='地図を読み込めません。インターネット接続を確認してください。';$('mapLoadStatus').hidden=false;}});
+    tiles.on('tileerror',()=>{if(++state.tileErrors>=4&&!state.tileLoaded&&!state.tileFallback){state.tileFallback=true;state.tileErrors=0;tiles.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png');tiles.options.maxNativeZoom=19;state.map.attributionControl.addAttribution('&copy; OpenStreetMap');return;}if(state.tileErrors>=4&&!state.tileLoaded){$('mapLoadStatus').textContent='地図を読み込めません。インターネット接続を確認してください。';$('mapLoadStatus').hidden=false;}});
     L.control.zoom({position:'topright'}).addTo(state.map);
     // スマホ：タップでは何もしない／ダブルタップで拡大／長押しでピン（地図アプリと同じ操作）
     {const box=state.map.getContainer();let t=null,lastTouch=0,prev=null,noDbl=0;
