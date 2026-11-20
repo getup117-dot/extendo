@@ -224,3 +224,9 @@ button{min-height:44px}
   body.keyboard-open .side:not(.collapsed){height:var(--app-height)!important;border-radius:0}
   body.keyboard-open .scroll{padding-top:10px;padding-bottom:40vh}
 }
+
+/* リストを下にスクロールしたらロゴと見出しを隠す */
+@media(max-width:800px){
+  body.scrolled-down{--header-height:0px}
+  body.scrolled-down .header,body.scrolled-down .sidehead{display:none}
+}

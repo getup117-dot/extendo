@@ -312,6 +312,7 @@
     document.querySelectorAll('[data-filter]').forEach(el=>{el.classList.toggle('active',el.dataset.filter===state.filter);el.setAttribute('aria-pressed',String(el.dataset.filter===state.filter));});
     $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():renderAccount());
     document.body.dataset.tab=state.tab;
+    if(document.body.dataset.lastTab!==state.tab){document.body.dataset.lastTab=state.tab;document.body.classList.remove('scrolled-down');}
     {const m=$('mainAction');if(state.tab==='now'){m.dataset.action='go-gps';m.textContent='📍 いまここにいる';m.className='btn teal wide';}else{m.dataset.action='new-event';m.textContent='＋ 出没予定を登録';m.className='btn primary wide';}}
     document.querySelectorAll('[data-tab="account"]').forEach(el=>el.classList.toggle('has-alert',state.extras&&incomingRequests().length>0));
     restoreFields(saved); renderMap(); updateShareIndicator();
@@ -1081,6 +1082,9 @@
     window.addEventListener('resize',updateViewport);window.visualViewport?.addEventListener('resize',updateViewport);
     document.addEventListener('focusin',e=>{if(!isMobile()||!isTyping(e.target))return;updateViewport();setTimeout(()=>{window.scrollTo(0,0);e.target.scrollIntoView({block:'center'});},350);});
     document.addEventListener('focusout',()=>setTimeout(updateViewport,120));
+    {let last=0;const sc=$('panelContent');sc.addEventListener('scroll',()=>{if(!isMobile())return;const y=sc.scrollTop,d=y-last;last=y;
+      const hide=y>40&&d>0?true:(y<10||d<-8)?false:null;if(hide===null||document.body.classList.contains('scrolled-down')===hide)return;
+      document.body.classList.toggle('scrolled-down',hide);setTimeout(updateViewport,0);},{passive:true});}
     if(window.ResizeObserver){const observer=new ResizeObserver(updateOverlaySizes);observer.observe($('sidePanel'));observer.observe($('selectedPlace'));observer.observe($('mapEvent'));}
     updateViewport();
     // Live wiring is optional during the hands-on preview.
