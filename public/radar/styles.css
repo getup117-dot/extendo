@@ -398,3 +398,8 @@ body.radar-open .mapfloat{display:none}
 .radar-blip.has-img{width:38px;height:38px;padding:0;overflow:hidden;background:#13303d}
 .radar-blip.has-img::after{display:none}.radar-blip.has-img img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
 .area-dot.has-img{padding:0;overflow:hidden;background:#7a5cff}.area-dot.has-img img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+
+.sprite-hit{background:none!important;border:0!important}
+.sprite-pin{display:block;width:44px;height:54px;object-fit:contain;filter:drop-shadow(0 2px 2px #0005) drop-shadow(0 0 1px #fff);transform-origin:50% 100%;animation:spriteBob 1.6s ease-in-out infinite}
+@keyframes spriteBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.sprite-pin{animation:none}}

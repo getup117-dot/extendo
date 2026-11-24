@@ -31,7 +31,10 @@
   const iso = () => new Date().toISOString();
   const uid = () => window.crypto?.randomUUID?.() || 'demo-'+Math.random().toString(36).slice(2);
   const initial = name => Array.from(clean(name) || '?')[0];
-  const avatarUrl=id=>{const p=state.profiles.find(x=>x.id===id);const base=(window.BEYSPOT_CONFIG||{}).supabaseUrl;return p&&p.avatar_ver&&base?`${base}/storage/v1/object/public/avatars/${id}.webp?v=${p.avatar_ver}`:'';};
+  // 特別なマップ表示（#番号で指定）
+  const SPECIAL={'9501':{sprite:'assets/sprite-9501.webp',avatar:'assets/avatar-9501.webp'}};
+  const specialOf=id=>SPECIAL[state.profiles.find(x=>x.id===id)?.tag||''];
+  const avatarUrl=id=>{const sp=specialOf(id);if(sp)return sp.avatar;const p=state.profiles.find(x=>x.id===id);const base=(window.BEYSPOT_CONFIG||{}).supabaseUrl;return p&&p.avatar_ver&&base?`${base}/storage/v1/object/public/avatars/${id}.webp?v=${p.avatar_ver}`:'';};
   const avatarHTML=(id,cls='avatar')=>{const u=avatarUrl(id);return u?`<span class="${cls} has-img"><img src="${u}" alt="" loading="lazy" decoding="async"></span>`:`<span class="${cls}">${esc(initial(nameFor(id)))}</span>`;};
   const ago = d => { const minutes = Math.max(0, Math.floor((Date.now()-Date.parse(d))/60000)); return minutes < 1 ? 'たった今' : minutes+'分前'; };
   function at(day, hour) { const d=new Date(); d.setDate(d.getDate()+day); d.setHours(hour,0,0,0); return d.toISOString(); }
@@ -367,7 +370,8 @@
     restoreEvent();
   }
   function markerOptions(kind, label, mine=false,ready=false,uid=null) {
-    const event=kind==='event',av=!event&&uid?avatarUrl(uid):'';
+    const event=kind==='event',av=!event&&uid?avatarUrl(uid):'',sp=!event&&uid?specialOf(uid):null;
+    if(sp)return {icon:L.divIcon({className:'radar-hit sprite-hit',html:`<img class="sprite-pin" src="${sp.sprite}" alt="" aria-hidden="true">`,iconSize:[44,54],iconAnchor:[22,52],popupAnchor:[0,-48]}),title:label,alt:label};
     const icon=L.divIcon({
       className:'radar-hit',
       html:`<span aria-hidden="true" class="${event?'battle-pin':'radar-blip'}${mine?' is-mine':''}${ready?' is-ready':''}${av?' has-img':''}">${av?`<img src="${av}" alt="">`:''}</span>`,
