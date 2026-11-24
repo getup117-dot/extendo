@@ -613,9 +613,10 @@
         ${state.mode==='live'?`<div class="avatar-edit">${avatarHTML(selfId(),'avatar-big')}<div class="avatar-btns"><label class="btn outline avatar-pick">画像を選ぶ<input type="file" id="avatarFile" accept="image/*" hidden></label>${state.profiles.find(x=>x.id===selfId())?.avatar_ver?'<button type="button" class="linklike" data-action="avatar-remove">画像を外す</button>':''}</div></div>`:''}
         <form id="profileForm" class="form-col">
           <div class="field"><label for="nickField">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="nickField" maxlength="32" required value="${esc(selfName())}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+          <details class="profile-more" id="profileMore"${state.profileMoreOpen?' open':''}><summary>対戦歓迎・スタジアム・ランク</summary><div class="form-col profile-more-body">
           <div class="field"><label for="battleReady">対戦歓迎の表示</label><select id="battleReady">${profileOptions({no:'表示しない',yes:'対戦歓迎'},profile.battle_ready?'yes':'no')}</select></div>
           <div class="field"><label for="stadiumStatus">スタジアム</label><select id="stadiumStatus">${profileOptions(STADIUM_OPTIONS, profile.stadium_status || 'unset')}</select></div>
-          <div class="field"><label for="rankLevel">ランク（仮）</label><select id="rankLevel">${profileOptions(RANK_OPTIONS, profile.rank_level || 'unset')}</select></div>
+          <div class="field"><label for="rankLevel">ランク（仮）</label><select id="rankLevel">${profileOptions(RANK_OPTIONS, profile.rank_level || 'unset')}</select></div></div></details>
           <button class="btn dark wide" type="submit">プロフィールを保存</button>
         </form>
       </div>
@@ -1374,6 +1375,7 @@
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
     $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
     $('checkinDuration').addEventListener('change',updateCheckinNote);
+    document.addEventListener('toggle',e=>{if(e.target.id==='profileMore')state.profileMoreOpen=e.target.open;},true);
     document.addEventListener('change',e=>{if(e.target.id==='rankArea'){state.rankArea=e.target.value;render();}
       if(e.target.id==='avatarFile'&&e.target.files?.[0]){const f=e.target.files[0];e.target.value='';uploadAvatar(f).catch(err=>notify(err.message||'画像を保存できませんでした'));}});
     $('mapSearch').addEventListener('input',()=>{clearTimeout(state.suggestTimer);const q=clean($('mapSearch').value);if(q.length<2){++state.mapSearchRequest;if(!q)showSavedResults();else $('mapSearchResults').hidden=true;return;}state.suggestTimer=setTimeout(suggestMap,450);});
