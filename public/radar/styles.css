@@ -388,3 +388,13 @@ body.radar-open .mapfloat{display:none}
 .recovery-memo{margin-top:6px;font-size:13px;font-weight:700;color:#e8590c}
 @media (prefers-reduced-motion:reduce){.sw-track,.sw-knob{transition:none}}
 .result-buttons{grid-template-columns:repeat(2,1fr)!important}
+
+.avatar.has-img,.rank-av.has-img,.avatar-big.has-img{padding:0;overflow:hidden;background:#13303d}
+.avatar.has-img img,.rank-av img,.avatar-big img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.rank-av{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#dfeee9;color:#13303d;font-size:12px;font-weight:900;overflow:hidden}
+.avatar-edit{display:flex;align-items:center;gap:16px;margin:4px 0 14px}
+.avatar-big{flex:none;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:#dfeee9;color:#13303d;font-size:28px;font-weight:900;overflow:hidden;box-shadow:0 0 0 3px #fff,0 2px 8px #0002}
+.avatar-btns{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.avatar-pick{padding:10px 16px;min-height:0;cursor:pointer}
+.radar-blip.has-img{width:38px;height:38px;padding:0;overflow:hidden;background:#13303d}
+.radar-blip.has-img::after{display:none}.radar-blip.has-img img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.area-dot.has-img{padding:0;overflow:hidden;background:#7a5cff}.area-dot.has-img img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}

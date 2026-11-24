@@ -31,6 +31,8 @@
   const iso = () => new Date().toISOString();
   const uid = () => window.crypto?.randomUUID?.() || 'demo-'+Math.random().toString(36).slice(2);
   const initial = name => Array.from(clean(name) || '?')[0];
+  const avatarUrl=id=>{const p=state.profiles.find(x=>x.id===id);const base=(window.BEYSPOT_CONFIG||{}).supabaseUrl;return p&&p.avatar_ver&&base?`${base}/storage/v1/object/public/avatars/${id}.webp?v=${p.avatar_ver}`:'';};
+  const avatarHTML=(id,cls='avatar')=>{const u=avatarUrl(id);return u?`<span class="${cls} has-img"><img src="${u}" alt="" loading="lazy" decoding="async"></span>`:`<span class="${cls}">${esc(initial(nameFor(id)))}</span>`;};
   const ago = d => { const minutes = Math.max(0, Math.floor((Date.now()-Date.parse(d))/60000)); return minutes < 1 ? 'たった今' : minutes+'分前'; };
   function at(day, hour) { const d=new Date(); d.setDate(d.getDate()+day); d.setHours(hour,0,0,0); return d.toISOString(); }
   function seedDemo() {
@@ -156,7 +158,7 @@
     const head=!state.user?'':`戦闘力 <b>${powerVal(selfId())}</b>${s?.best!=null?`｜自己最高 ${s.best}`:''}${isResting(s)?' <span class="pill">休止中</span>':''}`;
     const all=rankList(),areas=state.user?myAreas():[],area=areas.find(a=>a.id===state.rankArea);
     const list=area?all.filter(r=>state.areas.some(a=>a.user_id===r.user_id&&meters(a,area)<1500)):all;
-    const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span><span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
+    const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span>${avatarHTML(r.user_id,'rank-av')}<span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
     return `${head?`<div class="setting-card"><div class="section-title">あなたの戦闘力</div><p class="power-head">${head}</p></div>`:''}<div class="setting-card">
       <div class="rank-top"><strong>順位</strong>${areas.length?`<select id="rankArea" aria-label="順位の絞り込み"><option value="">全体</option>${areas.map(a=>`<option value="${esc(a.id)}"${a.id===state.rankArea?' selected':''}>${esc(a.name)}によくいる人</option>`).join('')}</select>`:''}</div>
       <div class="rank-list">${rows||'<p class="hint">まだ順位に載っている人はいません。</p>'}</div></div>`;
@@ -364,11 +366,11 @@
     $('mapSearch').blur();
     restoreEvent();
   }
-  function markerOptions(kind, label, mine=false,ready=false) {
-    const event=kind==='event';
+  function markerOptions(kind, label, mine=false,ready=false,uid=null) {
+    const event=kind==='event',av=!event&&uid?avatarUrl(uid):'';
     const icon=L.divIcon({
       className:'radar-hit',
-      html:`<span aria-hidden="true" class="${event?'battle-pin':'radar-blip'}${mine?' is-mine':''}${ready?' is-ready':''}"></span>`,
+      html:`<span aria-hidden="true" class="${event?'battle-pin':'radar-blip'}${mine?' is-mine':''}${ready?' is-ready':''}${av?' has-img':''}">${av?`<img src="${av}" alt="">`:''}</span>`,
       iconSize:[44,44],iconAnchor:event?[22,40]:[22,22],popupAnchor:[0,-17]
     });
     return {icon,title:label,alt:label};
@@ -393,7 +395,7 @@
     (show('areas')?areas:[]).forEach(a=>{
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
       const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false,className:'area-circle'}).addTo(state.map);
-      const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}" aria-hidden="true">${esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
+      const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}${avatarUrl(a.user_id)?' has-img':''}" aria-hidden="true">${avatarUrl(a.user_id)?`<img src="${avatarUrl(a.user_id)}" alt="">`:esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
       const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}`;
       labelMarker(m,label);
       const openA=()=>{if(Date.now()-(state.heldAt||0)<900)return;if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
@@ -406,7 +408,7 @@
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
       const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}${rivalHTML(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>${chanceHTML(p.user_id)}`;
       state.popByKey['p'+p.user_id]=pop;
-      const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready)).addTo(state.map);
+      const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready,p.user_id)).addTo(state.map);
       labelMarker(m,label);
       m.on('click',()=>{
         if(state.pickMode){chooseMapPoint(p,false);return;}
@@ -488,7 +490,7 @@
     const cards = people.map(person => `
       <div class="card person-card">
         <div class="person-top">
-          <span class="avatar">${esc(initial(nameFor(person.user_id)))}</span>
+          ${avatarHTML(person.user_id)}
           <div class="person-name">
             <strong>${esc(nameFor(person.user_id))}${tagFor(person.user_id)?`<span class="name-tag">#${esc(tagFor(person.user_id))}</span>`:''}${person.user_id === selfId() ? '（あなた）' : ''}</strong>
             <div class="person-sub">${esc(ago(person.updated_at))}更新・${person.precision === 'approx' ? '約500m表示' : person.kind === 'checkin' ? '地点を指定' : '詳細表示'}</div>
@@ -511,7 +513,7 @@
     if(!state.extras)return '';
     const q=state.listQueries.now.toLowerCase();
     const list=state.areas.filter(a=>[a.name,a.when_text,fullName(a.user_id)].join(' ').toLowerCase().includes(q)).sort((a,b)=>areaStale(a)-areaStale(b)||b.seen_at.localeCompare(a.seen_at));
-    const cards=list.slice(0,60).map(a=>`<div class="card area-card${areaStale(a)?' is-stale':''}"><div class="person-top"><span class="avatar area-avatar">${esc(initial(nameFor(a.user_id)))}</span><div class="person-name"><strong>${esc(a.name)}</strong><div class="person-sub">${esc(fullName(a.user_id))}${a.user_id===selfId()?'（あなた）':''}${a.when_text?' ・ '+esc(a.when_text):''}${areaStale(a)?' ・ 最近は来ていないかも':''}</div></div><span class="pill area-pill">出没エリア</span></div><div class="card-buttons"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図で見る</button>${a.user_id!==selfId()&&logged()?`<button class="tiny-btn" data-action="new-battle" data-id="${esc(a.user_id)}">対戦を記録</button>`:''}</div></div>`).join('');
+    const cards=list.slice(0,60).map(a=>`<div class="card area-card${areaStale(a)?' is-stale':''}"><div class="person-top">${avatarHTML(a.user_id,'avatar area-avatar')}<div class="person-name"><strong>${esc(a.name)}</strong><div class="person-sub">${esc(fullName(a.user_id))}${a.user_id===selfId()?'（あなた）':''}${a.when_text?' ・ '+esc(a.when_text):''}${areaStale(a)?' ・ 最近は来ていないかも':''}</div></div><span class="pill area-pill">出没エリア</span></div><div class="card-buttons"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図で見る</button>${a.user_id!==selfId()&&logged()?`<button class="tiny-btn" data-action="new-battle" data-id="${esc(a.user_id)}">対戦を記録</button>`:''}</div></div>`).join('');
     return `<div class="section-title">出没エリア <span class="count">${list.length}</span></div>${cards||`<div class="empty">${q?'該当する出没エリアはありません。':'まだありません。'}</div>`}`;
   }
   function filteredEvents() {
@@ -604,6 +606,7 @@
     return `${state.mode==='demo'?'<div class="notice demo-notice">試用版では、位置や予定はこのブラウザ内にだけ保存されます。ほかの人には共有されません。</div>':''}
       <div class="setting-card">
         <div class="section-title">プロフィール <span class="tag">${state.mode==='demo'?'試用版':'ログイン中'}</span></div>
+        ${state.mode==='live'?`<div class="avatar-edit">${avatarHTML(selfId(),'avatar-big')}<div class="avatar-btns"><label class="btn outline avatar-pick">画像を選ぶ<input type="file" id="avatarFile" accept="image/*" hidden></label>${avatarUrl(selfId())?'<button type="button" class="linklike" data-action="avatar-remove">画像を外す</button>':''}</div></div>`:''}
         <form id="profileForm" class="form-col">
           <div class="field"><label for="nickField">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="nickField" maxlength="32" required value="${esc(selfName())}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
           <div class="field"><label for="battleReady">対戦歓迎の表示</label><select id="battleReady">${profileOptions({no:'表示しない',yes:'対戦歓迎'},profile.battle_ready?'yes':'no')}</select></div>
@@ -664,6 +667,29 @@
     const rows=list.map(b=>{const v=battleView(b),st=b.status==='confirmed'?'確定':b.status==='memo'?'メモ':'承認待ち';return `<div class="battle-row"><div><span class="result-chip r-${v.result}">${esc(RESULT_TEXT[v.result])}</span> <strong>vs ${esc(v.otherName)}</strong><div class="person-sub">${esc(fmtDate(b.played_at))}${(()=>{const r=state.powerResults.find(x=>x.battle_id===b.id);return r?` ・ 戦闘力 ${r.before}→${r.after}`:'';})()}</div></div><div class="battle-actions"><span class="pill status-${b.status}">${st}</span>${b.reporter===selfId()&&!(b.status==='confirmed'&&b.rated)?`<button class="tiny-btn" data-action="delete-battle" data-id="${esc(b.id)}" aria-label="この記録を消す">消す</button>`:''}</div></div>`;}).join('');
     state._reqHTML=reqHTML;
     return `<div class="setting-card"><div class="section-title">対戦記録 <span class="tag">戦績 ${recordText(rec)}</span></div>${rows?`<div class="battle-list">${rows}</div>`:'<p class="hint">まだ記録がありません。</p>'}</div>`;
+  }
+  async function makeAvatar(file){
+    const bmp=await new Promise((ok,ng)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{ok(im);};im.onerror=()=>ng(Error('画像を読み込めませんでした'));im.src=u;});
+    const S=128,c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d');
+    const w=bmp.naturalWidth,h=bmp.naturalHeight,m=Math.min(w,h);g.imageSmoothingQuality='high';
+    g.drawImage(bmp,(w-m)/2,(h-m)/2,m,m,0,0,S,S);URL.revokeObjectURL(bmp.src);
+    let b=await new Promise(r=>c.toBlob(r,'image/webp',0.72));
+    if(!b||b.type!=='image/webp')b=await new Promise(r=>c.toBlob(r,'image/jpeg',0.8));
+    return b;
+  }
+  async function uploadAvatar(file){
+    if(!state.user||!state.sb)throw Error('ログインしてください');
+    const blob=await makeAvatar(file);if(!blob||blob.size>50000)throw Error('画像を小さくできませんでした');
+    const path=selfId()+'.webp';
+    const up=await state.sb.storage.from('avatars').upload(path,blob,{upsert:true,contentType:blob.type,cacheControl:'31536000'});
+    if(up.error)throw Error('画像を保存できませんでした');
+    const {error}=await state.sb.from('profiles').update({avatar_ver:Date.now()}).eq('id',selfId());if(error)throw Error('画像を保存できませんでした');
+    await loadLive();notify('アイコンを設定しました');
+  }
+  async function removeAvatar(){
+    await state.sb.storage.from('avatars').remove([selfId()+'.webp']);
+    const {error}=await state.sb.from('profiles').update({avatar_ver:null}).eq('id',selfId());if(error)throw Error('外せませんでした');
+    await loadLive();notify('アイコンを外しました');
   }
   function renderBattle(){
     if(state.mode!=='live')return '<div class="empty">対戦はライブ版で使えます。</div>';
@@ -1109,7 +1135,7 @@
     const d=state.battleDraft;if(!d)return;
     const box=$('battleOpponent');
     if(d.free){box.innerHTML=`<div class="field"><label for="battleFreeNick">相手のニックネーム</label><input autocomplete="off" id="battleFreeNick" maxlength="32" value="${esc(d.freeName||'')}" placeholder="例：ケイタ"></div><p class="help">自分だけのメモになります。</p><button type="button" class="linklike" data-action="battle-free">登録している人から選ぶ</button>`;$('battleFreeNick').addEventListener('input',e=>{d.freeName=e.target.value;});}
-    else if(d.opponent){box.innerHTML=`<div class="picked-opponent"><span class="avatar">${esc(initial(nameFor(d.opponent)))}</span><div><strong>${esc(fullName(d.opponent))}</strong>${profileBadges(d.opponent)}</div><button type="button" class="tiny-btn" data-action="pick-opponent" data-id="">変える</button></div>`;}
+    else if(d.opponent){box.innerHTML=`<div class="picked-opponent">${avatarHTML(d.opponent)}<div><strong>${esc(fullName(d.opponent))}</strong>${profileBadges(d.opponent)}</div><button type="button" class="tiny-btn" data-action="pick-opponent" data-id="">変える</button></div>`;}
     else{
       const groups=battleCandidates();
       box.innerHTML=`<div class="field"><label for="battleSearch">対戦相手</label><input id="battleSearch" type="search" placeholder="ニックネームか #番号 で探す" autocomplete="off" value="${esc(d.query||'')}"></div><div id="battleCandidates" class="candidate-list">${candidateHTML(groups)}</div><button type="button" class="linklike" data-action="battle-free">相手がまだ登録していない</button>`;
@@ -1118,7 +1144,7 @@
     document.querySelectorAll('[data-action="battle-result"]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.value===d.result)));
   }
   function candidateHTML(groups){
-    return groups.map(g=>`<p class="candidate-title">${esc(g.title)}</p>${g.ids.map(id=>`<button type="button" class="candidate" data-action="pick-opponent" data-id="${esc(id)}"><span class="avatar">${esc(initial(nameFor(id)))}</span><span><strong>${esc(nameFor(id))}</strong><small>#${esc(tagFor(id)||'----')}${(()=>{const r=recordOf(id);return r.total?' ・ '+recordText(r):'';})()}</small></span></button>`).join('')}`).join('')||'<p class="hint">名前か #番号 で探してください。</p>';
+    return groups.map(g=>`<p class="candidate-title">${esc(g.title)}</p>${g.ids.map(id=>`<button type="button" class="candidate" data-action="pick-opponent" data-id="${esc(id)}">${avatarHTML(id)}<span><strong>${esc(nameFor(id))}</strong><small>#${esc(tagFor(id)||'----')}${(()=>{const r=recordOf(id);return r.total?' ・ '+recordText(r):'';})()}</small></span></button>`).join('')}`).join('')||'<p class="hint">名前か #番号 で探してください。</p>';
   }
   function openBattle(opponent){
     if(!state.user)throw Error('ニックネームではじめると記録できます');
@@ -1293,6 +1319,7 @@
         else if(action==='battle-result'){if(state.battleDraft){state.battleDraft.result=t.dataset.value;renderBattleForm();}}
         else if(action==='confirm-battle')await confirmBattle(id);
         else if(action==='power-next')nextPower();
+        else if(action==='avatar-remove')await removeAvatar();
         else if(action==='join-match')await joinMatch(id);
         else if(action==='leave-match')await leaveMatch(id);
         else if(action==='cancel-match')await cancelMatch(id);
@@ -1343,7 +1370,8 @@
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
     $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
     $('checkinDuration').addEventListener('change',updateCheckinNote);
-    document.addEventListener('change',e=>{if(e.target.id==='rankArea'){state.rankArea=e.target.value;render();}});
+    document.addEventListener('change',e=>{if(e.target.id==='rankArea'){state.rankArea=e.target.value;render();}
+      if(e.target.id==='avatarFile'&&e.target.files?.[0]){const f=e.target.files[0];e.target.value='';uploadAvatar(f).catch(err=>notify(err.message||'画像を保存できませんでした'));}});
     $('mapSearch').addEventListener('input',()=>{clearTimeout(state.suggestTimer);const q=clean($('mapSearch').value);if(q.length<2){++state.mapSearchRequest;if(!q)showSavedResults();else $('mapSearchResults').hidden=true;return;}state.suggestTimer=setTimeout(suggestMap,450);});
     document.addEventListener('pointerdown',e=>{if(!$('mapSearchPanel').contains(e.target))$('mapSearchResults').hidden=true;});
     $('selectedLabel').addEventListener('change',()=>{if(state.selected)state.selected.name=clean($('selectedLabel').value)||state.selected.name;});
