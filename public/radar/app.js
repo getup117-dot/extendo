@@ -612,8 +612,8 @@
           <button class="btn dark wide" type="submit">プロフィールを保存</button>
         </form>
       </div>
-      <div class="setting-card"><div class="toggle-line"><strong>現在地の共有</strong><span class="pill" id="sharePill">${sharing?'共有中':'OFF'}</span></div><div class="separator"></div>
-      ${sharing?`<div class="share-active" id="shareStatus"></div><button class="btn outline wide" style="margin-top:12px" data-action="stop-share">${state.stopFailed?'公開停止をもう一度試す':'位置共有を停止する'}</button>`:`<div class="field share-settings"><label for="shareDuration">共有する時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><button class="btn teal wide" data-action="start-share">GPSで現在地を共有</button><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button>`}
+      <div class="setting-card share-card ${sharing?'is-on':'is-off'}"><button type="button" class="share-switch" role="switch" aria-checked="${sharing}" data-action="${sharing?'stop-share':'start-share'}"><span class="sw-text"><strong>位置の共有</strong><span class="sw-state">${sharing?'オン：地図にあなたの位置が出ています':'オフ：誰にも見えていません'}</span></span><span class="sw-track" aria-hidden="true"><span class="sw-label">${sharing?'ON':'OFF'}</span><span class="sw-knob"></span></span></button>
+      ${sharing?`<div class="share-active" id="shareStatus"></div>${state.stopFailed?'<button class="btn outline wide" style="margin-top:12px" data-action="stop-share">公開停止をもう一度試す</button>':''}`:`<div class="field share-settings"><label for="shareDuration">オンにしたときの共有時間</label><select id="shareDuration"><option value="30">30分</option><option value="60" selected>1時間</option><option value="120">2時間</option><option value="360">6時間</option></select></div><button class="btn outline wide manual-button" data-action="manual-share">地図で選んだ地点を共有</button>`}
       </div>
       ${recoveryHTML()}
       ${areaAccountHTML()}
@@ -630,6 +630,7 @@
     const id=`#${tagFor(selfId())}`,done=hasRecovery(),open=!done||state.recoveryEdit;
     return `<div class="setting-card"><div class="section-title">引き継ぎ <span class="tag">${done?'設定済み':'未設定'}</span></div>
       <p class="recovery-id">ID：<b>${esc(id)}</b></p>
+      <p class="recovery-memo">IDと合言葉はメモしておいてね</p>
       ${open?`<form id="recoveryForm" class="form-col" style="margin-top:10px"><div class="field"><label for="recoveryWord">合言葉（ひらがな）</label><input type="text" id="recoveryWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="recoveryHint">ヒント（任意）</label><input type="text" id="recoveryHint" maxlength="30" autocomplete="off"></div><button class="btn dark wide" type="submit">${done?'合言葉を変更':'合言葉を設定'}</button></form>`:`<button class="btn outline wide" style="margin-top:10px" data-action="edit-recovery">合言葉を変更</button>`}
 </div>`;
   }
