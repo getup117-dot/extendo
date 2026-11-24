@@ -35,7 +35,7 @@
   const SPECIAL={'9501':{sprite:'assets/sprite-9501.webp',avatar:'assets/avatar-9501.webp'}};
   const specialOf=id=>SPECIAL[state.profiles.find(x=>x.id===id)?.tag||''];
   const avatarUrl=id=>{const sp=specialOf(id);if(sp)return sp.avatar;const p=state.profiles.find(x=>x.id===id);const base=(window.BEYSPOT_CONFIG||{}).supabaseUrl;return p&&p.avatar_ver&&base?`${base}/storage/v1/object/public/avatars/${id}.webp?v=${p.avatar_ver}`:'';};
-  const avatarHTML=(id,cls='avatar')=>{const u=avatarUrl(id);return u?`<span class="${cls} has-img"><img src="${u}" alt="" loading="lazy" decoding="async"></span>`:`<span class="${cls}">${esc(initial(nameFor(id)))}</span>`;};
+  const avatarHTML=(id,cls='avatar')=>{const sp=specialOf(id);if(sp)return `<span class="${cls} sprite-av"><img src="${sp.sprite}" alt=""></span>`;const u=avatarUrl(id);return u?`<span class="${cls} has-img"><img src="${u}" alt="" loading="lazy" decoding="async"></span>`:`<span class="${cls}">${esc(initial(nameFor(id)))}</span>`;};
   const ago = d => { const minutes = Math.max(0, Math.floor((Date.now()-Date.parse(d))/60000)); return minutes < 1 ? 'たった今' : minutes+'分前'; };
   function at(day, hour) { const d=new Date(); d.setDate(d.getDate()+day); d.setHours(hour,0,0,0); return d.toISOString(); }
   function seedDemo() {
@@ -399,7 +399,7 @@
     (show('areas')?areas:[]).forEach(a=>{
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
       const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false,className:'area-circle'}).addTo(state.map);
-      const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}${avatarUrl(a.user_id)?' has-img':''}" aria-hidden="true">${avatarUrl(a.user_id)?`<img src="${avatarUrl(a.user_id)}" alt="">`:esc(initial(nameFor(a.user_id)))}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
+      const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`${specialOf(a.user_id)?`<img class="sprite-pin" src="${specialOf(a.user_id).sprite}" alt="" aria-hidden="true">`:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}${avatarUrl(a.user_id)?' has-img':''}" aria-hidden="true">${avatarUrl(a.user_id)?`<img src="${avatarUrl(a.user_id)}" alt="">`:esc(initial(nameFor(a.user_id)))}</span>`}`,iconSize:specialOf(a.user_id)?[44,54]:[30,30],iconAnchor:specialOf(a.user_id)?[22,46]:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
       const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}`;
       labelMarker(m,label);
       const openA=()=>{if(Date.now()-(state.heldAt||0)<900)return;if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
@@ -610,7 +610,7 @@
     return `${state.mode==='demo'?'<div class="notice demo-notice">試用版では、位置や予定はこのブラウザ内にだけ保存されます。ほかの人には共有されません。</div>':''}
       <div class="setting-card">
         <div class="section-title">プロフィール <span class="tag">${state.mode==='demo'?'試用版':'ログイン中'}</span></div>
-        ${state.mode==='live'?`<div class="avatar-edit">${avatarHTML(selfId(),'avatar-big')}<div class="avatar-btns"><label class="btn outline avatar-pick">画像を選ぶ<input type="file" id="avatarFile" accept="image/*" hidden></label>${avatarUrl(selfId())?'<button type="button" class="linklike" data-action="avatar-remove">画像を外す</button>':''}</div></div>`:''}
+        ${state.mode==='live'?`<div class="avatar-edit">${avatarHTML(selfId(),'avatar-big')}<div class="avatar-btns"><label class="btn outline avatar-pick">画像を選ぶ<input type="file" id="avatarFile" accept="image/*" hidden></label>${state.profiles.find(x=>x.id===selfId())?.avatar_ver?'<button type="button" class="linklike" data-action="avatar-remove">画像を外す</button>':''}</div></div>`:''}
         <form id="profileForm" class="form-col">
           <div class="field"><label for="nickField">ニックネーム${tagFor(selfId())?` <span class="my-tag">#${esc(tagFor(selfId()))}</span>`:''}</label><input id="nickField" maxlength="32" required value="${esc(selfName())}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
           <div class="field"><label for="battleReady">対戦歓迎の表示</label><select id="battleReady">${profileOptions({no:'表示しない',yes:'対戦歓迎'},profile.battle_ready?'yes':'no')}</select></div>
