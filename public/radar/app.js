@@ -34,7 +34,7 @@
   // 特別なマップ表示（#番号で指定）
   const SPECIAL={'9501':{sprite:'assets/sprite-9501.webp',avatar:'assets/avatar-9501.webp'}};
   const specialOf=id=>SPECIAL[state.profiles.find(x=>x.id===id)?.tag||''];
-  const avatarUrl=id=>{const sp=specialOf(id);if(sp)return sp.avatar;const p=state.profiles.find(x=>x.id===id);const base=(window.BEYSPOT_CONFIG||{}).supabaseUrl;return p&&p.avatar_ver&&base?`${base}/storage/v1/object/public/avatars/${id}.webp?v=${p.avatar_ver}`:'';};
+  const avatarUrl=id=>{const p=state.profiles.find(x=>x.id===id);const base=(window.BEYSPOT_CONFIG||{}).supabaseUrl;if(p&&p.avatar_ver&&base)return `${base}/storage/v1/object/public/avatars/${id}.webp?v=${p.avatar_ver}`;const sp=specialOf(id);return sp?sp.avatar:'';};
   const avatarHTML=(id,cls='avatar')=>{const u=avatarUrl(id);return u?`<span class="${cls} has-img"><img src="${u}" alt="" loading="lazy" decoding="async"></span>`:`<span class="${cls}">${esc(initial(nameFor(id)))}</span>`;};
   const ago = d => { const minutes = Math.max(0, Math.floor((Date.now()-Date.parse(d))/60000)); return minutes < 1 ? 'たった今' : minutes+'分前'; };
   function at(day, hour) { const d=new Date(); d.setDate(d.getDate()+day); d.setHours(hour,0,0,0); return d.toISOString(); }
