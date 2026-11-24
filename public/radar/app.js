@@ -404,7 +404,8 @@
       labelMarker(m,label);
       const openA=()=>{if(Date.now()-(state.heldAt||0)<900)return;if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
       m.on('click',openA);circle.on('click',openA);
-      state.markers.push(circle,m);
+      // 立ちキャラの人が「いまここにいる」間は、出没エリアのキャラを出さない（2人にならないように）
+      if(specialOf(a.user_id)&&activePeople().some(p=>p.user_id===a.user_id)){m.remove();state.markers.push(circle);}else state.markers.push(circle,m);
     });
     (show('now')?people:[]).forEach(p=>{
       if(!C.validPoint(p))return;
