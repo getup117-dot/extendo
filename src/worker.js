@@ -4,7 +4,6 @@ import { handleShinkeiApi } from "./shinkei-api.js";
 import { handleSeichiApi } from "./seichi-api.js";
 import { handleSeichiExApi } from "./seichi-ex-api.js";
 import { handleBeyApi } from "./bey-api.js";
-import { handleYaochoApi } from "./yaocho-api.js";
 export { BeyStore } from "./bey-api.js"; // ベイ出没マップの投稿を保存する場所
 
 export default {
@@ -13,7 +12,6 @@ export default {
     if (url.pathname === "/api/shinkei/generate") return handleShinkeiApi(request, env);
     if (url.pathname.startsWith("/api/seichi-ex/")) return handleSeichiExApi(request, env);
     if (url.pathname.startsWith("/api/seichi/")) return handleSeichiApi(request, env);
-    if (url.pathname.startsWith("/api/yaocho/")) return handleYaochoApi(request, env);
     if (url.pathname.startsWith("/api/bey/")) return handleBeyApi(request, env);
     if (url.pathname.startsWith("/api/")) return new Response("Not found", { status: 404 });
     return env.ASSETS.fetch(request);

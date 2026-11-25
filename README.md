@@ -7,16 +7,14 @@
 | `public/index.html` | サイトのトップ（ゲームの棚） |
 | `public/img/` | カバー画像とシェア用画像 |
 | `src/` | ワーカー（`/api/` だけ担当。神経ド衰弱のAIお題生成、聖地巡礼スナップのAI） |
-| `public/<ゲーム名>/` | 各ゲーム（yaocho / ningen / seichi / shinkei / miyanashi / pizza / tekishoku / osouji / matcha / dopagaki / koukai / tenten / ehon） |
+| `public/<ゲーム名>/` | 各ゲーム（ningen / seichi / shinkei / miyanashi / pizza / tekishoku / osouji / matcha / dopagaki / koukai / tenten / ehon） |
 
 新しいゲームは `public/` にフォルダを1つ足して、トップにカードを1枚足す。
 このリポジトリに変更が入ると、Cloudflare が自動でデプロイします。
 
 神経ド衰弱のAIお題生成には、Cloudflare のシークレット `ANTHROPIC_API_KEY`（Claude API のキー）が必要です。
 
-八百長クイズ（`/yaocho/`）の自由解答も `ANTHROPIC_API_KEY` を共用します（`src/yaocho-api.js`）。
-問題集は `public/yaocho/questions.json`。分岐の `from`〜`until` は、その答えが使える公開行数の範囲（`from` は省略すると1）。
-どんな答えでも必ず正解にする。AIはまず自然な「続き」を書き、別の役割のAIが事実・正解・つながりを審査する。通らなければ「強引モード」（飛躍・こじつけOK、うそはNG）で最大2回作り直し、それでもだめなら「司会者の切り札」（封筒の言葉は何でしょう？などの定型文）で正解にする。
+八百長クイズは非公開にして `archive/yaocho/` に保管中（戻すときは public・src・トップのカードを元に戻す）。
 
 どこでも聖地巡礼スナップ（`/seichi/`）は2つのAIを使います。
 - 架空アニメの設定の捏造：`ANTHROPIC_API_KEY`（神経ド衰弱と共用）
