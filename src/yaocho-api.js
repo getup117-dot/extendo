@@ -8,7 +8,8 @@
 //         → だめなら「強引モード」（飛躍OK）で理由を添えて作り直し（最大2回）→ ②③
 //         → それでもだめなら「司会者の切り札」（どんな答えでも正解になる定型文）で必ず正解にする
 
-const MODEL = "claude-haiku-5-5"; // 作問役（時短優先で速いモデル。切れ味重視なら claude-sonnet-5-5）
+const MODEL = "claude-haiku-5-5"; // 自然モードの作問役（速いモデル）
+const LEAP_MODEL = "claude-sonnet-5-5"; // 強引モードの作問役（こじつけの切れ味重視）
 const CHECK_MODEL = "claude-haiku-5-5"; // 審査役（判定だけなので速いモデル）
 const DEADLINE_MS = 20000; // これを超えたら切り札で即正解にする
 const LATE_NATURAL_MS = 1500; // 強引モードが先に合格したとき、自然モードを待つ時間

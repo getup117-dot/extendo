@@ -95,31 +95,75 @@ byId("next").addEventListener("click", () => {
   byId("buzz").focus();
 });
 
-byId("entry").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const answer = byId("answer").value.trim();
-  if (!answer || busy) return;
-  notice();
-  const question = current();
-  if (matches(answer, question)) {
-    result("正解！", question.lines.slice(shown), question.answer);
-    return;
-  }
-  const branch = question.branches.find((option) => usable(option) && matches(answer, option));
-  if (branch) {
-    result("正解！", branch.continuation, branch.answer, true);
-    return;
-  }
-  if (!aiEnabled) {
-    notice("お試し版では、表示されている解答で八百長を試せます。");
-    return;
-  }
-  busy = true;
-  for (const control of byId("entry").elements) control.disabled = true;
-  const lines = ["司会者が問題の続きを考えています…", "スタッフがカンペを書き直しています…", "司会者が台本をめくっています…", "ディレクターと目配せしています…", "まもなく正解が発表されます…"];
+// ---- 正解発表前のカットイン（待ち時間をドキドキに変える） ----
+const SUSPENSE_LINES = [
+  "その答えで……よろしいですね？",
+  "……",
+  "（じっと、あなたの目を見つめている）",
+  "会場が静まりかえっています……",
+  "スタッフ、準備はいいか？",
+  "いやあ、勇気のある答えだ……",
+  "（司会者がカンペをちらりと見る）",
+  "……いきますよ。",
+];
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let audio;
+function beep(freq, start, length, volume = 0.18, type = "sine") {
+  try {
+    audio ||= new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime + start;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + length);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + length);
+  } catch { /* 音が出せない環境では無音で進める */ }
+}
+const heartbeat = () => { beep(58, 0, 0.16, 0.35); beep(52, 0.22, 0.2, 0.28); };
+
+function setLine(text) {
+  const line = byId("cutin-line");
+  line.textContent = text;
+  line.classList.remove("pop");
+  void line.offsetWidth;
+  line.classList.add("pop");
+}
+
+// 答えを受け取ってから正解を見せるまでの演出。pending（続きの文を返すPromise）が終わるまで引っぱる
+async function suspense(answer, pending) {
+  const cutin = byId("cutin");
+  cutin.classList.remove("final");
+  byId("cutin-stamp").hidden = true;
+  byId("cutin-answer").textContent = answer;
+  cutin.hidden = false;
   let step = 0;
-  notice(lines[0]);
-  const ticker = setInterval(() => notice(lines[Math.min(++step, lines.length - 1)]), 3000);
+  setLine(SUSPENSE_LINES[0]);
+  heartbeat();
+  const beat = setInterval(heartbeat, 1000);
+  const talk = setInterval(() => setLine(SUSPENSE_LINES[++step % SUSPENSE_LINES.length]), 2200);
+  try {
+    const [continuation] = await Promise.all([pending, sleep(2600)]);
+    clearInterval(talk);
+    cutin.classList.add("final");
+    setLine("正解は……");
+    for (let i = 0; i < 10; i++) beep(140 + i * 6, i * 0.09, 0.07, 0.12, "square");
+    await sleep(1300);
+    byId("cutin-stamp").hidden = false;
+    beep(988, 0, 0.18, 0.2, "triangle"); beep(1319, 0.14, 0.45, 0.2, "triangle");
+    await sleep(900);
+    return continuation;
+  } finally {
+    clearInterval(beat);
+    clearInterval(talk);
+    cutin.hidden = true;
+  }
+}
+
+async function askHost(question, answer) {
   try {
     const response = await fetch("/api/yaocho/continue", {
       method: "POST",
@@ -128,14 +172,38 @@ byId("entry").addEventListener("submit", async (event) => {
     });
     const data = await response.json();
     if (!response.ok || !data.continuation) throw new Error("generation failed");
-    notice();
-    result("正解！", data.continuation, answer, true);
+    return data.continuation;
   } catch {
     // 通信できなくても必ず正解にする（司会者の切り札）
-    notice();
-    result("正解！", TRUMP_CARDS[Math.floor(Math.random() * TRUMP_CARDS.length)], answer, true);
+    return TRUMP_CARDS[Math.floor(Math.random() * TRUMP_CARDS.length)];
+  }
+}
+
+byId("entry").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const answer = byId("answer").value.trim();
+  if (!answer || busy) return;
+  notice();
+  const question = current();
+  const branch = question.branches.find((option) => usable(option) && matches(answer, option));
+  if (!matches(answer, question) && !branch && !aiEnabled) {
+    notice("お試し版では、表示されている解答で八百長を試せます。");
+    return;
+  }
+  busy = true;
+  for (const control of byId("entry").elements) control.disabled = true;
+  try {
+    if (matches(answer, question)) {
+      await suspense(answer, question.lines.slice(shown));
+      result("正解！", question.lines.slice(shown), question.answer);
+    } else if (branch) {
+      await suspense(answer, branch.continuation);
+      result("正解！", branch.continuation, branch.answer, true);
+    } else {
+      const continuation = await suspense(answer, askHost(question, answer));
+      result("正解！", continuation, answer, true);
+    }
   } finally {
-    clearInterval(ticker);
     busy = false;
     for (const control of byId("entry").elements) control.disabled = false;
     if (!byId("entry").hidden) byId("answer").focus();
