@@ -79,7 +79,7 @@ async function callClaude(env, system, user, maxTokens) {
   const data = await res.json();
   const text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text).join("");
   const s = text.indexOf("{"), e = text.lastIndexOf("}");
-  if (s < 0 || e < s) throw new Error("JSONが返ってこなかった");
+  if (s < 0 || e < s) throw new Error("JSONが返ってこなかった: " + JSON.stringify({ stop: data.stop_reason, text: text.slice(0, 150) }));
   return JSON.parse(text.slice(s, e + 1));
 }
 
