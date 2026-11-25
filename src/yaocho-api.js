@@ -8,7 +8,10 @@
 //         → だめなら「強引モード」（飛躍OK）で理由を添えて作り直し（最大2回）→ ②③
 //         → それでもだめなら「司会者の切り札」（どんな答えでも正解になる定型文）で必ず正解にする
 
-const MODEL = "claude-sonnet-5-5";
+const MODEL = "claude-sonnet-5-5"; // 作問役（発想力が要る）
+const CHECK_MODEL = "claude-haiku-5-5"; // 審査役（判定だけなので速いモデル）
+const DEADLINE_MS = 20000; // これを超えたら切り札で即正解にする
+const RETRY_BUDGET_MS = 9000; // 1巡目がこれより早く終わったときだけ、強引モードをもう1回
 const MAX_ANSWER = 30;
 
 const GEN_SYSTEM = `あなたは日本語の早押し雑学クイズを完成させる作問者。
@@ -62,7 +65,7 @@ function json(body, status = 200) {
   });
 }
 
-async function callClaude(env, system, user, maxTokens) {
+async function callClaude(env, system, user, maxTokens, model = MODEL) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -70,7 +73,7 @@ async function callClaude(env, system, user, maxTokens) {
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
@@ -136,41 +139,53 @@ export async function handleYaochoApi(request, env) {
   }
 
   const prefix = question.lines.slice(0, shown);
-  let feedback = "";
+  const started = Date.now();
   const trace = []; // 各段階で何が起きたか（調整用）
-  for (const mode of ["natural", "leap", "leap"]) {
+
+  // 作問 → 形式チェック → 審査 を1回やる。合格なら続きの文を返す
+  async function attempt(mode, feedback) {
+    const t0 = Date.now();
+    const tag = (msg) => trace.push(`${mode}:${msg} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
     try {
-      // ① 作問（1回目は自然に、2回目は強引に）
       const input = { published_lines: prefix, answer };
       if (feedback) input.previous_attempt_rejected_because = feedback;
       const gen = await callClaude(env, mode === "natural" ? GEN_SYSTEM : LEAP_SYSTEM, JSON.stringify(input), 3000);
-      if (gen.continuation === null) {
-        trace.push(mode + ":null");
-        if (mode === "leap") break; // 不適切な答えなど：AIには書かせず切り札へ
-        feedback = "自然にはつなげられなかった";
-        continue;
-      }
+      if (gen.continuation === null) { tag("null"); return { refused: true }; }
       const continuation = String(gen.continuation ?? "").trim();
-
-      // ② 形式チェック
       const problem = formatProblem(continuation, prefix, answer);
-      if (problem) { feedback = problem; trace.push(mode + ":形式:" + problem); continue; }
-
-      // ③ 別の役割のAIで審査
+      if (problem) { tag("形式:" + problem); return { reason: problem }; }
       const chk = await callClaude(
         env, CHECK_SYSTEM,
         JSON.stringify({ つなぎ方: mode, 既出部分: prefix.join(""), 続き: continuation, 問題文: prefix.join("") + continuation, 指定解答: answer }),
-        2000,
+        1500, CHECK_MODEL,
       );
-      if (chk.ok === true) return json({ continuation, mode, trace });
-      feedback = String(chk.reason || "審査で不合格").slice(0, 120);
-      trace.push(mode + ":審査:" + feedback + " / " + continuation);
+      if (chk.ok === true) { tag("合格"); return { continuation }; }
+      const reason = String(chk.reason || "審査で不合格").slice(0, 120);
+      tag("審査:" + reason + " / " + continuation);
+      return { reason };
     } catch (err) {
       console.error("yaocho continue error", mode, err);
-      trace.push(mode + ":エラー:" + String(err.message || err).slice(0, 120));
-      feedback = "";
+      tag("エラー:" + String(err.message || err).slice(0, 120));
+      return {};
     }
   }
-  // ④ 司会者の切り札：どんな答えでも必ず正解にする
-  return json({ continuation: trumpCard(), mode: "trump", trace });
+
+  async function solve() {
+    // 1巡目：自然モードと強引モードを同時に走らせ、自然が通ればそちらを優先
+    const [natural, leap] = await Promise.all([attempt("natural"), attempt("leap")]);
+    if (natural.continuation) return { continuation: natural.continuation, mode: "natural" };
+    if (leap.continuation) return { continuation: leap.continuation, mode: "leap" };
+    if (leap.refused) return null; // 不適切な答えなど：AIには書かせず切り札へ
+    // 2巡目：時間に余裕があるときだけ、強引モードで理由を添えてもう1回
+    if (Date.now() - started > RETRY_BUDGET_MS) return null;
+    const again = await attempt("leap", leap.reason || natural.reason);
+    return again.continuation ? { continuation: again.continuation, mode: "leap" } : null;
+  }
+
+  const timeout = new Promise((resolve) => setTimeout(() => { trace.push("時間切れ"); resolve(null); }, DEADLINE_MS));
+  const solved = await Promise.race([solve(), timeout]);
+  const total = ((Date.now() - started) / 1000).toFixed(1) + "s";
+  if (solved) return json({ ...solved, total, trace });
+  // 司会者の切り札：どんな答えでも必ず正解にする
+  return json({ continuation: trumpCard(), mode: "trump", total, trace });
 }
