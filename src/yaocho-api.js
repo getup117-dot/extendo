@@ -27,7 +27,7 @@ const LEAP_SYSTEM = `あなたは「八百長クイズ」の強引な作問者�
 既出の問題文を一字も変えずにその直後へ続け、指定解答が正解になる「未公開部分」だけを書く。
 既出部分のすぐ後ろに文字どおり連結して読まれるので、既出部分の繰り返しや言い直しはしない。
 自然につながらなくてよい。腕の見せどころは「なるほど、そう来たか」と笑えるこじつけ。優先順位は次のとおり。
-1. 既出部分の言葉や話題から、連想・共通点・こじつけで橋を架ける（例：既出が惑星の話で答えがカレーなら「惑星の色にたとえられることもある」のような無理やりな共通点ではなく、「土星の環のように、ご飯のまわりをルーでぐるりと囲んで盛ることもある」くらいの、うそのない比喩や連想）
+1. 既出部分の言葉や話題から、連想・共通点・比喩・こじつけで橋を架ける（うその共通点は作らない。見た目・形・名前・数字・場所などの本当の共通点や、「〜のように」という比喩を使う）
 2. 既出部分の否定やひっくり返し（「〜と言いたいところですが」「〜ではなく」「〜を公転するのは惑星ですが、食卓の主役といえば」など）
 3. ことば遊び、文字や読みに関する問い（「〜と読む言葉は？」「〜で始まる〜は？」）
 4. 最後の手段として、話題の急な転換。「……というのは置いておいて」は使わない。言い回しは毎回工夫する
@@ -141,7 +141,7 @@ export async function handleYaochoApi(request, env) {
       // ① 作問（1回目は自然に、2回目は強引に）
       const input = { published_lines: prefix, answer };
       if (feedback) input.previous_attempt_rejected_because = feedback;
-      const gen = await callClaude(env, mode === "natural" ? GEN_SYSTEM : LEAP_SYSTEM, JSON.stringify(input), 450);
+      const gen = await callClaude(env, mode === "natural" ? GEN_SYSTEM : LEAP_SYSTEM, JSON.stringify(input), 3000);
       if (gen.continuation === null) {
         trace.push(mode + ":null");
         if (mode === "leap") break; // 不適切な答えなど：AIには書かせず切り札へ
@@ -158,7 +158,7 @@ export async function handleYaochoApi(request, env) {
       const chk = await callClaude(
         env, CHECK_SYSTEM,
         JSON.stringify({ つなぎ方: mode, 既出部分: prefix.join(""), 続き: continuation, 問題文: prefix.join("") + continuation, 指定解答: answer }),
-        300,
+        2000,
       );
       if (chk.ok === true) return json({ continuation, mode, trace });
       feedback = String(chk.reason || "審査で不合格").slice(0, 120);
