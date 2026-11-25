@@ -119,7 +119,7 @@ byId("entry").addEventListener("submit", async (event) => {
   const lines = ["司会者が問題の続きを考えています…", "スタッフがカンペを書き直しています…", "司会者が台本をめくっています…", "ディレクターと目配せしています…", "まもなく正解が発表されます…"];
   let step = 0;
   notice(lines[0]);
-  const ticker = setInterval(() => notice(lines[Math.min(++step, lines.length - 1)]), 2000);
+  const ticker = setInterval(() => notice(lines[Math.min(++step, lines.length - 1)]), 3000);
   try {
     const response = await fetch("/api/yaocho/continue", {
       method: "POST",
