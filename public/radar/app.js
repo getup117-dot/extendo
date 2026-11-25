@@ -152,7 +152,7 @@
   }
   function rankList(){
     const known=new Set(state.profiles.map(p=>p.id));
-    const list=state.power.filter(s=>s.calibrated&&!isResting(s)&&known.has(s.user_id)).sort((a,b)=>b.rating-a.rating);
+    const list=state.power.filter(s=>(s.calibrated||s.joined)&&!isResting(s)&&known.has(s.user_id)).sort((a,b)=>b.rating-a.rating);
     let rank=0,prev=null;list.forEach((s,i)=>{if(s.rating!==prev){rank=i+1;prev=s.rating;}s.rank=rank;});return list;
   }
   function powerAccountHTML(){
@@ -162,7 +162,9 @@
     const all=rankList(),areas=state.user?myAreas():[],area=areas.find(a=>a.id===state.rankArea);
     const list=area?all.filter(r=>state.areas.some(a=>a.user_id===r.user_id&&meters(a,area)<1500)):all;
     const rows=list.slice(0,50).map(r=>`<div class="rank-row${r.user_id===selfId()?' is-me':''}"><span class="rank-no">${area?'全体':''}${r.rank}位</span>${avatarHTML(r.user_id,'rank-av')}<span class="rank-name">${esc(fullName(r.user_id))}</span><span class="rank-power">${r.rating}</span></div>`).join('');
-    return `${head?`<div class="setting-card"><div class="section-title">あなたの戦闘力</div><p class="power-head">${head}</p></div>`:''}<div class="setting-card">
+    const inRank=!!s&&(s.calibrated||s.joined);
+    const joinBtn=state.user&&!inRank?'<button class="btn primary wide" style="margin-top:12px" data-action="join-ranking">ランキングに参加</button>':'';
+    return `${head?`<div class="setting-card"><div class="section-title">あなたの戦闘力</div><p class="power-head">${head}</p>${joinBtn}</div>`:''}<div class="setting-card">
       <div class="rank-top"><strong>順位</strong>${areas.length?`<select id="rankArea" aria-label="順位の絞り込み"><option value="">全体</option>${areas.map(a=>`<option value="${esc(a.id)}"${a.id===state.rankArea?' selected':''}>${esc(a.name)}によくいる人</option>`).join('')}</select>`:''}</div>
       <div class="rank-list">${rows||'<p class="hint">まだ順位に載っている人はいません。</p>'}</div></div>`;
   }
@@ -1302,7 +1304,7 @@
       if(t.dataset.tab){closePlace();endPick();$('mapSearchResults').hidden=true;state.tab=t.dataset.tab;setSheet(isMobile()&&state.tab==='now');render();return;}
       if(t.dataset.filter){state.filter=t.dataset.filter;render();return;}
       const action=t.dataset.action,id=t.dataset.id;
-      if(!logged()&&/^(new-event|event-here|register-here|manual-share|start-share|rsvp|report|report-reason|edit-event|delete-event|pick-map|save-spot|area-here|add-area-map|edit-area|delete-area|new-battle|join-match|leave-match|cancel-match|confirm-battle|reject-battle|delete-battle)$/.test(action)){closePlace();endPick();state.tab='account';setSheet(isMobile());render();notify('登録や参加は、ニックネームではじめると使えます');return;}
+      if(!logged()&&/^(new-event|event-here|register-here|manual-share|start-share|rsvp|report|report-reason|edit-event|delete-event|pick-map|save-spot|area-here|add-area-map|edit-area|delete-area|new-battle|join-ranking|join-match|leave-match|cancel-match|confirm-battle|reject-battle|delete-battle)$/.test(action)){closePlace();endPick();state.tab='account';setSheet(isMobile());render();notify('登録や参加は、ニックネームではじめると使えます');return;}
       if(action==='confirm-no'){resolveConfirm(false);return;}if(action==='confirm-yes'){resolveConfirm(true);return;}
       await runBusy(t,async()=>{
         if(action==='new-event')newEvent();
@@ -1326,6 +1328,7 @@
         else if(action==='confirm-battle')await confirmBattle(id);
         else if(action==='power-next')nextPower();
         else if(action==='avatar-remove')await removeAvatar();
+        else if(action==='join-ranking'){const {error}=await state.sb.rpc('join_ranking');if(error)throw Error('参加できませんでした');await loadLive();notify('ランキングに参加しました');}
         else if(action==='join-match')await joinMatch(id);
         else if(action==='leave-match')await leaveMatch(id);
         else if(action==='cancel-match')await cancelMatch(id);
