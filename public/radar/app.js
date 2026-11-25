@@ -471,7 +471,7 @@
     $('listSearch').placeholder=listLabel;
     $('listSearch').setAttribute('aria-label',listLabel);
     document.querySelectorAll('[data-filter]').forEach(el=>{el.classList.toggle('active',el.dataset.filter===state.filter);el.setAttribute('aria-pressed',String(el.dataset.filter===state.filter));});
-    $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():state.tab==='battle'?renderBattle():renderAccount());
+    $('panelContent').innerHTML=!logged()&&(state.tab==='account'||!viewing())?loginWall():(!logged()?viewBanner():'')+(state.tab==='account'?nudgeHTML():'')+(state.tab==='now'?renderNow():state.tab==='plans'?renderPlans():state.tab==='battle'?renderBattle():renderAccount());
     document.body.dataset.tab=state.tab;
     if(document.body.dataset.lastTab!==state.tab){document.body.dataset.lastTab=state.tab;document.body.classList.remove('scrolled-down');}
     {const m=$('mainAction');if(state.tab==='now'){m.dataset.action='go-gps';m.textContent='📍 いまここにいる';m.className='btn teal wide';}else if(state.tab==='battle'){m.dataset.action='new-battle';m.textContent='＋ 対戦を記録';m.className='btn primary wide';}else{m.dataset.action='new-event';m.textContent='＋ 出没予定を登録';m.className='btn primary wide';}}
@@ -606,6 +606,15 @@
   function loginWall() {
     return `<div class="setting-card form-col"><h2 class="login-heading">ニックネームではじめる</h2><p class="hint">メール登録は不要です。</p><form id="startForm" class="form-col"><div class="field"><label for="startNick">ニックネーム</label><input type="text" id="startNick" required maxlength="32" placeholder="例：しょうた" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div><label class="agree"><input type="checkbox" id="startAgree" required><span>18歳以上です。会うのは公園やお店など人のいる場所にし、危ないことはしません。トラブルは自己責任とし、運営は責任を負わないことに同意します。</span></label><button class="btn teal wide" type="submit">はじめる</button></form><p class="help">この端末のブラウザに記録されます。</p></div>
     <div class="setting-card form-col"><h2 class="login-heading">IDと合言葉で戻る</h2><form id="restoreForm" class="form-col"><div class="field"><label for="restoreId">ID（4ケタの番号）</label><input type="text" id="restoreId" required maxlength="6" inputmode="numeric" placeholder="例：1234" autocomplete="off"></div><div class="field"><label for="restoreWord">合言葉（ひらがな）</label><input type="text" id="restoreWord" required maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button type="button" class="linklike restore-hint-btn" data-action="show-hint">ヒントを見る</button><p id="restoreHint" class="help" hidden></p></div><button class="btn dark wide" type="submit">戻る</button></form></div>`;
+  }
+  const nudgeKey=()=>'beyradar-nudge-closed-'+selfId();
+  function nudgeHTML(){
+    if(state.mode!=='live'||!state.user||hasRecovery()||storage.get(nudgeKey(),false))return '';
+    return `<div class="setting-card nudge"><button type="button" class="nudge-x" data-action="nudge-close" aria-label="閉じる">×</button>
+      <strong class="nudge-title">合言葉を設定しておこう</strong>
+      <p class="nudge-text">ブラウザのデータが消えても、IDと合言葉で戻れます。<b>IDの番号と合言葉は、メモかスクショで残しておいてね。</b></p>
+      <p class="nudge-id">あなたのID：<b>#${esc(tagFor(selfId()))}</b></p>
+      <button type="button" class="btn primary wide" data-action="nudge-go">合言葉を設定する</button></div>`;
   }
   function renderAccount() {
     const mine=activePeople().find(p=>p.user_id===selfId()), sharing=!!state.share||!!mine;
@@ -1328,6 +1337,8 @@
         else if(action==='confirm-battle')await confirmBattle(id);
         else if(action==='power-next')nextPower();
         else if(action==='avatar-remove')await removeAvatar();
+        else if(action==='nudge-close'){storage.set(nudgeKey(),true);render();}
+        else if(action==='nudge-go'){const w=$('recoveryWord');if(w){w.closest('.setting-card').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>w.focus({preventScroll:true}),400);}}
         else if(action==='join-ranking'){const {error}=await state.sb.rpc('join_ranking');if(error)throw Error('参加できませんでした');await loadLive();notify('ランキングに参加しました');}
         else if(action==='join-match')await joinMatch(id);
         else if(action==='leave-match')await leaveMatch(id);
