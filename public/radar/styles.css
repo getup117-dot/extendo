@@ -414,3 +414,5 @@ body.radar-open .mapfloat{display:none}
 .profile-more[open] summary::after{transform:rotate(-135deg);margin-top:4px}
 .profile-more-body{padding:0 16px 16px}
 .avatar-big.sprite-av img{margin-top:0;height:100%}
+
+.agree{gap:12px!important;font-size:14px!important;line-height:1.6!important;cursor:pointer}.agree input{flex:none;width:22px!important;height:22px!important;min-height:0!important;margin:2px 0 0!important;padding:0!important;accent-color:var(--teal,#12a59e)}.agree span{flex:1}
