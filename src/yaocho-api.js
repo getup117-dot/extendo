@@ -135,6 +135,7 @@ export async function handleYaochoApi(request, env) {
 
   const prefix = question.lines.slice(0, shown);
   let feedback = "";
+  const trace = []; // 各段階で何が起きたか（調整用）
   for (const mode of ["natural", "leap", "leap"]) {
     try {
       // ① 作問（1回目は自然に、2回目は強引に）
@@ -142,6 +143,7 @@ export async function handleYaochoApi(request, env) {
       if (feedback) input.previous_attempt_rejected_because = feedback;
       const gen = await callClaude(env, mode === "natural" ? GEN_SYSTEM : LEAP_SYSTEM, JSON.stringify(input), 450);
       if (gen.continuation === null) {
+        trace.push(mode + ":null");
         if (mode === "leap") break; // 不適切な答えなど：AIには書かせず切り札へ
         feedback = "自然にはつなげられなかった";
         continue;
@@ -150,7 +152,7 @@ export async function handleYaochoApi(request, env) {
 
       // ② 形式チェック
       const problem = formatProblem(continuation, prefix, answer);
-      if (problem) { feedback = problem; continue; }
+      if (problem) { feedback = problem; trace.push(mode + ":形式:" + problem); continue; }
 
       // ③ 別の役割のAIで審査
       const chk = await callClaude(
@@ -158,13 +160,15 @@ export async function handleYaochoApi(request, env) {
         JSON.stringify({ つなぎ方: mode, 既出部分: prefix.join(""), 続き: continuation, 問題文: prefix.join("") + continuation, 指定解答: answer }),
         300,
       );
-      if (chk.ok === true) return json({ continuation, mode });
+      if (chk.ok === true) return json({ continuation, mode, trace });
       feedback = String(chk.reason || "審査で不合格").slice(0, 120);
+      trace.push(mode + ":審査:" + feedback + " / " + continuation);
     } catch (err) {
       console.error("yaocho continue error", mode, err);
+      trace.push(mode + ":エラー:" + String(err.message || err).slice(0, 120));
       feedback = "";
     }
   }
   // ④ 司会者の切り札：どんな答えでも必ず正解にする
-  return json({ continuation: trumpCard(), mode: "trump" });
+  return json({ continuation: trumpCard(), mode: "trump", trace });
 }
