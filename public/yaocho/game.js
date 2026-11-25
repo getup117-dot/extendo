@@ -6,6 +6,12 @@ const usable = (option) => (option.from ?? 1) <= shown && shown <= option.until;
 const matches = (answer, option) =>
   [option.answer, ...option.aliases].some((alias) => normalize(alias) === normalize(answer));
 
+const TRUMP_CARDS = [
+  "──と思わせておいて、司会者の手元の封筒に書かれている言葉は何でしょう？",
+  "──という前置きはさておき、司会者がいま心に思い浮かべているものは何でしょう？",
+  "──と読み上げたところで問題を変更します。本日の番組の「ラッキーワード」は何でしょう？",
+];
+
 let questions;
 let aiEnabled = false;
 let index = 0;
@@ -110,7 +116,7 @@ byId("entry").addEventListener("submit", async (event) => {
   }
   busy = true;
   for (const control of byId("entry").elements) control.disabled = true;
-  notice("司会者が問題の続きを考えています…（10秒ほど）");
+  notice("司会者が問題の続きを考えています…（10〜20秒ほど）");
   try {
     const response = await fetch("/api/yaocho/continue", {
       method: "POST",
@@ -118,15 +124,13 @@ byId("entry").addEventListener("submit", async (event) => {
       body: JSON.stringify({id: question.id, shown, answer}),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error("generation failed");
-    if (!data.continuation) {
-      notice("ここからその答えにつなぐのは難しいようです。別の答えで試せます。");
-      return;
-    }
+    if (!response.ok || !data.continuation) throw new Error("generation failed");
     notice();
     result("正解！", data.continuation, answer, true);
   } catch {
-    notice("司会者につながりませんでした。もう一度試せます。");
+    // 通信できなくても必ず正解にする（司会者の切り札）
+    notice();
+    result("正解！", TRUMP_CARDS[Math.floor(Math.random() * TRUMP_CARDS.length)], answer, true);
   } finally {
     busy = false;
     for (const control of byId("entry").elements) control.disabled = false;
