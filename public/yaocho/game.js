@@ -116,7 +116,10 @@ byId("entry").addEventListener("submit", async (event) => {
   }
   busy = true;
   for (const control of byId("entry").elements) control.disabled = true;
-  notice("司会者が問題の続きを考えています…（20秒ほどかかります）");
+  const lines = ["司会者が問題の続きを考えています…", "スタッフがカンペを書き直しています…", "司会者が台本をめくっています…", "ディレクターと目配せしています…", "まもなく正解が発表されます…"];
+  let step = 0;
+  notice(lines[0]);
+  const ticker = setInterval(() => notice(lines[Math.min(++step, lines.length - 1)]), 3000);
   try {
     const response = await fetch("/api/yaocho/continue", {
       method: "POST",
@@ -132,6 +135,7 @@ byId("entry").addEventListener("submit", async (event) => {
     notice();
     result("正解！", TRUMP_CARDS[Math.floor(Math.random() * TRUMP_CARDS.length)], answer, true);
   } finally {
+    clearInterval(ticker);
     busy = false;
     for (const control of byId("entry").elements) control.disabled = false;
     if (!byId("entry").hidden) byId("answer").focus();

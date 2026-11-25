@@ -11,6 +11,7 @@
 const MODEL = "claude-sonnet-5-5"; // 作問役（発想力が要る）
 const CHECK_MODEL = "claude-haiku-5-5"; // 審査役（判定だけなので速いモデル）
 const DEADLINE_MS = 20000; // これを超えたら切り札で即正解にする
+const LATE_NATURAL_MS = 1500; // 強引モードが先に合格したとき、自然モードを待つ時間
 const RETRY_BUDGET_MS = 9000; // 1巡目がこれより早く終わったときだけ、強引モードをもう1回
 const MAX_ANSWER = 30;
 
@@ -171,8 +172,15 @@ export async function handleYaochoApi(request, env) {
   }
 
   async function solve() {
-    // 1巡目：自然モードと強引モードを同時に走らせ、自然が通ればそちらを優先
-    const [natural, leap] = await Promise.all([attempt("natural"), attempt("leap")]);
+    // 1巡目：自然モードと強引モードを同時に走らせ、自然が通ればそちらを優先。
+    // 強引モードが先に合格したら、自然モードは少しだけ待って打ち切る
+    const naturalP = attempt("natural");
+    const leapP = attempt("leap");
+    const wait = (ms) => new Promise((r) => setTimeout(() => r({ late: true }), ms));
+    let natural = await Promise.race([naturalP, leapP.then(() => null)]);
+    if (natural?.continuation) return { continuation: natural.continuation, mode: "natural" };
+    const leap = await leapP;
+    if (natural === null) natural = leap.continuation ? await Promise.race([naturalP, wait(LATE_NATURAL_MS)]) : await naturalP;
     if (natural.continuation) return { continuation: natural.continuation, mode: "natural" };
     if (leap.continuation) return { continuation: leap.continuation, mode: "leap" };
     if (leap.refused) return null; // 不適切な答えなど：AIには書かせず切り札へ
