@@ -116,7 +116,7 @@ byId("entry").addEventListener("submit", async (event) => {
   }
   busy = true;
   for (const control of byId("entry").elements) control.disabled = true;
-  notice("司会者が問題の続きを考えています…（10〜20秒ほど）");
+  notice("司会者が問題の続きを考えています…（20秒ほどかかります）");
   try {
     const response = await fetch("/api/yaocho/continue", {
       method: "POST",
