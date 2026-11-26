@@ -423,3 +423,7 @@ body.radar-open .mapfloat{display:none}
 .nudge-text{margin:8px 0 6px;font-size:14px;line-height:1.6;color:#3c4043}.nudge-text b{color:#e8590c}
 .nudge-id{margin:0 0 12px;font-size:15px}.nudge-id b{font-size:20px;color:#13303d}
 .nudge-x{padding:0!important;min-height:0!important;min-width:0!important;display:grid;place-items:center}
+
+.now-tag{position:absolute;left:50%;bottom:calc(100% - 1px);transform:translateX(-50%);pointer-events:none;background:#ff744f;color:#fff;font-size:11px;font-weight:800;line-height:1;padding:4px 8px 4px;border:2px solid #fff;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px #071b2640;z-index:2}
+.now-tag::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top:6px solid #ff744f;border-bottom:0;margin-top:1px;filter:drop-shadow(0 2px 0 #fff)}
+.sprite-hit .now-tag{bottom:calc(100% + 6px)}

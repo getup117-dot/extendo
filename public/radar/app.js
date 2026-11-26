@@ -373,10 +373,11 @@
   }
   function markerOptions(kind, label, mine=false,ready=false,uid=null) {
     const event=kind==='event',av=!event&&uid?avatarUrl(uid):'',sp=!event&&uid?specialOf(uid):null;
-    if(sp)return {icon:L.divIcon({className:'radar-hit sprite-hit',html:`<img class="sprite-pin" src="${sp.sprite}" alt="" aria-hidden="true">`,iconSize:[44,54],iconAnchor:[22,52],popupAnchor:[0,-48]}),title:label,alt:label};
+    const now=kind==='person'?'<span class="now-tag" aria-hidden="true">いまいる</span>':'';
+    if(sp)return {icon:L.divIcon({className:'radar-hit sprite-hit',html:`${now}<img class="sprite-pin" src="${sp.sprite}" alt="" aria-hidden="true">`,iconSize:[44,54],iconAnchor:[22,52],popupAnchor:[0,-48]}),title:label,alt:label};
     const icon=L.divIcon({
       className:'radar-hit',
-      html:`<span aria-hidden="true" class="${event?'battle-pin':'radar-blip'}${mine?' is-mine':''}${ready?' is-ready':''}${av?' has-img':''}">${av?`<img src="${av}" alt="">`:''}</span>`,
+      html:`${now}<span aria-hidden="true" class="${event?'battle-pin':'radar-blip'}${mine?' is-mine':''}${ready?' is-ready':''}${av?' has-img':''}">${av?`<img src="${av}" alt="">`:''}</span>`,
       iconSize:[44,44],iconAnchor:event?[22,40]:[22,22],popupAnchor:[0,-17]
     });
     return {icon,title:label,alt:label};
@@ -415,7 +416,7 @@
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
       const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}${rivalHTML(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>${chanceHTML(p.user_id)}`;
       state.popByKey['p'+p.user_id]=pop;
-      const m=L.marker([p.lat,p.lng],markerOptions('person',label,p.user_id===selfId(),ready,p.user_id)).addTo(state.map);
+      const m=L.marker([p.lat,p.lng],{...markerOptions('person',label,p.user_id===selfId(),ready,p.user_id),zIndexOffset:800}).addTo(state.map);
       labelMarker(m,label);
       m.on('click',()=>{
         if(state.pickMode){chooseMapPoint(p,false);return;}
