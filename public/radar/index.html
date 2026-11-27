@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="preconnect" href="https://basemaps.cartocdn.com">
 <link rel="stylesheet" href="vendor/leaflet.css">
-<link rel="stylesheet" href="styles.css?v=202611262359">
+<link rel="stylesheet" href="styles.css?v=202611271000">
 </head>
 <body>
 <header class="header">
@@ -103,6 +103,7 @@
     <div class="field"><label for="eventDetail">ひとこと（任意）</label><textarea id="eventDetail" maxlength="300" placeholder="対戦歓迎、初心者OK、持ち物など"></textarea></div>
     <div class="notice">誰でも見られます。自宅などの住所は入れないでください。</div>
     <button class="btn primary wide" type="submit" id="eventSave">予定を登録する</button>
+    <button class="btn wide remove-btn" type="button" id="eventRemove" hidden>予定を消す</button>
   </form>
 </div></div>
 <div id="settingsOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-label="接続設定"><div class="modal">
@@ -116,14 +117,23 @@
 <div id="confirmOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modal"><div class="modal-head"><h2 id="confirmTitle">確認</h2><button class="xbtn" data-action="confirm-no" aria-label="閉じる">×</button></div><p id="confirmMessage" class="hint"></p><div class="confirm-actions"><button class="btn outline" data-action="confirm-no">キャンセル</button><button class="btn primary" data-action="confirm-yes" id="confirmYes">削除する</button></div></div></div>
 <div id="powerOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="powerTitle"><div class="modal power-modal"><h2 id="powerTitle"></h2><div id="powerBody" class="power-body"></div><button class="btn primary wide" data-action="power-next">OK</button></div></div>
 <div id="reportOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="reportTitle"><div class="modal"><div class="modal-head"><h2 id="reportTitle">通報する</h2><button class="xbtn" data-action="close-report" aria-label="閉じる">×</button></div><p class="hint">理由を選んでください。</p><div class="report-reasons"><button class="btn outline wide" data-action="report-reason" data-reason="迷惑・いたずら">迷惑・いたずら</button><button class="btn outline wide" data-action="report-reason" data-reason="個人の住所・職場">個人の住所・職場</button><button class="btn outline wide" data-action="report-reason" data-reason="不適切な内容">不適切な内容</button><button class="btn outline wide" data-action="report-reason" data-reason="その他">その他</button></div></div></div>
+<div id="nowOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="nowTitle"><div class="modal">
+  <div class="modal-head"><h2 id="nowTitle">いまいる</h2><button class="xbtn" data-action="close-now" aria-label="閉じる">×</button></div>
+  <div class="form-col">
+    <div class="now-status"><span id="nowKind"></span><b id="nowLeft"></b></div>
+    <div class="now-row"><label for="nowDuration">時間</label><select id="nowDuration"><option value="30">30分</option><option value="60">1時間</option><option value="120">2時間</option><option value="180">3時間</option><option value="360">6時間</option></select></div>
+    <button class="btn wide remove-btn" type="button" data-action="now-stop">共有をやめる</button>
+  </div>
+</div></div>
 <div id="areaOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="areaDialogTitle"><div class="modal">
   <div class="modal-head"><h2 id="areaDialogTitle">出没エリアに登録</h2><button class="xbtn" data-action="close-area" aria-label="閉じる">×</button></div>
   <form id="areaForm" class="form-col">
-    <p class="hint">よくいる場所を地図に出しておけます。<span id="areaCount"></span></p>
+    <p class="hint" id="areaHint">よくいる場所を地図に出しておけます。<span id="areaCount"></span></p>
     <div class="field"><label for="areaLabel">場所の名前</label><input autocomplete="off" id="areaLabel" maxlength="60" required placeholder="例：○○店、○○公園"></div>
     <div class="field"><label for="areaWhen">よくいる曜日・時間帯（任意）</label><input autocomplete="off" id="areaWhen" maxlength="40" placeholder="例：土日の午後、平日の夜"></div>
-    <div class="notice">誰でも見られます。お店・公園など公共の場所だけにしてください。</div>
+    <div class="notice" id="areaNotice">誰でも見られます。お店・公園など公共の場所だけにしてください。</div>
     <button class="btn primary wide" type="submit" id="areaSave">登録する</button>
+    <button class="btn wide remove-btn" type="button" id="areaRemove" data-action="remove-area" hidden>エリアを外す</button>
   </form>
 </div></div>
 <div id="battleOverlay" class="modaloverlay" role="dialog" aria-modal="true" aria-labelledby="battleDialogTitle"><div class="modal">
@@ -139,6 +149,6 @@
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/supabase.min.js"></script>
 <script src="config.js"></script>
-<script src="core.js?v=202611262359"></script>
-<script src="app.js?v=202611262359"></script>
+<script src="core.js?v=202611271000"></script>
+<script src="app.js?v=202611271000"></script>
 </body></html>

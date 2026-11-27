@@ -427,3 +427,13 @@ body.radar-open .mapfloat{display:none}
 .now-tag{position:absolute;left:50%;bottom:calc(100% - 1px);transform:translateX(-50%);pointer-events:none;background:#ff744f;color:#fff;font-size:11px;font-weight:800;line-height:1;padding:4px 8px 4px;border:2px solid #fff;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px #071b2640;z-index:2}
 .now-tag::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top:6px solid #ff744f;border-bottom:0;margin-top:1px;filter:drop-shadow(0 2px 0 #fff)}
 .sprite-hit .now-tag{bottom:calc(100% + 6px)}
+
+#confirmOverlay{z-index:2200}
+.leaflet-marker-icon{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.remove-btn{background:#fff;color:#d2522f;border:1.5px solid #f0b8a6}
+.edit-own{margin-top:10px}
+.now-status{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#e7faf4;border:1px solid #96ddd1;border-radius:14px;padding:12px 14px;font-size:14px;color:#27766c}
+.now-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.now-row label{font-size:14px;font-weight:800;color:#152a34}
+.now-row select{flex:1;max-width:220px}
+#nowOverlay .remove-btn{margin-top:8px}

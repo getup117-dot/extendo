@@ -271,13 +271,16 @@
       const pin=e=>{const ll=state.map.mouseEventToLatLng(e);chooseMapPoint({lat:ll.lat,lng:ll.lng},false);};
       box.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;
         if(t){clearTimeout(t.timer);t.multi=true;return;}
+        {const own=e.target.closest('[data-own]');if(own&&e.isPrimary&&!state.pickMode){const key=own.getAttribute('data-own');
+          t={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),own:true};
+          t.timer=setTimeout(()=>{if(!t||t.multi)return;t.held=true;state.heldAt=Date.now();navigator.vibrate?.(15);editOwn(key);},500);return;}}
         if(onUI(e))return;
         t={id:e.pointerId,x:e.clientX,y:e.clientY,t:Date.now(),multi:!e.isPrimary,onArea:!!e.target.closest('.area-circle')};
         const ev={clientX:e.clientX,clientY:e.clientY};
         t.timer=setTimeout(()=>{if(!t||t.multi)return;t.held=true;state.heldAt=Date.now();navigator.vibrate?.(15);pin(ev);},500);});
       box.addEventListener('pointermove',e=>{if(t&&e.pointerId===t.id&&Math.hypot(e.clientX-t.x,e.clientY-t.y)>10){clearTimeout(t.timer);t.moved=true;}});
       const end=e=>{const s=t;if(!s||e.pointerId!==s.id)return;clearTimeout(s.timer);t=null;lastTouch=Date.now();
-        if(e.type!=='pointerup'||s.multi||s.moved||s.held||Date.now()-s.t>450)return;
+        if(s.own||e.type!=='pointerup'||s.multi||s.moved||s.held||Date.now()-s.t>450)return;
         if(s.onArea)return;
         if(state.pickMode){pin(e);return;}
         const now=Date.now();
@@ -403,8 +406,8 @@
       const stale=areaStale(a),mine=a.user_id===selfId(),label=`出没エリア：${a.name}（${nameFor(a.user_id)}）`;
       const circle=L.circle([a.lat,a.lng],{radius:160,color:mine?'#152a34':'#7a5cff',weight:2,dashArray:'5 6',opacity:stale?.35:.8,fillColor:'#7a5cff',fillOpacity:stale?.05:.14,interactive:true,bubblingMouseEvents:false,className:'area-circle'}).addTo(state.map);
       const m=L.marker([a.lat,a.lng],{icon:L.divIcon({className:'area-hit',html:`${specialOf(a.user_id)?`<img class="sprite-pin" src="${specialOf(a.user_id).sprite}" alt="" aria-hidden="true">`:`<span class="area-dot${stale?' is-stale':''}${mine?' is-mine':''}${avatarUrl(a.user_id)?' has-img':''}" aria-hidden="true">${avatarUrl(a.user_id)?`<img src="${avatarUrl(a.user_id)}" alt="">`:esc(initial(nameFor(a.user_id)))}</span>`}`,iconSize:specialOf(a.user_id)?[44,54]:[30,30],iconAnchor:specialOf(a.user_id)?[22,46]:[15,15],popupAnchor:[0,-12]}),title:label,alt:label,zIndexOffset:-500}).addTo(state.map);
-      const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}`;
-      labelMarker(m,label);
+      const pop=`<div class="popup-title">${esc(fullName(a.user_id))}${mine?'（あなた）':''}の出没エリア</div><div><strong>${esc(a.name)}</strong></div>${a.when_text?`<div>よくいる：${esc(a.when_text)}</div>`:''}${stale?'<div class="popup-muted">最近は来ていないかも</div>':''}${profileBadges(a.user_id)}${rivalHTML(a.user_id)}${chanceHTML(a.user_id)}${mine?`<button class="tiny-btn edit-own" data-action="edit-area" data-id="${esc(a.id)}">編集</button>`:''}`;
+      labelMarker(m,label);if(mine)m.getElement()?.setAttribute('data-own','area:'+a.id);
       const openA=()=>{if(Date.now()-(state.heldAt||0)<900)return;if(state.pickMode){chooseMapPoint({lat:a.lat,lng:a.lng,name:a.name},false);return;}showInfo(pop,a.lat,a.lng,'a'+a.id);};state.popByKey['a'+a.id]=pop;
       m.on('click',openA);circle.on('click',openA);
       // 立ちキャラの人が「いまここにいる」間は、出没エリアのキャラを出さない（2人にならないように）
@@ -414,11 +417,13 @@
       if(!C.validPoint(p))return;
       const ready=!!state.profiles.find(profile=>profile.id===p.user_id)?.battle_ready;
       const label='現在地：'+nameFor(p.user_id)+(ready?'（対戦歓迎）':'');
-      const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}${rivalHTML(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>${chanceHTML(p.user_id)}`;
+      const pop=`<div class="popup-title">${esc(nameFor(p.user_id))}${p.user_id===selfId()?'（あなた）':''}</div>${profileBadges(p.user_id)}${rivalHTML(p.user_id)}<div>${p.precision==='approx'?'約500mの概略位置':p.kind==='checkin'?'選んだ地点':'詳細位置'}を共有中</div><div class="popup-muted">${esc(ago(p.updated_at))}更新</div>${chanceHTML(p.user_id)}${p.user_id===selfId()?'<button class="tiny-btn edit-own" data-action="edit-now">編集</button>':''}`;
       state.popByKey['p'+p.user_id]=pop;
       const m=L.marker([p.lat,p.lng],{...markerOptions('person',label,p.user_id===selfId(),ready,p.user_id),zIndexOffset:800}).addTo(state.map);
       labelMarker(m,label);
+      if(p.user_id===selfId())m.getElement()?.setAttribute('data-own','now');
       m.on('click',()=>{
+        if(Date.now()-(state.heldAt||0)<900)return;
         if(state.pickMode){chooseMapPoint(p,false);return;}
         if(isMobile())setSheet(true);showInfo(pop,p.lat,p.lng,'p'+p.user_id);
       });
@@ -428,8 +433,9 @@
       if(!C.validPoint(ev))return;
       const label='出没予定：'+ev.title;
       const m=L.marker([ev.lat,ev.lng],markerOptions('event',label)).addTo(state.map);
-      labelMarker(m,label);
+      labelMarker(m,label);if(ev.user_id===selfId())m.getElement()?.setAttribute('data-own','event:'+ev.id);
       m.on('click',()=>{
+        if(Date.now()-(state.heldAt||0)<900)return;
         if(state.pickMode)chooseMapPoint({lat:ev.lat,lng:ev.lng,name:ev.place_name},false);
         else openMapEvent(ev);
       });
@@ -717,7 +723,7 @@
   function areaAccountHTML(){
     if(!state.extras||state.mode!=='live')return '';
     const list=myAreas();
-    return `<div class="setting-card"><div class="section-title">出没エリア <span class="count">${list.length}/${AREA_MAX}</span></div>${list.map(a=>`<div class="battle-row"><div><strong>${esc(a.name)}</strong><div class="person-sub">${a.when_text?'よくいる：'+esc(a.when_text):'曜日・時間帯は未設定'}</div></div><div class="battle-actions"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図</button><button class="tiny-btn" data-action="edit-area" data-id="${esc(a.id)}">編集</button><button class="tiny-btn" data-action="delete-area" data-id="${esc(a.id)}">消す</button></div></div>`).join('')||'<p class="hint">よく行くお店や公園を地図に出しておけます。</p>'}${list.length<AREA_MAX?'<button class="btn outline wide" style="margin-top:10px" data-action="add-area-map">地図で場所を選んで追加</button>':''}</div>`;
+    return `<div class="setting-card"><div class="section-title">出没エリア <span class="count">${list.length}/${AREA_MAX}</span></div>${list.map(a=>`<div class="battle-row"><div><strong>${esc(a.name)}</strong><div class="person-sub">${a.when_text?'よくいる：'+esc(a.when_text):'曜日・時間帯は未設定'}</div></div><div class="battle-actions"><button class="tiny-btn" data-action="go-area" data-id="${esc(a.id)}">地図</button><button class="tiny-btn" data-action="edit-area" data-id="${esc(a.id)}">編集</button><button class="tiny-btn" data-action="delete-area" data-id="${esc(a.id)}">外す</button></div></div>`).join('')||'<p class="hint">よく行くお店や公園を地図に出しておけます。</p>'}${list.length<AREA_MAX?'<button class="btn outline wide" style="margin-top:10px" data-action="add-area-map">地図で場所を選んで追加</button>':''}</div>`;
   }
   function updateShareIndicator() {
     const el=$('shareStatus'); if(!el)return;
@@ -768,7 +774,8 @@
     $('eventStadium').value=d.stadiumPlan||'unset';
     {const m=d.mode==='match'?'match':'go';document.querySelectorAll('input[name="eventMode"]').forEach(r=>r.checked=r.value===m);}
     state.chosen=C.validPoint(d)?{lat:Number(d.lat),lng:Number(d.lng)}:null;
-    $('eventDialogTitle').textContent=d.id?'出没予定を編集':'出没予定を登録';$('eventSave').textContent=d.id?'変更を保存':'予定を登録する';
+    $('eventDialogTitle').textContent=d.id?'出没予定':'出没予定を登録';
+    {const ev=d.id&&state.events.find(x=>x.id===d.id),b=$('eventRemove');b.hidden=!ev;if(ev){const st=isMatch(ev)?matchState(ev):'';const cm=st==='open'||st==='matched';b.dataset.id=ev.id;b.dataset.action=cm?'cancel-match':'delete-event';b.textContent=cm?'募集を取り消す':'予定を消す';}}$('eventSave').textContent=d.id?'変更を保存':'予定を登録する';
     updateCoords();openModal('event');
   }
   function newEvent(event) {
@@ -802,10 +809,10 @@
   }
   async function deleteEvent(id) {
     const ev=state.events.find(e=>e.id===id&&e.user_id===selfId());if(!ev)return;
-    if(!await askConfirm(`「${ev.title}」を削除しますか？`))return;
+    if(!await askConfirm(`「${ev.title}」を消しますか？`,'予定を消す','消す'))return;
     if(state.mode==='demo'){await updateDemo(latest=>{latest.events=latest.events.filter(e=>e.id!==id);latest.rsvps=latest.rsvps.filter(r=>r.event_id!==id);});}
     else {const {data,error}=await state.sb.from('events').delete().eq('id',id).eq('user_id',selfId()).select('id');if(error)throw error;if(!data?.length)throw Error('削除できませんでした。予定を再読み込みしてください');await loadLive();}
-    notify('予定を削除しました');
+    closeModal('event');state.draft=null;notify('予定を消しました');
   }
   async function rsvp(id) {
     const ev=activeEvents().find(e=>e.id===id);if(!logged()||!ev||ev.user_id===selfId())return;
@@ -847,12 +854,12 @@
     const action=$('mapEventAction');
     action.dataset.id=event.id;
     action.dataset.action=mine?'edit-event':'rsvp';
-    action.textContent=mine?'予定を編集':joined?'参加を取り消す':'参加する';
+    action.textContent=mine?'編集':joined?'参加を取り消す':'参加する';
     action.classList.toggle('is-joined',joined);action.hidden=false;action.disabled=false;
     if(isMatch(event)){const st=matchState(event);
       $('mapEventStatus').textContent=({open:'あと1人で開催',matched:involved(event)?'対戦成立！':'成立済み',cancelled:'中止',closed:'締め切り'})[st];
       $('mapEventCount').innerHTML=st==='matched'&&involved(event)?'相手：'+esc(fullName(mine?event.partner:event.user_id)):mine&&st==='open'?'相手を募集中':'';
-      if(mine){action.dataset.action=st==='open'||st==='matched'?'edit-event':'delete-event';action.textContent=st==='open'||st==='matched'?'予定を編集':'削除';}
+      if(mine){action.dataset.action=st==='open'||st==='matched'?'edit-event':'delete-event';action.textContent=st==='open'||st==='matched'?'編集':'削除';}
       else if(st==='open'){action.dataset.action='join-match';action.textContent='自分も行ける';}
       else if(st==='matched'&&event.partner===selfId()&&Date.parse(event.starts_at)>Date.now()){action.dataset.action='leave-match';action.textContent='辞退する';}
       else action.hidden=true;}
@@ -1092,6 +1099,34 @@
     state.freshRequest=true;
     navigator.geolocation.getCurrentPosition(p=>{state.freshRequest=false;receiveGps(p,share.token);},e=>{state.freshRequest=false;gpsError(e,share.token);},{enableHighAccuracy:share.privacy==='exact',maximumAge:10000,timeout:15000});
   }
+  function myNow(){return activePeople().find(p=>p.user_id===selfId());}
+  function nowUntil(){const n=myNow();return state.share?.until||(n?Date.parse(n.expires_at):0);}
+  function fillNow(){
+    const n=myNow();if(!n&&!state.share){closeModal('now');return;}
+    const gps=state.share?state.share.kind==='gps':n?.kind!=='checkin';
+    $('nowKind').textContent=gps?'GPS':'地図で選んだ地点';
+    const left=Math.max(0,Math.ceil((nowUntil()-Date.now())/60000));
+    $('nowLeft').textContent='あと'+(left>=60?`${Math.floor(left/60)}時間${left%60?left%60+'分':''}`:`${left}分`);
+  }
+  function editNow(){
+    if(!myNow()&&!state.share)return;
+    closePlace();const saved=Number(storage.get(CHECKIN_KEY,60));$('nowDuration').value=String(CHECKIN_CHOICES.includes(saved)?saved:60);
+    fillNow();openModal('now');
+  }
+  async function changeNowTime(){
+    const m=Number($('nowDuration').value);if(!CHECKIN_CHOICES.includes(m))return;storage.set(CHECKIN_KEY,m);
+    const until=Date.now()+m*60000,n=myNow();if(state.share)state.share.until=until;
+    if(state.mode==='demo'){await updateDemo(latest=>{latest.positions.forEach(p=>{if(p.user_id===selfId())p.expires_at=new Date(until).toISOString();});});render();}
+    else if(n){const {error}=await state.sb.from('positions').upsert({user_id:n.user_id,lat:n.lat,lng:n.lng,precision:n.precision,kind:n.kind,updated_at:n.updated_at,expires_at:new Date(until).toISOString()});if(error)throw error;await loadLive();}
+    fillNow();notify(`あと${minutesLabel(m)}にしました`);
+  }
+  function editOwn(key){
+    try{
+      if(key==='now')editNow();
+      else if(key.startsWith('area:')){const a=myAreas().find(x=>x.id===key.slice(5));if(a)openArea(a);}
+      else if(key.startsWith('event:')){const ev=state.events.find(x=>x.id===key.slice(6)&&x.user_id===selfId());if(ev){closePlace();newEvent(ev);}}
+    }catch(e){notify(e.message);}
+  }
   function manualShare() {
     if(!state.mapReady)throw Error('地図が利用できません');
     closePlace();showMapTab();state.privacy=shareSettings().privacy;state.pickMode='manual';$('pickText').textContent='登録したい地点をタップ';$('pickPrompt').hidden=false;setSheet(true);notify('場所を検索するか、地図をタップして選んでください');
@@ -1106,6 +1141,8 @@
     $('areaDialogTitle').textContent=area.id?'出没エリアを編集':'出没エリアに登録';
     $('areaSave').textContent=area.id?'変更を保存':'登録する';
     $('areaCount').textContent=area.id?'':`登録済み ${myAreas().length}/${AREA_MAX}`;
+    $('areaDialogTitle').textContent=area.id?'出没エリア':'出没エリアに登録';
+    $('areaHint').hidden=$('areaNotice').hidden=!!area.id;$('areaRemove').hidden=!area.id;$('areaRemove').dataset.id=area.id||'';
     closePlace();openModal('area');
   }
   function addAreaFromMap(){
@@ -1124,8 +1161,8 @@
   }
   async function deleteArea(id){
     const a=myAreas().find(x=>x.id===id);if(!a)return;
-    if(!await askConfirm(`「${a.name}」を出没エリアから消しますか？`,'出没エリアを消す','消す'))return;
-    const {error}=await state.sb.from('areas').delete().eq('id',id).eq('user_id',selfId());if(error)throw error;await loadLive();notify('出没エリアを消しました');
+    if(!await askConfirm(`「${a.name}」を出没エリアから外しますか？`,'エリアを外す','外す'))return;
+    const {error}=await state.sb.from('areas').delete().eq('id',id).eq('user_id',selfId());if(error)throw error;closeModal('area');state.areaDraft=null;await loadLive();notify('出没エリアから外しました');
   }
   // ---- 対戦記録 ----
   function battleCandidates(){
@@ -1326,6 +1363,8 @@
         else if(action==='close-place')closePlace();
         else if(action==='area-here'){const p=selectedPoint();if(p)openArea(p);}
         else if(action==='add-area-map')addAreaFromMap();
+        else if(action==='edit-now')editNow();else if(action==='close-now')closeModal('now');else if(action==='now-stop'){closeModal('now');await stopShare();}
+        else if(action==='remove-area')await deleteArea(id);
         else if(action==='edit-area'){const a=myAreas().find(x=>x.id===id);if(a)openArea(a);}
         else if(action==='delete-area')await deleteArea(id);
         else if(action==='close-area'){closeModal('area');state.areaDraft=null;}
@@ -1343,7 +1382,7 @@
         else if(action==='join-ranking'){const {error}=await state.sb.rpc('join_ranking');if(error)throw Error('参加できませんでした');await loadLive();notify('ランキングに参加しました');}
         else if(action==='join-match')await joinMatch(id);
         else if(action==='leave-match')await leaveMatch(id);
-        else if(action==='cancel-match')await cancelMatch(id);
+        else if(action==='cancel-match'){await cancelMatch(id);if(state.events.find(x=>x.id===id)?.cancelled_at)closeModal('event');}
         else if(action==='reject-battle')await removeBattle(id,true);
         else if(action==='delete-battle')await removeBattle(id,false);
         else if(action==='save-spot')saveSelected();
@@ -1391,6 +1430,7 @@
     $('listSearch').addEventListener('input',()=>{state.listQueries[state.tab]=$('listSearch').value;render();});
     $('mapSearch').addEventListener('focus',()=>{if(state.selected||!$('mapEvent').hidden)closePlace();if(isMobile())setSheet(true);showSavedResults();});
     $('checkinDuration').addEventListener('change',updateCheckinNote);
+    $('nowDuration').addEventListener('change',()=>changeNowTime().catch(e=>notify(e.message)));
     document.addEventListener('toggle',e=>{if(e.target.id==='profileMore')state.profileMoreOpen=e.target.open;},true);
     document.addEventListener('change',e=>{if(e.target.id==='rankArea'){state.rankArea=e.target.value;render();}
       if(e.target.id==='avatarFile'&&e.target.files?.[0]){const f=e.target.files[0];e.target.value='';uploadAvatar(f).catch(err=>notify(err.message||'画像を保存できませんでした'));}});
@@ -1462,6 +1502,7 @@
     if(url&&key){try{await startSupabase(url,key);}catch(error){setStatus('接続できませんでした：'+error.message,true);}}
     let lastShape='';
     state.expiry=setInterval(()=>{
+      if($('nowOverlay').classList.contains('open'))fillNow();
       if(state.share&&Date.now()>=state.share.until){stopShare(true).then(()=>notify('共有時間が終了しました')).catch(e=>notify(e.message));}
       updateShareIndicator();const shape=JSON.stringify([activePeople().map(p=>p.user_id),activeEvents().map(e=>e.id)]);
       if(shape!==lastShape){lastShape=shape;render();}
